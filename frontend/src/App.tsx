@@ -10,7 +10,7 @@ import { ProtectedRoute } from "./features/auth/components/ProtectedRoute";
 export default function App() {
   return (
     <div className="container">
-      <Link to="/" style={{ textDecoration: "none" }}>
+      <Link to="/">
         <header className="header">
           <h1>setnote</h1>
           <p>DJセットリストを作成・共有</p>
