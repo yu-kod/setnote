@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { fetchMySetlists, createSetlist } from "../api";
 import type { Setlist } from "../types";
@@ -7,6 +7,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogClose,
+} from "@/components/ui/dialog";
 
 const statusVariant: Record<string, "success" | "draft" | "destructive"> = {
   published: "success",
@@ -16,10 +23,11 @@ const statusVariant: Record<string, "success" | "draft" | "destructive"> = {
 
 export function SetlistList() {
   const navigate = useNavigate();
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [setlists, setSetlists] = useState<Setlist[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [createError, setCreateError] = useState("");
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
 
@@ -30,13 +38,12 @@ export function SetlistList() {
       .finally(() => setLoading(false));
   }, []);
 
-  function openDialog() {
-    setNewName("");
-    dialogRef.current?.showModal();
-  }
-
-  function closeDialog() {
-    dialogRef.current?.close();
+  function handleDialogChange(open: boolean) {
+    setDialogOpen(open);
+    if (open) {
+      setNewName("");
+      setCreateError("");
+    }
   }
 
   async function handleCreate(e: React.FormEvent) {
@@ -45,10 +52,10 @@ export function SetlistList() {
     setCreating(true);
     try {
       const created = await createSetlist(newName.trim());
-      closeDialog();
+      setDialogOpen(false);
       navigate(`/setlists/${created.id}/edit`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "作成に失敗しました");
+      setCreateError(err instanceof Error ? err.message : "作成に失敗しました");
     } finally {
       setCreating(false);
     }
@@ -63,34 +70,43 @@ export function SetlistList() {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-      <Button onClick={openDialog} className="w-full">
-        新規作成
-      </Button>
-      <dialog
-        ref={dialogRef}
-        className="rounded-lg border border-border bg-card p-6 text-card-foreground shadow-lg backdrop:bg-black/70"
-      >
-        <form onSubmit={handleCreate} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="new-setlist-name">セットリスト名</Label>
-            <Input
-              id="new-setlist-name"
-              type="text"
-              value={newName}
-              onChange={(e) => setNewName(e.target.value)}
-              required
-            />
-          </div>
-          <div className="flex items-center gap-3">
-            <Button type="submit" className="flex-1" disabled={creating}>
-              {creating ? "作成中..." : "作成"}
-            </Button>
-            <Button type="button" variant="ghost" onClick={closeDialog}>
-              キャンセル
-            </Button>
-          </div>
-        </form>
-      </dialog>
+      <Dialog open={dialogOpen} onOpenChange={handleDialogChange}>
+        <Button onClick={() => handleDialogChange(true)} className="w-full">
+          新規作成
+        </Button>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>新規作成</DialogTitle>
+          </DialogHeader>
+          {createError && (
+            <Alert variant="destructive">
+              <AlertDescription>{createError}</AlertDescription>
+            </Alert>
+          )}
+          <form onSubmit={handleCreate} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-setlist-name">セットリスト名</Label>
+              <Input
+                id="new-setlist-name"
+                type="text"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+                required
+              />
+            </div>
+            <div className="flex items-center gap-3">
+              <Button type="submit" className="flex-1" disabled={creating}>
+                {creating ? "作成中..." : "作成"}
+              </Button>
+              <DialogClose asChild>
+                <Button type="button" variant="ghost">
+                  キャンセル
+                </Button>
+              </DialogClose>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
       {setlists.length === 0 ? (
         <p className="mt-4 text-muted-foreground">
           セットリストがありません。最初のセットリストを作成しましょう
