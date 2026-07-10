@@ -15,9 +15,7 @@ export default function App() {
           <h1 className="text-3xl font-bold bg-gradient-to-br from-primary to-accent bg-clip-text text-transparent">
             setnote
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            DJセットリストを作成・共有
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">DJセットリストを作成・共有</p>
         </header>
       </Link>
       <Routes>

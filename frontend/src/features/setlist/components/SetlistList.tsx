@@ -104,9 +104,7 @@ export function SetlistList() {
                 onClick={() => navigate(`/setlists/${s.id}/edit`)}
               >
                 <span className="flex-1 font-semibold">{s.name}</span>
-                <Badge variant={statusVariant[s.status]}>
-                  {s.status}
-                </Badge>
+                <Badge variant={statusVariant[s.status]}>{s.status}</Badge>
                 <span className="text-xs text-muted-foreground">
                   {new Date(s.updatedAt).toLocaleDateString("ja-JP")}
                 </span>
