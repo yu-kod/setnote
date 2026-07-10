@@ -27,30 +27,14 @@ jobs:
           fetch-depth: 1
 
       - uses: anthropics/claude-code-action@v1
-        id: claude-review
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          claude_args: '--allowedTools "Bash(gh pr review:*)" "Bash(gh pr comment:*)" "Bash(gh pr diff:*)" "Bash(gh pr view:*)"'
           prompt: |
             Follow the coding standards defined in .claude/skills/coding-standards.md.
             Follow project rules defined in CLAUDE.md.
             Review the PR diff. If you find issues, fix them by pushing commits.
-            After reviewing, output your verdict as a single JSON object:
-            {"verdict": "APPROVE", "summary": "..."} or {"verdict": "REQUEST_CHANGES", "summary": "..."}
-
-      - name: Submit review
-        if: github.event_name == 'pull_request'
-        env:
-          GH_TOKEN: ${{ github.token }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          OUTPUT='${{ steps.claude-review.outputs.result }}'
-          VERDICT=$(echo "$OUTPUT" | grep -oP '"verdict"\s*:\s*"(APPROVE|REQUEST_CHANGES)"' | head -1 | grep -oP '(APPROVE|REQUEST_CHANGES)') || true
-
-          if [ "$VERDICT" = "APPROVE" ]; then
-            gh pr review "$PR_NUMBER" --approve --body "Claude Code review: No issues found."
-          elif [ "$VERDICT" = "REQUEST_CHANGES" ]; then
-            SUMMARY=$(echo "$OUTPUT" | grep -oP '"summary"\s*:\s*"([^"]*)"' | head -1 | sed 's/"summary"\s*:\s*"//;s/"$//') || true
-            gh pr review "$PR_NUMBER" --request-changes --body "Claude Code review: ${SUMMARY:-Issues found.}"
-          else
-            gh pr review "$PR_NUMBER" --comment --body "Claude Code review completed. Manual review recommended."
-          fi
+            After reviewing, submit a formal review using the gh CLI:
+            - If no issues: gh pr review <number> --approve --body "LGTM"
+            - If issues remain: gh pr review <number> --request-changes --body "<summary>"
+            The PR number is ${{ github.event.pull_request.number }}.
