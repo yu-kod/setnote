@@ -127,3 +127,31 @@ describe("signin", () => {
     await expect(signin("dj@example.com", "password123")).rejects.toThrow("User is not confirmed");
   });
 });
+
+describe("authRequest error handling", () => {
+  it("throws AuthError with status text when response is not JSON", async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 500,
+      statusText: "Internal Server Error",
+      json: () => Promise.reject(new SyntaxError("Unexpected token")),
+    });
+
+    await expect(signup("dj@example.com", "password123", "DJName")).rejects.toThrow(
+      "Internal Server Error"
+    );
+  });
+
+  it("throws AuthError with fallback message when response is not JSON and no statusText", async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 502,
+      statusText: "",
+      json: () => Promise.reject(new SyntaxError("Unexpected token")),
+    });
+
+    await expect(signup("dj@example.com", "password123", "DJName")).rejects.toThrow(
+      "サーバーエラーが発生しました"
+    );
+  });
+});

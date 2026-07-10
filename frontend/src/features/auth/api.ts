@@ -16,14 +16,16 @@ async function authRequest<T>(path: string, body: unknown): Promise<T> {
     body: JSON.stringify(body),
   });
 
-  const data = await res.json();
+  let data: Record<string, unknown>;
+  try {
+    data = await res.json();
+  } catch {
+    throw new AuthError(res.statusText || "サーバーエラーが発生しました", "UNKNOWN", res.status);
+  }
 
   if (!res.ok) {
-    throw new AuthError(
-      data.error?.message ?? "Unknown error",
-      data.error?.code ?? "UNKNOWN",
-      res.status
-    );
+    const error = data.error as Record<string, string> | undefined;
+    throw new AuthError(error?.message ?? "Unknown error", error?.code ?? "UNKNOWN", res.status);
   }
 
   return data as T;
