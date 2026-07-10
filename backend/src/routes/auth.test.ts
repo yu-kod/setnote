@@ -22,6 +22,9 @@ vi.mock("@aws-sdk/client-cognito-identity-provider", () => ({
   InitiateAuthCommand: class {
     constructor(public input: unknown) {}
   },
+  ResendConfirmationCodeCommand: class {
+    constructor(public input: unknown) {}
+  },
 }));
 
 describe("POST /api/auth/signup", () => {
@@ -387,6 +390,68 @@ describe("POST /api/auth/signin", () => {
         email: "dj@example.com",
         password: "P@ssw0rd123",
       }),
+    });
+
+    expect(res.status).toBe(500);
+    const body = (await res.json()) as Record<string, unknown>;
+    const err = body.error as Record<string, string>;
+    expect(err.code).toBe("INTERNAL_ERROR");
+  });
+});
+
+describe("POST /api/auth/resend-code", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    mockCognitoSend.mockReset();
+  });
+
+  it("resends confirmation code and returns 200", async () => {
+    mockCognitoSend.mockResolvedValue({});
+
+    const { app } = await import("../app");
+    const res = await app.request("/api/auth/resend-code", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: "dj@example.com" }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as Record<string, unknown>;
+    expect(body.sent).toBe(true);
+  });
+
+  it("returns 400 when email is missing", async () => {
+    const { app } = await import("../app");
+    const res = await app.request("/api/auth/resend-code", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when email is invalid", async () => {
+    const { app } = await import("../app");
+    const res = await app.request("/api/auth/resend-code", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: "not-an-email" }),
+    });
+
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 500 with JSON error for unexpected Cognito errors", async () => {
+    const error = new Error("Something went wrong");
+    error.name = "InternalErrorException";
+    mockCognitoSend.mockRejectedValue(error);
+
+    const { app } = await import("../app");
+    const res = await app.request("/api/auth/resend-code", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: "dj@example.com" }),
     });
 
     expect(res.status).toBe(500);

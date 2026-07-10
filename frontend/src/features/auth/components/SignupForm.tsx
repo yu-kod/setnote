@@ -35,7 +35,7 @@ export function SignupForm() {
     setLoading(true);
     try {
       await signup(email, password, username);
-      navigate("/confirm", { state: { email } });
+      navigate("/confirm", { state: { email, fromSignup: true } });
     } catch (err) {
       setError(err instanceof Error ? err.message : "エラーが発生しました");
     } finally {

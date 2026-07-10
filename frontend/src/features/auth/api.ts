@@ -45,6 +45,10 @@ type SigninResponse = {
   refreshToken: string;
 };
 
+export function resendCode(email: string): Promise<void> {
+  return authRequest("/resend-code", { email });
+}
+
 export function signin(email: string, password: string): Promise<SigninResponse> {
   return authRequest<SigninResponse>("/signin", { email, password });
 }
