@@ -63,7 +63,7 @@ mcp__github__pull_request_read → method: get_review_comments
 #### 問題なしの場合
 
 - Claude Code Actionが問題を報告していないことを確認する
-- `mcp__github__merge_pull_request` でマージする（squash）
+- `mcp__github__merge_pull_request` でマージする（merge commit）
 - `unsubscribe_pr_activity` で購読を解除する
 - `send_later` のチェックインがあればキャンセルする
 
