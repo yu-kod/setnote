@@ -11,6 +11,7 @@ dist/
 *.tfstate.backup
 .terraform.lock.hcl
 
+coverage/
 .DS_Store
 .claude/*
 !.claude/skills/
