@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../AuthContext";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function ConfirmForm() {
   const { confirmEmail, resendCode } = useAuth();
@@ -47,50 +51,46 @@ export function ConfirmForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} className="space-y-4">
       {fromSignup && (
-        <div role="status" className="success-message">
-          アカウントを作成しました。確認コードをメールで送信しました。
-        </div>
+        <Alert variant="success" role="status">
+          <AlertDescription>
+            アカウントを作成しました。確認コードをメールで送信しました。
+          </AlertDescription>
+        </Alert>
       )}
       {info && (
-        <div role="status" className="success-message">
-          {info}
-        </div>
+        <Alert variant="success" role="status">
+          <AlertDescription>{info}</AlertDescription>
+        </Alert>
       )}
       {error && (
-        <div role="alert" className="error-message">
-          {error}
-        </div>
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
-      <p className="text-muted">
+      <p className="text-sm text-muted-foreground">
         {stateEmail
           ? `${stateEmail} に送信された確認コードを入力してください`
           : "登録時のメールアドレスと確認コードを入力してください"}
       </p>
       {!stateEmail && (
-        <div className="form-group">
-          <label htmlFor="confirm-email" className="label">
-            メールアドレス
-          </label>
-          <input
+        <div className="space-y-2">
+          <Label htmlFor="confirm-email">メールアドレス</Label>
+          <Input
             id="confirm-email"
             type="email"
-            className="input"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
           />
         </div>
       )}
-      <div className="form-group">
-        <label htmlFor="confirm-code" className="label">
-          確認コード
-        </label>
-        <input
+      <div className="space-y-2">
+        <Label htmlFor="confirm-code">確認コード</Label>
+        <Input
           id="confirm-code"
           type="text"
-          className="input"
           value={code}
           onChange={(e) => setCode(e.target.value)}
           required
@@ -98,17 +98,19 @@ export function ConfirmForm() {
           inputMode="numeric"
         />
       </div>
-      <button type="submit" className="btn" disabled={loading}>
+      <Button type="submit" className="w-full" disabled={loading}>
         {loading ? "確認中..." : "確認する"}
-      </button>
-      <button
+      </Button>
+      <Button
         type="button"
-        className="btn-link"
+        variant="ghost"
+        size="sm"
+        className="w-full text-muted-foreground"
         onClick={handleResend}
         disabled={resending || !email}
       >
         {resending ? "送信中..." : "確認コードを再送信"}
-      </button>
+      </Button>
     </form>
   );
 }
