@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fetchMySetlists, createSetlist } from "./api";
+import { clearSession, redirectToLogin } from "../auth/session";
+
+vi.mock("../auth/session", () => ({
+  clearSession: vi.fn(),
+  redirectToLogin: vi.fn(),
+}));
 
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
@@ -7,6 +13,8 @@ vi.stubGlobal("fetch", mockFetch);
 beforeEach(() => {
   mockFetch.mockReset();
   localStorage.clear();
+  vi.mocked(clearSession).mockClear();
+  vi.mocked(redirectToLogin).mockClear();
 });
 
 describe("fetchMySetlists", () => {
@@ -78,6 +86,35 @@ describe("204 response", () => {
     const result = await fetchMySetlists();
 
     expect(result).toBeUndefined();
+  });
+});
+
+describe("401 unauthorized (expired session)", () => {
+  it("clears the session and redirects to login on 401", async () => {
+    localStorage.setItem("setnote_access_token", "expired-token");
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: () => Promise.resolve({ error: { code: "UNAUTHORIZED", message: "Invalid token" } }),
+    });
+
+    await expect(fetchMySetlists()).rejects.toThrow();
+
+    expect(clearSession).toHaveBeenCalledOnce();
+    expect(redirectToLogin).toHaveBeenCalledOnce();
+  });
+
+  it("does not clear the session for non-401 errors", async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: () => Promise.resolve({ error: { message: "Bad request" } }),
+    });
+
+    await expect(fetchMySetlists()).rejects.toThrow();
+
+    expect(clearSession).not.toHaveBeenCalled();
+    expect(redirectToLogin).not.toHaveBeenCalled();
   });
 });
 

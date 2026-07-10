@@ -1,4 +1,5 @@
 import type { Setlist } from "./types";
+import { clearSession, redirectToLogin } from "../auth/session";
 
 function getToken(): string {
   return localStorage.getItem("setnote_access_token") ?? "";
@@ -18,6 +19,11 @@ async function setlistRequest<T>(
   });
 
   if (!res.ok) {
+    if (res.status === 401) {
+      // トークン失効。セッションを破棄してログイン画面へ誘導する。
+      clearSession();
+      redirectToLogin();
+    }
     const data = await res.json().catch(() => ({}));
     const message =
       (data as Record<string, unknown>).error instanceof Object
