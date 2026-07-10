@@ -56,6 +56,28 @@ triggers:
 
 ## 2. Vitest テストのベストプラクティス
 
+### カバレッジ 100% ルール
+
+- **全プロジェクトで lines / functions / branches / statements すべて 100% を維持する**
+- `vitest.config.ts` に `coverage.thresholds` を設定し、閾値を下回るとテストが失敗するようにする
+- `npm test` は `vitest run --coverage` で実行し、カバレッジレポートを必ず生成する
+- カバレッジ対象外にすべきファイル（エントリポイント、型定義等）は `coverage.exclude` で明示的に除外する
+- 新しいコードを書いたら、そのコードのすべてのブランチ・行がテストでカバーされていることを確認する
+- CI でもカバレッジチェックが走り、100% 未満で失敗する
+
+```ts
+// vitest.config.ts の設定例
+coverage: {
+  provider: "v8",
+  thresholds: {
+    lines: 100,
+    functions: 100,
+    branches: 100,
+    statements: 100,
+  },
+}
+```
+
 ### ファイル構成
 
 - テストはソースと同じ場所に配置: `src/routes/setlists.ts` → `src/routes/setlists.test.ts`

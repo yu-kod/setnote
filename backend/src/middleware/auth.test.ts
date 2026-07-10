@@ -67,6 +67,29 @@ describe("auth middleware", () => {
     expect(body.error.code).toBe("UNAUTHORIZED");
   });
 
+  it("sets email to empty string when token payload has no email", async () => {
+    mockVerify.mockResolvedValue({
+      sub: "user-456",
+      token_use: "access",
+    });
+
+    const { authMiddleware } = await import("./auth");
+    const app = new Hono();
+    app.use("/*", authMiddleware);
+    app.get("/test", (c) => {
+      const ctx = c as unknown as { get(k: string): string };
+      return c.json({ userId: ctx.get("userId"), email: ctx.get("email") });
+    });
+
+    const res = await app.request("/test", {
+      headers: { Authorization: "Bearer valid-token" },
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { userId: string; email: string };
+    expect(body.userId).toBe("user-456");
+    expect(body.email).toBe("");
+  });
+
   it("returns 401 when Authorization header has wrong scheme", async () => {
     const { authMiddleware } = await import("./auth");
     const app = new Hono();

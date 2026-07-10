@@ -135,4 +135,27 @@ describe("ConfirmForm", () => {
 
     expect(screen.getByRole("alert")).toHaveTextContent("Too many attempts");
   });
+
+  it("shows fallback error when confirmEmail rejects with non-Error", async () => {
+    mockConfirmEmail.mockRejectedValue("string rejection");
+    const user = userEvent.setup();
+
+    renderWithProviders(<ConfirmForm />);
+
+    await user.type(screen.getByLabelText("確認コード"), "123456");
+    await user.click(screen.getByRole("button", { name: "確認する" }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent("エラーが発生しました");
+  });
+
+  it("shows fallback error when resendCode rejects with non-Error", async () => {
+    mockResendCode.mockRejectedValue("string rejection");
+    const user = userEvent.setup();
+
+    renderWithProviders(<ConfirmForm />);
+
+    await user.click(screen.getByRole("button", { name: "確認コードを再送信" }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent("再送信に失敗しました");
+  });
 });

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { signup, confirmEmail, signin } from "./api";
+import { signup, confirmEmail, signin, resendCode } from "./api";
 
 const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
@@ -125,6 +125,39 @@ describe("signin", () => {
     });
 
     await expect(signin("dj@example.com", "password123")).rejects.toThrow("User is not confirmed");
+  });
+});
+
+describe("resendCode", () => {
+  it("calls POST /api/auth/resend-code with email", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ message: "Code resent" }),
+    });
+
+    await resendCode("dj@example.com");
+
+    expect(mockFetch).toHaveBeenCalledWith("/api/auth/resend-code", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: "dj@example.com" }),
+    });
+  });
+});
+
+describe("authRequest error defaults", () => {
+  it("uses fallback message and code when error object has neither", async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: () => Promise.resolve({ error: {} }),
+    });
+
+    await expect(signup("dj@example.com", "password123", "DJName")).rejects.toMatchObject({
+      message: "Unknown error",
+      code: "UNKNOWN",
+    });
   });
 });
 

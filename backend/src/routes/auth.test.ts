@@ -56,6 +56,28 @@ describe("POST /api/auth/signup", () => {
     expect(body.userConfirmed).toBe(false);
   });
 
+  it("defaults userConfirmed to false when UserConfirmed is undefined", async () => {
+    mockCognitoSend.mockResolvedValue({
+      UserSub: "cognito-uuid-456",
+    });
+
+    const { app } = await import("../app");
+    const res = await app.request("/api/auth/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: "dj2@example.com",
+        password: "P@ssw0rd123",
+        username: "DJ_Test2",
+      }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as Record<string, unknown>;
+    expect(body.userSub).toBe("cognito-uuid-456");
+    expect(body.userConfirmed).toBe(false);
+  });
+
   it("returns 400 when email is missing", async () => {
     const { app } = await import("../app");
     const res = await app.request("/api/auth/signup", {

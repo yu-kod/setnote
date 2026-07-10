@@ -169,6 +169,19 @@ describe("GET /api/setlists/mine (authenticated)", () => {
     expect(body[0].name).toBe("Set A");
   });
 
+  it("returns empty array when DynamoDB returns undefined Items", async () => {
+    mockVerify.mockResolvedValue({ sub: "user1", email: "dj@example.com" });
+    mockSend.mockResolvedValue({});
+
+    const { app } = await import("../app");
+    const res = await app.request("/api/setlists/mine", {
+      headers: { Authorization: "Bearer valid-token" },
+    });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual([]);
+  });
+
   it("returns empty array when user has no setlists", async () => {
     mockVerify.mockResolvedValue({ sub: "user1", email: "dj@example.com" });
     mockSend.mockResolvedValue({ Items: [] });
@@ -239,6 +252,22 @@ describe("PUT /api/setlists/:id (authenticated)", () => {
 
     expect(res.status).toBe(404);
   });
+
+  it("re-throws non-ConditionalCheckFailedException errors", async () => {
+    mockVerify.mockResolvedValue({ sub: "user1", email: "dj@example.com" });
+    const err = new Error("DynamoDB timeout");
+    err.name = "ProvisionedThroughputExceededException";
+    mockSend.mockRejectedValue(err);
+
+    const { app } = await import("../app");
+    const res = await app.request("/api/setlists/abc", {
+      method: "PUT",
+      headers: authHeaders(),
+      body: JSON.stringify({ name: "Updated" }),
+    });
+
+    expect(res.status).toBe(500);
+  });
 });
 
 describe("DELETE /api/setlists/:id (authenticated)", () => {
@@ -277,6 +306,21 @@ describe("DELETE /api/setlists/:id (authenticated)", () => {
     });
 
     expect(res.status).toBe(404);
+  });
+
+  it("re-throws non-ConditionalCheckFailedException errors", async () => {
+    mockVerify.mockResolvedValue({ sub: "user1", email: "dj@example.com" });
+    const err = new Error("DynamoDB timeout");
+    err.name = "ProvisionedThroughputExceededException";
+    mockSend.mockRejectedValue(err);
+
+    const { app } = await import("../app");
+    const res = await app.request("/api/setlists/abc", {
+      method: "DELETE",
+      headers: { Authorization: "Bearer valid-token" },
+    });
+
+    expect(res.status).toBe(500);
   });
 });
 
@@ -383,5 +427,20 @@ describe("DELETE /api/setlists/:id/publish (authenticated)", () => {
     });
 
     expect(res.status).toBe(404);
+  });
+
+  it("re-throws non-ConditionalCheckFailedException errors", async () => {
+    mockVerify.mockResolvedValue({ sub: "user1", email: "dj@example.com" });
+    const err = new Error("DynamoDB timeout");
+    err.name = "ProvisionedThroughputExceededException";
+    mockSend.mockRejectedValue(err);
+
+    const { app } = await import("../app");
+    const res = await app.request("/api/setlists/abc/publish", {
+      method: "DELETE",
+      headers: { Authorization: "Bearer valid-token" },
+    });
+
+    expect(res.status).toBe(500);
   });
 });
