@@ -19,7 +19,7 @@
 ## 技術スタック
 
 - Frontend: React + Vite + TypeScript
-- Backend: Express + TypeScript + DynamoDB
+- Backend: Hono + TypeScript + DynamoDB
 - Infra: Terraform (S3 + CloudFront + API Gateway + Lambda)
 - テスト: Vitest（フロントエンド・バックエンド共通）
 
@@ -27,7 +27,7 @@
 
 ```
 frontend/   — React SPA
-backend/    — Express API (Lambda デプロイ)
+backend/    — Hono API (Lambda デプロイ)
 infra/      — Terraform
 docs/       — 仕様書
 ```

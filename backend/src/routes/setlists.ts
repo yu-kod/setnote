@@ -1,32 +1,29 @@
-import { Router } from "express";
+import { Hono } from "hono";
 import { GetCommand } from "@aws-sdk/lib-dynamodb";
 import { docClient, TABLES } from "../db/client";
 
-const router = Router();
+export const setlistsRoute = new Hono();
 
-router.get("/:id", async (req, res) => {
+setlistsRoute.get("/:id", async (c) => {
   try {
     const result = await docClient.send(
       new GetCommand({
         TableName: TABLES.setlists,
-        Key: { id: req.params.id },
+        Key: { id: c.req.param("id") },
       })
     );
 
     if (!result.Item) {
-      return res.status(404).json({ error: "Not found" });
+      return c.json({ error: "Not found" }, 404);
     }
 
-    const item = result.Item;
-    if (item.status !== "published") {
-      return res.status(404).json({ error: "Not found" });
+    if (result.Item.status !== "published") {
+      return c.json({ error: "Not found" }, 404);
     }
 
-    res.json(item.publishedSnapshot);
+    return c.json(result.Item.publishedSnapshot);
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Internal server error" });
+    return c.json({ error: "Internal server error" }, 500);
   }
 });
-
-export default router;

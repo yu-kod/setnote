@@ -164,13 +164,16 @@ src/
 
 ---
 
-## 4. Express + Lambda + DynamoDB ベストプラクティス
+## 4. Hono + Lambda + DynamoDB ベストプラクティス
 
-### Express on Lambda
+### Hono on Lambda
 
-- Express app はハンドラ外（モジュールスコープ）で初期化し、warm invocation で再利用
-- `esbuild` で単一ファイルにバンドル、デプロイパッケージは 5MB 以下を目標
-- 不要なミドルウェアを入れない: `express.static`, `compression`, `helmet` HSTS は Lambda では不要
+- `hono/aws-lambda` の `handle()` でハンドラをエクスポート — アダプタライブラリ不要
+- `Hono` インスタンスはモジュールスコープで作成し、warm invocation で再利用
+- `esbuild` で単一ファイルにバンドル、デプロイパッケージは 5MB 以下を目標（Hono は ~14KB）
+- ルートは `new Hono()` で作成し、`app.route("/api/xxx", xxxRoute)` でマウント
+- テストは `app.request()` メソッドで HTTP サーバーなしに直接テスト可能
+- ローカル開発は `@hono/node-server` の `serve()` を使用
 - DynamoDB クライアントはモジュールスコープで作成（warm start で再利用）
 
 ### DynamoDB データモデリング
@@ -185,7 +188,7 @@ src/
 ### TypeScript パターン
 
 - リクエストボディのバリデーションは `zod` で早期に実行、失敗時は 400 を返す
-- エラーハンドリングは単一の Express エラーミドルウェアに集約
+- エラーハンドリングは Hono の `app.onError()` に集約
 - 型付きエラークラス（`statusCode` と `code` フィールド付き）を使用
 - `tsconfig` で `strict` と `noUncheckedIndexedAccess` を有効化
 
