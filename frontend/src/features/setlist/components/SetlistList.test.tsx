@@ -94,12 +94,11 @@ describe("SetlistList", () => {
       expect(screen.getByRole("button", { name: "新規作成" })).toBeInTheDocument();
     });
 
-    const dialog = screen.getByRole("dialog", { hidden: true });
-    expect(dialog).not.toHaveAttribute("open");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "新規作成" }));
 
-    expect(dialog.hasAttribute("open")).toBe(true);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
   it("creates a new setlist via modal and navigates to edit page", async () => {
@@ -134,12 +133,13 @@ describe("SetlistList", () => {
     });
     await user.click(screen.getByRole("button", { name: "新規作成" }));
 
-    const dialog = screen.getByRole("dialog");
-    expect(dialog.hasAttribute("open")).toBe(true);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "キャンセル" }));
 
-    expect(dialog.hasAttribute("open")).toBe(false);
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    });
   });
 
   it("shows error when fetch fails", async () => {
