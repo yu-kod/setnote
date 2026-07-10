@@ -37,18 +37,33 @@ triggers:
 
 ### 4. レビュー待機
 
-- Claude Code Actionからのレビューコメントが `<github-webhook-activity>` として届くのを待つ
 - ターンを終了して待機する（`sleep` やポーリングはしない）
+- webhookイベントまたは `send_later` チェックインで再開する
 
-### 5. レビュー結果の判断
+### 5. イベント受信時のトークン節約ルール
 
-レビューイベントを受信したら:
+webhookイベントを受信したら、**まずClaude Code Actionのワークフローが完了しているか確認する**:
+
+```
+mcp__github__actions_list → method: list_workflow_runs, resource_id: claude.yml, branch: <head-branch>
+```
+
+- **ワークフローがまだ `in_progress`**: 何もせずターンを終了する（トークン節約）
+- **ワークフローが `completed`**: 手順6に進む
+
+### 6. マージ判断（ワークフロー完了後のみ実行）
+
+ワークフロー完了を確認してから、レビューコメントを確認する:
+
+```
+mcp__github__pull_request_read → method: get_comments
+mcp__github__pull_request_read → method: get_review_comments
+```
 
 #### 問題なしの場合
 
 - Claude Code Actionが問題を報告していないことを確認する
-- CIが通っていることを確認する（`mcp__github__actions_list` で確認）
-- `mcp__github__merge_pull_request` でマージする
+- `mcp__github__merge_pull_request` でマージする（squash）
 - `unsubscribe_pr_activity` で購読を解除する
 - `send_later` のチェックインがあればキャンセルする
 
@@ -58,13 +73,13 @@ triggers:
 - 問題が妥当なら修正してプッシュする（新しいレビューサイクルが始まる）
 - 問題が的外れならその旨をユーザーに伝え、判断を仰ぐ
 
-### 6. セルフチェックイン（send_later 発火時）
+### 7. セルフチェックイン（send_later 発火時）
 
 - PRの状態を確認する（`mcp__github__pull_request_read`）
-- CIの状態を確認する（`mcp__github__actions_list`）
-- まだレビューが来ていなければ再度60分後にチェックインをスケジュールする
-- レビュー済みで問題なければマージする
-- PRがマージ済み or クローズ済みならチェックインを停止する
+- Claude Code Actionのワークフロー状態を確認する（`mcp__github__actions_list`）
+- ワークフローが未完了 → 再度60分後にチェックインをスケジュール
+- ワークフロー完了 → 手順6に進む
+- PRがマージ済み or クローズ済み → チェックインを停止する
 
 ---
 
