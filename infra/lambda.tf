@@ -61,7 +61,9 @@ resource "aws_lambda_function" "api" {
 
   environment {
     variables = {
-      SETLISTS_TABLE = aws_dynamodb_table.setlists.name
+      SETLISTS_TABLE       = aws_dynamodb_table.setlists.name
+      COGNITO_USER_POOL_ID = aws_cognito_user_pool.main.id
+      COGNITO_CLIENT_ID    = aws_cognito_user_pool_client.web.id
     }
   }
 }
