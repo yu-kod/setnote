@@ -1,5 +1,10 @@
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
-import { signup as apiSignup, confirmEmail as apiConfirmEmail, signin as apiSignin } from "./api";
+import {
+  signup as apiSignup,
+  confirmEmail as apiConfirmEmail,
+  resendCode as apiResendCode,
+  signin as apiSignin,
+} from "./api";
 
 type User = {
   email: string;
@@ -12,6 +17,7 @@ type AuthContextValue = {
   logout: () => void;
   signup: (email: string, password: string, username: string) => Promise<void>;
   confirmEmail: (email: string, code: string) => Promise<void>;
+  resendCode: (email: string) => Promise<void>;
   getAccessToken: () => string | null;
 };
 
@@ -64,13 +70,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await apiConfirmEmail(email, code);
   }, []);
 
+  const resendCode = useCallback(async (email: string) => {
+    await apiResendCode(email);
+  }, []);
+
   const getAccessToken = useCallback(() => {
     return localStorage.getItem(TOKEN_KEY);
   }, []);
 
   return (
     <AuthContext.Provider
-      value={{ user, isAuthenticated, login, logout, signup, confirmEmail, getAccessToken }}
+      value={{ user, isAuthenticated, login, logout, signup, confirmEmail, resendCode, getAccessToken }}
     >
       {children}
     </AuthContext.Provider>

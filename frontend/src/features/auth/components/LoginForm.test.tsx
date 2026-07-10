@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderWithProviders, screen, userEvent } from "../../../test-utils";
 import { LoginForm } from "./LoginForm";
+import { AuthError } from "../api";
 
 const mockLogin = vi.fn();
 const mockNavigate = vi.fn();
@@ -60,10 +61,10 @@ describe("LoginForm", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("Wrong password");
   });
 
-  it("shows unconfirmed user message with link to confirm page", async () => {
-    const err = new Error("User is not confirmed");
-    (err as unknown as Record<string, unknown>).code = "USER_NOT_CONFIRMED";
-    mockLogin.mockRejectedValue(err);
+  it("redirects unconfirmed user to confirm page with email", async () => {
+    mockLogin.mockRejectedValue(
+      new AuthError("Please verify your email first", "USER_NOT_CONFIRMED", 403)
+    );
     const user = userEvent.setup();
 
     renderWithProviders(<LoginForm />);
@@ -72,6 +73,23 @@ describe("LoginForm", () => {
     await user.type(screen.getByLabelText("パスワード"), "password123");
     await user.click(screen.getByRole("button", { name: "ログイン" }));
 
-    expect(screen.getByRole("alert")).toHaveTextContent("User is not confirmed");
+    expect(mockNavigate).toHaveBeenCalledWith("/confirm", {
+      state: { email: "dj@example.com" },
+    });
+  });
+
+  it("does not show error when redirecting unconfirmed user", async () => {
+    mockLogin.mockRejectedValue(
+      new AuthError("Please verify your email first", "USER_NOT_CONFIRMED", 403)
+    );
+    const user = userEvent.setup();
+
+    renderWithProviders(<LoginForm />);
+
+    await user.type(screen.getByLabelText("メールアドレス"), "dj@example.com");
+    await user.type(screen.getByLabelText("パスワード"), "password123");
+    await user.click(screen.getByRole("button", { name: "ログイン" }));
+
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
 });

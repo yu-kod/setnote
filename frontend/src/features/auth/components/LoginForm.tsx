@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../AuthContext";
+import { AuthError } from "../api";
 
 export function LoginForm() {
   const { login } = useAuth();
@@ -20,6 +21,10 @@ export function LoginForm() {
       await login(email, password);
       navigate(from, { replace: true });
     } catch (err) {
+      if (err instanceof AuthError && err.code === "USER_NOT_CONFIRMED") {
+        navigate("/confirm", { state: { email } });
+        return;
+      }
       setError(err instanceof Error ? err.message : "エラーが発生しました");
     } finally {
       setLoading(false);

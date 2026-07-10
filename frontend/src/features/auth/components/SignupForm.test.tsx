@@ -43,7 +43,7 @@ describe("SignupForm", () => {
 
     expect(mockSignup).toHaveBeenCalledWith("dj@example.com", "P@ssw0rd123", "DJName");
     expect(mockNavigate).toHaveBeenCalledWith("/confirm", {
-      state: { email: "dj@example.com" },
+      state: { email: "dj@example.com", fromSignup: true },
     });
   });
 

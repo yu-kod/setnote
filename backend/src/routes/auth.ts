@@ -5,6 +5,7 @@ import {
   SignUpCommand,
   ConfirmSignUpCommand,
   InitiateAuthCommand,
+  ResendConfirmationCodeCommand,
 } from "@aws-sdk/client-cognito-identity-provider";
 
 const cognitoClient = new CognitoIdentityProviderClient({
@@ -27,6 +28,10 @@ const signupSchema = z.object({
 const confirmSchema = z.object({
   email: z.string().email(),
   code: z.string().min(1),
+});
+
+const resendCodeSchema = z.object({
+  email: z.string().email(),
 });
 
 const signinSchema = z.object({
@@ -196,6 +201,38 @@ authRoute.post("/signin", async (c) => {
       );
     }
     console.error("Signin error:", err);
+    return c.json({ error: { code: "INTERNAL_ERROR", message: "Internal server error" } }, 500);
+  }
+});
+
+authRoute.post("/resend-code", async (c) => {
+  const body = await c.req.json();
+  const parsed = resendCodeSchema.safeParse(body);
+  if (!parsed.success) {
+    return c.json(
+      {
+        error: {
+          code: "VALIDATION_ERROR",
+          message: parsed.error.issues[0].message,
+        },
+      },
+      400
+    );
+  }
+
+  const { email } = parsed.data;
+
+  try {
+    await cognitoClient.send(
+      new ResendConfirmationCodeCommand({
+        ClientId: CLIENT_ID,
+        Username: email,
+      })
+    );
+
+    return c.json({ sent: true });
+  } catch (err) {
+    console.error("Resend code error:", err);
     return c.json({ error: { code: "INTERNAL_ERROR", message: "Internal server error" } }, 500);
   }
 });
