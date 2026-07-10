@@ -20,20 +20,12 @@ async function authRequest<T>(path: string, body: unknown): Promise<T> {
   try {
     data = await res.json();
   } catch {
-    throw new AuthError(
-      res.statusText || "サーバーエラーが発生しました",
-      "UNKNOWN",
-      res.status
-    );
+    throw new AuthError(res.statusText || "サーバーエラーが発生しました", "UNKNOWN", res.status);
   }
 
   if (!res.ok) {
     const error = data.error as Record<string, string> | undefined;
-    throw new AuthError(
-      error?.message ?? "Unknown error",
-      error?.code ?? "UNKNOWN",
-      res.status
-    );
+    throw new AuthError(error?.message ?? "Unknown error", error?.code ?? "UNKNOWN", res.status);
   }
 
   return data as T;
