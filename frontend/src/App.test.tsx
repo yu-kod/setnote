@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { renderWithProviders } from "./test-utils";
@@ -19,6 +19,10 @@ function renderApp(path: string) {
 }
 
 describe("App", () => {
+  beforeEach(() => {
+    mockUseAuth.mockReturnValue({ isAuthenticated: false, login: vi.fn() });
+  });
+
   it("renders the site title", () => {
     renderWithProviders(<App />);
     expect(screen.getByRole("heading", { name: "setnote" })).toBeInTheDocument();
@@ -28,6 +32,19 @@ describe("App", () => {
     renderWithProviders(<App />);
     expect(screen.getByText("利用規約")).toBeInTheDocument();
     expect(screen.getByText("プライバシーポリシー")).toBeInTheDocument();
+  });
+
+  it("renders the landing page at /", () => {
+    mockUseAuth.mockReturnValue({ isAuthenticated: false });
+    renderApp("/");
+    expect(screen.getByRole("link", { name: "新規登録" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "ログイン" })).toBeInTheDocument();
+  });
+
+  it("renders the not-found page for an unknown route", () => {
+    mockUseAuth.mockReturnValue({ isAuthenticated: false });
+    renderApp("/no/such/path");
+    expect(screen.getByText("お探しのページが見つかりませんでした")).toBeInTheDocument();
   });
 
   it("renders login page at /login", () => {
