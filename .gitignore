@@ -12,5 +12,6 @@ dist/
 .terraform.lock.hcl
 
 .DS_Store
-.claude/
+.claude/*
+!.claude/skills/
 tsconfig.tsbuildinfo
