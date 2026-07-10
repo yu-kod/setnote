@@ -1,8 +1,11 @@
 name: Deploy
 
 on:
-  pull_request:
-    types: [closed]
+  # main が更新されたら理由を問わず必ずデプロイする。
+  # 実ユーザーによる push/マージはこの push トリガーで起動し、
+  # bot（GITHUB_TOKEN）マージは push が抑制されるため ci-gate.yml が
+  # workflow_dispatch で明示的に起動する（GITHUB_TOKEN でも例外的に起動可能）。
+  push:
     branches: [main]
   workflow_dispatch:
 
@@ -15,9 +18,6 @@ permissions:
 
 jobs:
   deploy:
-    if: >
-      github.event_name == 'workflow_dispatch' ||
-      github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     concurrency:
       group: deploy-production
