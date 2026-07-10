@@ -140,6 +140,22 @@ describe("POST /api/setlists (authenticated)", () => {
 
     expect(res.status).toBe(401);
   });
+
+  it("returns JSON 500 when DynamoDB PutCommand fails", async () => {
+    mockVerify.mockResolvedValue({ sub: "user1", email: "dj@example.com" });
+    mockSend.mockRejectedValue(new Error("DynamoDB timeout"));
+
+    const { app } = await import("../app");
+    const res = await app.request("/api/setlists", {
+      method: "POST",
+      headers: authHeaders(),
+      body: JSON.stringify({ name: "My Set" }),
+    });
+
+    expect(res.status).toBe(500);
+    const body = (await res.json()) as Record<string, Record<string, string>>;
+    expect(body.error.code).toBe("INTERNAL_ERROR");
+  });
 });
 
 describe("GET /api/setlists/mine (authenticated)", () => {
