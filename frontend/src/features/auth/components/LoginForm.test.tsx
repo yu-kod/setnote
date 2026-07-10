@@ -62,7 +62,7 @@ describe("LoginForm", () => {
 
   it("shows unconfirmed user message with link to confirm page", async () => {
     const err = new Error("User is not confirmed");
-    (err as Record<string, unknown>).code = "USER_NOT_CONFIRMED";
+    (err as unknown as Record<string, unknown>).code = "USER_NOT_CONFIRMED";
     mockLogin.mockRejectedValue(err);
     const user = userEvent.setup();
 
