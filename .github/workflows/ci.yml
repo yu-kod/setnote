@@ -5,7 +5,28 @@ on:
     branches: [main]
 
 jobs:
-  check:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      frontend: ${{ steps.filter.outputs.frontend }}
+      backend: ${{ steps.filter.outputs.backend }}
+      infra: ${{ steps.filter.outputs.infra }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            frontend:
+              - 'frontend/**'
+            backend:
+              - 'backend/**'
+            infra:
+              - 'infra/**'
+
+  frontend:
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -15,13 +36,44 @@ jobs:
           node-version: "20"
 
       - name: Install dependencies
-        run: npm run install:all
+        run: cd frontend && npm install
 
-      - name: Typecheck frontend
+      - name: Typecheck
         run: cd frontend && npx tsc --noEmit
 
-      - name: Build frontend
-        run: npm run build:frontend
+      - name: Build
+        run: cd frontend && npm run build
+
+  backend:
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: cd backend && npm install
 
       - name: Build Lambda
-        run: npm run build:lambda
+        run: cd backend && npm run build:lambda
+
+  infra:
+    needs: changes
+    if: needs.changes.outputs.infra == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform fmt check
+        run: terraform -chdir=infra fmt -check -recursive
+
+      - name: Terraform validate
+        run: |
+          terraform -chdir=infra init -backend=false
+          terraform -chdir=infra validate
