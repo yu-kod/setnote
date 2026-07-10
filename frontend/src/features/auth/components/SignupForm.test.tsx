@@ -102,4 +102,32 @@ describe("SignupForm", () => {
     expect(mockSignup).not.toHaveBeenCalled();
     expect(screen.getByRole("alert")).toBeInTheDocument();
   });
+
+  it("shows validation error when password lacks lowercase", async () => {
+    const user = userEvent.setup();
+
+    renderWithProviders(<SignupForm />);
+
+    await user.type(screen.getByLabelText("メールアドレス"), "dj@example.com");
+    await user.type(screen.getByLabelText("パスワード"), "PASSWORD1");
+    await user.type(screen.getByLabelText("ユーザー名"), "DJName");
+    await user.click(screen.getByRole("button", { name: "アカウント作成" }));
+
+    expect(mockSignup).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toHaveTextContent("パスワードに小文字を含めてください");
+  });
+
+  it("shows fallback error when signup rejects with non-Error", async () => {
+    mockSignup.mockRejectedValue("string rejection");
+    const user = userEvent.setup();
+
+    renderWithProviders(<SignupForm />);
+
+    await user.type(screen.getByLabelText("メールアドレス"), "dj@example.com");
+    await user.type(screen.getByLabelText("パスワード"), "P@ssw0rd123");
+    await user.type(screen.getByLabelText("ユーザー名"), "DJName");
+    await user.click(screen.getByRole("button", { name: "アカウント作成" }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent("エラーが発生しました");
+  });
 });

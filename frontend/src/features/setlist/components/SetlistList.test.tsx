@@ -150,4 +150,67 @@ describe("SetlistList", () => {
       expect(screen.getByRole("alert")).toHaveTextContent("Network error");
     });
   });
+
+  it("shows fallback error when fetch rejects with non-Error", async () => {
+    mockFetchMySetlists.mockRejectedValue("network failure");
+    renderWithProviders(<SetlistList />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent("エラーが発生しました");
+    });
+  });
+
+  it("shows error when create setlist fails with Error", async () => {
+    mockFetchMySetlists.mockResolvedValue([]);
+    mockCreateSetlist.mockRejectedValue(new Error("Create failed"));
+    const user = userEvent.setup();
+
+    renderWithProviders(<SetlistList />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "新規作成" })).toBeInTheDocument();
+    });
+    await user.click(screen.getByRole("button", { name: "新規作成" }));
+    await user.type(screen.getByLabelText("セットリスト名"), "Failing Set");
+    await user.click(screen.getByRole("button", { name: "作成" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent("Create failed");
+    });
+  });
+
+  it("does not create setlist when name is only whitespace", async () => {
+    mockFetchMySetlists.mockResolvedValue([]);
+    const user = userEvent.setup();
+
+    renderWithProviders(<SetlistList />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "新規作成" })).toBeInTheDocument();
+    });
+    await user.click(screen.getByRole("button", { name: "新規作成" }));
+    await user.type(screen.getByLabelText("セットリスト名"), " ");
+    await user.click(screen.getByRole("button", { name: "作成" }));
+
+    expect(mockCreateSetlist).not.toHaveBeenCalled();
+  });
+
+  it("shows fallback error when create setlist rejects with non-Error", async () => {
+    mockFetchMySetlists.mockResolvedValue([]);
+    mockCreateSetlist.mockRejectedValue("something went wrong");
+    const user = userEvent.setup();
+
+    renderWithProviders(<SetlistList />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "新規作成" })).toBeInTheDocument();
+    });
+    await user.click(screen.getByRole("button", { name: "新規作成" }));
+    await user.type(screen.getByLabelText("セットリスト名"), "Failing Set");
+    await user.click(screen.getByRole("button", { name: "作成" }));
+
+    await waitFor(() => {
+      expect(screen.getByRole("alert")).toHaveTextContent("作成に失敗しました");
+    });
+  });
 });

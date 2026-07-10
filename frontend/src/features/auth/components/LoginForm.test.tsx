@@ -92,4 +92,17 @@ describe("LoginForm", () => {
 
     expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   });
+
+  it("shows fallback error when login rejects with non-Error", async () => {
+    mockLogin.mockRejectedValue("string rejection");
+    const user = userEvent.setup();
+
+    renderWithProviders(<LoginForm />);
+
+    await user.type(screen.getByLabelText("メールアドレス"), "dj@example.com");
+    await user.type(screen.getByLabelText("パスワード"), "password123");
+    await user.click(screen.getByRole("button", { name: "ログイン" }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent("エラーが発生しました");
+  });
 });
