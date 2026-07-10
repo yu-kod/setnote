@@ -8,20 +8,27 @@ import {
 } from "@aws-sdk/lib-dynamodb";
 import { docClient, TABLES } from "../db/client";
 import { nanoid } from "nanoid";
+import { authMiddleware } from "../middleware/auth";
 
 export const setlistsRoute = new Hono();
 
-setlistsRoute.get("/user/:userId", async (c) => {
+// --- Protected routes (auth required) ---
+// Literal paths must be registered before parameterized /:id
+
+setlistsRoute.get("/mine", authMiddleware, async (c) => {
+  const userId = c.get("userId");
   const result = await docClient.send(
     new QueryCommand({
       TableName: TABLES.setlists,
       IndexName: "gsi-userId",
       KeyConditionExpression: "userId = :uid",
-      ExpressionAttributeValues: { ":uid": c.req.param("userId") },
+      ExpressionAttributeValues: { ":uid": userId },
     })
   );
   return c.json(result.Items ?? []);
 });
+
+// --- Public routes (no auth) ---
 
 setlistsRoute.get("/:id", async (c) => {
   const result = await docClient.send(
@@ -38,17 +45,18 @@ setlistsRoute.get("/:id", async (c) => {
   return c.json(result.Item.publishedSnapshot);
 });
 
-setlistsRoute.post("/", async (c) => {
+setlistsRoute.post("/", authMiddleware, async (c) => {
   const body = await c.req.json();
+  const userId = c.get("userId");
 
-  if (!body.name || !body.userId) {
-    return c.json({ error: "name and userId are required" }, 400);
+  if (!body.name) {
+    return c.json({ error: "name is required" }, 400);
   }
 
   const now = new Date().toISOString();
   const item = {
     id: nanoid(10),
-    userId: body.userId,
+    userId,
     name: body.name,
     eventName: body.eventName ?? null,
     eventLink: body.eventLink ?? null,
@@ -69,9 +77,10 @@ setlistsRoute.post("/", async (c) => {
   return c.json(item, 201);
 });
 
-setlistsRoute.put("/:id", async (c) => {
+setlistsRoute.put("/:id", authMiddleware, async (c) => {
   const body = await c.req.json();
   const id = c.req.param("id");
+  const userId = c.get("userId");
 
   try {
     const result = await docClient.send(
@@ -89,7 +98,7 @@ setlistsRoute.put("/:id", async (c) => {
           ":eventLink": body.eventLink ?? null,
           ":eventDate": body.eventDate ?? null,
           ":now": new Date().toISOString(),
-          ":uid": body.userId,
+          ":uid": userId,
         },
         ReturnValues: "ALL_NEW",
       })
@@ -103,8 +112,8 @@ setlistsRoute.put("/:id", async (c) => {
   }
 });
 
-setlistsRoute.delete("/:id", async (c) => {
-  const body = await c.req.json();
+setlistsRoute.delete("/:id", authMiddleware, async (c) => {
+  const userId = c.get("userId");
 
   try {
     await docClient.send(
@@ -112,7 +121,7 @@ setlistsRoute.delete("/:id", async (c) => {
         TableName: TABLES.setlists,
         Key: { id: c.req.param("id") },
         ConditionExpression: "attribute_exists(id) AND userId = :uid",
-        ExpressionAttributeValues: { ":uid": body.userId },
+        ExpressionAttributeValues: { ":uid": userId },
       })
     );
     return c.body(null, 204);
@@ -124,9 +133,9 @@ setlistsRoute.delete("/:id", async (c) => {
   }
 });
 
-setlistsRoute.post("/:id/publish", async (c) => {
-  const body = await c.req.json();
+setlistsRoute.post("/:id/publish", authMiddleware, async (c) => {
   const id = c.req.param("id");
+  const userId = c.get("userId");
 
   const result = await docClient.send(
     new GetCommand({
@@ -139,7 +148,7 @@ setlistsRoute.post("/:id/publish", async (c) => {
     return c.json({ error: "Not found" }, 404);
   }
 
-  if (result.Item.userId !== body.userId) {
+  if (result.Item.userId !== userId) {
     return c.json({ error: "Forbidden" }, 403);
   }
 
@@ -163,8 +172,8 @@ setlistsRoute.post("/:id/publish", async (c) => {
   return c.json(updated.Attributes);
 });
 
-setlistsRoute.delete("/:id/publish", async (c) => {
-  const body = await c.req.json();
+setlistsRoute.delete("/:id/publish", authMiddleware, async (c) => {
+  const userId = c.get("userId");
 
   try {
     const result = await docClient.send(
@@ -177,7 +186,7 @@ setlistsRoute.delete("/:id/publish", async (c) => {
         ExpressionAttributeValues: {
           ":unpublished": "unpublished",
           ":now": new Date().toISOString(),
-          ":uid": body.userId,
+          ":uid": userId,
         },
         ReturnValues: "ALL_NEW",
       })
