@@ -19,6 +19,18 @@ export function SignupForm() {
       setError("パスワードは8文字以上で入力してください");
       return;
     }
+    if (!/[a-z]/.test(password)) {
+      setError("パスワードに小文字を含めてください");
+      return;
+    }
+    if (!/[A-Z]/.test(password)) {
+      setError("パスワードに大文字を含めてください");
+      return;
+    }
+    if (!/[0-9]/.test(password)) {
+      setError("パスワードに数字を含めてください");
+      return;
+    }
 
     setLoading(true);
     try {

@@ -15,7 +15,12 @@ const CLIENT_ID = process.env.COGNITO_CLIENT_ID || "";
 
 const signupSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(8),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .regex(/[a-z]/, "Password must contain a lowercase letter")
+    .regex(/[A-Z]/, "Password must contain an uppercase letter")
+    .regex(/[0-9]/, "Password must contain a number"),
   username: z.string().min(1),
 });
 
@@ -69,18 +74,23 @@ authRoute.post("/signup", async (c) => {
       201
     );
   } catch (err) {
-    if ((err as Error).name === "UsernameExistsException") {
+    const name = (err as Error).name;
+    if (name === "UsernameExistsException") {
+      return c.json({ error: { code: "USER_EXISTS", message: "User already exists" } }, 409);
+    }
+    if (name === "InvalidPasswordException") {
       return c.json(
         {
           error: {
-            code: "USER_EXISTS",
-            message: "User already exists",
+            code: "INVALID_PASSWORD",
+            message: (err as Error).message,
           },
         },
-        409
+        400
       );
     }
-    throw err;
+    console.error("Signup error:", err);
+    return c.json({ error: { code: "INTERNAL_ERROR", message: "Internal server error" } }, 500);
   }
 });
 
@@ -112,18 +122,18 @@ authRoute.post("/confirm", async (c) => {
 
     return c.json({ confirmed: true });
   } catch (err) {
-    if ((err as Error).name === "CodeMismatchException") {
+    const name = (err as Error).name;
+    if (name === "CodeMismatchException") {
       return c.json(
-        {
-          error: {
-            code: "CODE_MISMATCH",
-            message: "Invalid verification code",
-          },
-        },
+        { error: { code: "CODE_MISMATCH", message: "Invalid verification code" } },
         400
       );
     }
-    throw err;
+    if (name === "ExpiredCodeException") {
+      return c.json({ error: { code: "EXPIRED_CODE", message: (err as Error).message } }, 400);
+    }
+    console.error("Confirm error:", err);
+    return c.json({ error: { code: "INTERNAL_ERROR", message: "Internal server error" } }, 500);
   }
 });
 
@@ -185,6 +195,7 @@ authRoute.post("/signin", async (c) => {
         403
       );
     }
-    throw err;
+    console.error("Signin error:", err);
+    return c.json({ error: { code: "INTERNAL_ERROR", message: "Internal server error" } }, 500);
   }
 });

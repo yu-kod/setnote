@@ -64,6 +64,54 @@ describe("POST /api/auth/signup", () => {
     expect(res.status).toBe(400);
   });
 
+  it("returns 400 when password lacks uppercase letter", async () => {
+    const { app } = await import("../app");
+    const res = await app.request("/api/auth/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: "dj@example.com",
+        password: "password1",
+        username: "DJ_Test",
+      }),
+    });
+
+    expect(res.status).toBe(400);
+    expect(mockCognitoSend).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when password lacks number", async () => {
+    const { app } = await import("../app");
+    const res = await app.request("/api/auth/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: "dj@example.com",
+        password: "Password",
+        username: "DJ_Test",
+      }),
+    });
+
+    expect(res.status).toBe(400);
+    expect(mockCognitoSend).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when password lacks lowercase letter", async () => {
+    const { app } = await import("../app");
+    const res = await app.request("/api/auth/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: "dj@example.com",
+        password: "PASSWORD1",
+        username: "DJ_Test",
+      }),
+    });
+
+    expect(res.status).toBe(400);
+    expect(mockCognitoSend).not.toHaveBeenCalled();
+  });
+
   it("returns 400 when password is missing", async () => {
     const { app } = await import("../app");
     const res = await app.request("/api/auth/signup", {
@@ -106,6 +154,50 @@ describe("POST /api/auth/signup", () => {
     });
 
     expect(res.status).toBe(409);
+  });
+
+  it("returns 400 when password does not meet Cognito policy", async () => {
+    const error = new Error("Password did not conform with policy");
+    error.name = "InvalidPasswordException";
+    mockCognitoSend.mockRejectedValue(error);
+
+    const { app } = await import("../app");
+    const res = await app.request("/api/auth/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: "dj@example.com",
+        password: "P@ssw0rd123",
+        username: "DJ_Test",
+      }),
+    });
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as Record<string, unknown>;
+    const err = body.error as Record<string, string>;
+    expect(err.code).toBe("INVALID_PASSWORD");
+  });
+
+  it("returns 500 with JSON error for unexpected Cognito errors", async () => {
+    const error = new Error("Something went wrong");
+    error.name = "InternalErrorException";
+    mockCognitoSend.mockRejectedValue(error);
+
+    const { app } = await import("../app");
+    const res = await app.request("/api/auth/signup", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: "dj@example.com",
+        password: "P@ssw0rd123",
+        username: "DJ_Test",
+      }),
+    });
+
+    expect(res.status).toBe(500);
+    const body = (await res.json()) as Record<string, unknown>;
+    const err = body.error as Record<string, string>;
+    expect(err.code).toBe("INTERNAL_ERROR");
   });
 });
 
@@ -158,6 +250,48 @@ describe("POST /api/auth/confirm", () => {
     });
 
     expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when code is expired", async () => {
+    const error = new Error("Invalid code provided, please request a code again.");
+    error.name = "ExpiredCodeException";
+    mockCognitoSend.mockRejectedValue(error);
+
+    const { app } = await import("../app");
+    const res = await app.request("/api/auth/confirm", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: "dj@example.com",
+        code: "123456",
+      }),
+    });
+
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as Record<string, unknown>;
+    const err = body.error as Record<string, string>;
+    expect(err.code).toBe("EXPIRED_CODE");
+  });
+
+  it("returns 500 with JSON error for unexpected Cognito errors", async () => {
+    const error = new Error("Something went wrong");
+    error.name = "InternalErrorException";
+    mockCognitoSend.mockRejectedValue(error);
+
+    const { app } = await import("../app");
+    const res = await app.request("/api/auth/confirm", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: "dj@example.com",
+        code: "123456",
+      }),
+    });
+
+    expect(res.status).toBe(500);
+    const body = (await res.json()) as Record<string, unknown>;
+    const err = body.error as Record<string, string>;
+    expect(err.code).toBe("INTERNAL_ERROR");
   });
 });
 
@@ -238,5 +372,26 @@ describe("POST /api/auth/signin", () => {
     });
 
     expect(res.status).toBe(403);
+  });
+
+  it("returns 500 with JSON error for unexpected Cognito errors", async () => {
+    const error = new Error("Something went wrong");
+    error.name = "InternalErrorException";
+    mockCognitoSend.mockRejectedValue(error);
+
+    const { app } = await import("../app");
+    const res = await app.request("/api/auth/signin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: "dj@example.com",
+        password: "P@ssw0rd123",
+      }),
+    });
+
+    expect(res.status).toBe(500);
+    const body = (await res.json()) as Record<string, unknown>;
+    const err = body.error as Record<string, string>;
+    expect(err.code).toBe("INTERNAL_ERROR");
   });
 });

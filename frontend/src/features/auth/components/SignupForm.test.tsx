@@ -37,11 +37,11 @@ describe("SignupForm", () => {
     renderWithProviders(<SignupForm />);
 
     await user.type(screen.getByLabelText("メールアドレス"), "dj@example.com");
-    await user.type(screen.getByLabelText("パスワード"), "password123");
+    await user.type(screen.getByLabelText("パスワード"), "P@ssw0rd123");
     await user.type(screen.getByLabelText("ユーザー名"), "DJName");
     await user.click(screen.getByRole("button", { name: "アカウント作成" }));
 
-    expect(mockSignup).toHaveBeenCalledWith("dj@example.com", "password123", "DJName");
+    expect(mockSignup).toHaveBeenCalledWith("dj@example.com", "P@ssw0rd123", "DJName");
     expect(mockNavigate).toHaveBeenCalledWith("/confirm", {
       state: { email: "dj@example.com" },
     });
@@ -54,11 +54,39 @@ describe("SignupForm", () => {
     renderWithProviders(<SignupForm />);
 
     await user.type(screen.getByLabelText("メールアドレス"), "dj@example.com");
-    await user.type(screen.getByLabelText("パスワード"), "password123");
+    await user.type(screen.getByLabelText("パスワード"), "P@ssw0rd123");
     await user.type(screen.getByLabelText("ユーザー名"), "DJName");
     await user.click(screen.getByRole("button", { name: "アカウント作成" }));
 
     expect(screen.getByRole("alert")).toHaveTextContent("User already exists");
+  });
+
+  it("shows validation error when password lacks uppercase", async () => {
+    const user = userEvent.setup();
+
+    renderWithProviders(<SignupForm />);
+
+    await user.type(screen.getByLabelText("メールアドレス"), "dj@example.com");
+    await user.type(screen.getByLabelText("パスワード"), "password1");
+    await user.type(screen.getByLabelText("ユーザー名"), "DJName");
+    await user.click(screen.getByRole("button", { name: "アカウント作成" }));
+
+    expect(mockSignup).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+  });
+
+  it("shows validation error when password lacks number", async () => {
+    const user = userEvent.setup();
+
+    renderWithProviders(<SignupForm />);
+
+    await user.type(screen.getByLabelText("メールアドレス"), "dj@example.com");
+    await user.type(screen.getByLabelText("パスワード"), "Password");
+    await user.type(screen.getByLabelText("ユーザー名"), "DJName");
+    await user.click(screen.getByRole("button", { name: "アカウント作成" }));
+
+    expect(mockSignup).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert")).toBeInTheDocument();
   });
 
   it("shows validation error when password is too short", async () => {
