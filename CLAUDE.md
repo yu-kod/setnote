@@ -26,13 +26,11 @@
 
 ## PRマージの流れ
 
-実装が完了したら `.claude/skills/pr-merge.md` のスキルに従ってPRを作成・マージする。
+実装が完了したら `.claude/skills/pr-merge.md` のスキルに従ってPRを作成する。
 
 1. フィーチャーブランチにコミット & プッシュ
 2. GitHub MCP ツールでPR作成
-3. `subscribe_pr_activity` でPRイベントを購読
-4. Claude Code Action のレビューを待機（ターンを終了して待つ）
-5. レビュー結果を確認し、問題なければ `mcp__github__merge_pull_request` でマージ
+3. Auto-merge を有効化（CIパスで自動マージ）
 
 **このスキルを省略しない。** main への直接プッシュは禁止。
 
