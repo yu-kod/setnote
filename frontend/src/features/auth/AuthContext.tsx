@@ -5,6 +5,7 @@ import {
   resendCode as apiResendCode,
   signin as apiSignin,
 } from "./api";
+import { TOKEN_KEY, REFRESH_KEY, USER_KEY, clearSession } from "./session";
 
 type User = {
   email: string;
@@ -22,10 +23,6 @@ type AuthContextValue = {
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
-
-const TOKEN_KEY = "setnote_access_token";
-const REFRESH_KEY = "setnote_refresh_token";
-const USER_KEY = "setnote_user";
 
 function loadUser(): User | null {
   const raw = localStorage.getItem(USER_KEY);
@@ -56,9 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(REFRESH_KEY);
-    localStorage.removeItem(USER_KEY);
+    clearSession();
     setUser(null);
   }, []);
 
