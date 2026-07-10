@@ -1,5 +1,7 @@
 import { Routes, Route, Link } from "react-router-dom";
 import SetlistPage from "./pages/SetlistPage";
+import SignupPage from "./pages/SignupPage";
+import ConfirmPage from "./pages/ConfirmPage";
 import NotFoundPage from "./pages/NotFoundPage";
 
 export default function App() {
@@ -13,6 +15,8 @@ export default function App() {
       </Link>
       <Routes>
         <Route path="/s/:id" element={<SetlistPage />} />
+        <Route path="/signup" element={<SignupPage />} />
+        <Route path="/confirm" element={<ConfirmPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
       <footer className="footer">
