@@ -1,0 +1,117 @@
+name: CI Gate
+
+# CI（ci.yml）の完了を workflow_run で検知して以下を行う:
+#   - CI 成功 → 対象 PR をマージコミットでマージし、deploy を workflow_dispatch で起動
+#   - CI 失敗 → Claude に自動修復を依頼（1 PR あたり最大 1 回。ループ暴走防止）
+#
+# workflow_run は他ワークフローの完了イベントであり、GITHUB_TOKEN 起因の
+# マージ/push でも抑制されずに起動する。deploy の起動には workflow_dispatch を
+# 使う（GITHUB_TOKEN でも例外的に起動できる唯一のイベント）。
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+jobs:
+  # ---- CI 成功: マージ（PAT 実行 → main への push が発火し deploy.yml が起動） ----
+  merge:
+    if: >
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve open PR for head branch
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          REPO: ${{ github.repository }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          num=$(gh pr list --repo "$REPO" --head "$HEAD_BRANCH" --state open --json number --jq '.[0].number // empty')
+          echo "number=$num" >> "$GITHUB_OUTPUT"
+
+      - name: Merge PR (merge commit)
+        if: steps.pr.outputs.number != ''
+        env:
+          # PAT で実行することで実ユーザー扱いのマージになり、
+          # main への push が抑制されず deploy.yml（on: push main）が起動する。
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          REPO: ${{ github.repository }}
+          PR: ${{ steps.pr.outputs.number }}
+        run: |
+          # squash ではなくマージコミットでマージ
+          gh pr merge "$PR" --repo "$REPO" --merge --delete-branch
+
+  # ---- CI 失敗: Claude に自動修復を依頼 ----
+  fix-on-failure:
+    if: >
+      github.event.workflow_run.event == 'pull_request' &&
+      github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve open PR and loop guard
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+        run: |
+          num=$(gh pr list --repo "$REPO" --head "$HEAD_BRANCH" --state open --json number --jq '.[0].number // empty')
+          echo "number=$num" >> "$GITHUB_OUTPUT"
+          if [ -z "$num" ]; then
+            echo "No open PR; nothing to fix."
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # ループ暴走防止: 既に自動修復を試みた PR は再修復しない（人手の確認へ）
+          attempted=$(gh pr view "$num" --repo "$REPO" --json labels --jq '[.labels[].name] | index("ci-auto-fix-attempted") // empty')
+          if [ -n "$attempted" ]; then
+            gh pr comment "$num" --repo "$REPO" --body "⚠️ 自動修復を既に1回試みましたが CI が再度失敗しました。人手での確認が必要です。"
+            echo "proceed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "proceed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Mark auto-fix attempted
+        if: steps.pr.outputs.proceed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR: ${{ steps.pr.outputs.number }}
+        run: |
+          gh label create "ci-auto-fix-attempted" --repo "$REPO" --color BFD4F2 --description "CI 失敗を Claude が自動修復済み" --force
+          gh pr edit "$PR" --repo "$REPO" --add-label "ci-auto-fix-attempted"
+
+      - name: Checkout PR branch
+        if: steps.pr.outputs.proceed == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_branch }}
+          fetch-depth: 0
+
+      - name: Claude auto-fix
+        if: steps.pr.outputs.proceed == 'true'
+        uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # PAT で push することで、修復コミットが CI を再トリガーし
+          # （成功すれば）自動マージ→デプロイまでループが閉じる。
+          github_token: ${{ secrets.GH_PAT }}
+          use_commit_signing: true
+          claude_args: "--max-turns 25"
+          prompt: |
+            この PR の CI が失敗しました（PR #${{ steps.pr.outputs.number }}、ブランチ ${{ github.event.workflow_run.head_branch }}）。
+            失敗ログ: ${{ github.event.workflow_run.html_url }}
+
+            次の手順で修正してください:
+            1. リポジトリ直下の CLAUDE.md と .claude/skills/coding-standards.md を必ず読み、規約に従う。
+            2. frontend / backend の CI（vitest, prettier --check, eslint, tsc）をローカルで再現し、失敗原因を特定する。
+            3. 失敗を解消する最小限の修正を、現在チェックアウトされているこのブランチにコミットしてください。
+            4. テストのカバレッジ100%要件・既存テストを壊さないこと。テストを消して通すことは禁止。
+            5. 無関係な変更・大規模リファクタは行わない。
