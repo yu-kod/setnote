@@ -123,3 +123,71 @@ setlistsRoute.delete("/:id", async (c) => {
     throw err;
   }
 });
+
+setlistsRoute.post("/:id/publish", async (c) => {
+  const body = await c.req.json();
+  const id = c.req.param("id");
+
+  const result = await docClient.send(
+    new GetCommand({
+      TableName: TABLES.setlists,
+      Key: { id },
+    })
+  );
+
+  if (!result.Item) {
+    return c.json({ error: "Not found" }, 404);
+  }
+
+  if (result.Item.userId !== body.userId) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
+
+  const { status: _status, publishedSnapshot: _snap, ...snapshot } = result.Item;
+
+  const updated = await docClient.send(
+    new UpdateCommand({
+      TableName: TABLES.setlists,
+      Key: { id },
+      UpdateExpression:
+        "SET #status = :published, publishedSnapshot = :snapshot, updatedAt = :now",
+      ExpressionAttributeNames: { "#status": "status" },
+      ExpressionAttributeValues: {
+        ":published": "published",
+        ":snapshot": snapshot,
+        ":now": new Date().toISOString(),
+      },
+      ReturnValues: "ALL_NEW",
+    })
+  );
+
+  return c.json(updated.Attributes);
+});
+
+setlistsRoute.delete("/:id/publish", async (c) => {
+  const body = await c.req.json();
+
+  try {
+    const result = await docClient.send(
+      new UpdateCommand({
+        TableName: TABLES.setlists,
+        Key: { id: c.req.param("id") },
+        UpdateExpression: "SET #status = :unpublished, updatedAt = :now",
+        ConditionExpression: "attribute_exists(id) AND userId = :uid",
+        ExpressionAttributeNames: { "#status": "status" },
+        ExpressionAttributeValues: {
+          ":unpublished": "unpublished",
+          ":now": new Date().toISOString(),
+          ":uid": body.userId,
+        },
+        ReturnValues: "ALL_NEW",
+      })
+    );
+    return c.json(result.Attributes);
+  } catch (err) {
+    if ((err as Error).name === "ConditionalCheckFailedException") {
+      return c.json({ error: "Not found" }, 404);
+    }
+    throw err;
+  }
+});

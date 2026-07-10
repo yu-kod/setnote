@@ -230,3 +230,99 @@ describe("DELETE /api/setlists/:id", () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe("POST /api/setlists/:id/publish", () => {
+  beforeEach(() => {
+    mockSend.mockReset();
+  });
+
+  it("publishes a draft setlist and returns 200", async () => {
+    const setlist = {
+      id: "abc",
+      userId: "user1",
+      name: "My Set",
+      status: "draft",
+      tracks: [{ trackName: "Song 1" }],
+    };
+    mockSend
+      .mockResolvedValueOnce({ Item: setlist })
+      .mockResolvedValueOnce({ Attributes: { ...setlist, status: "published" } });
+
+    const { app } = await import("../app");
+    const res = await app.request("/api/setlists/abc/publish", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: "user1" }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.status).toBe("published");
+  });
+
+  it("returns 404 when setlist not found", async () => {
+    mockSend.mockResolvedValue({ Item: undefined });
+
+    const { app } = await import("../app");
+    const res = await app.request("/api/setlists/abc/publish", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: "user1" }),
+    });
+
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 403 when userId does not match", async () => {
+    mockSend.mockResolvedValue({
+      Item: { id: "abc", userId: "user1", status: "draft" },
+    });
+
+    const { app } = await import("../app");
+    const res = await app.request("/api/setlists/abc/publish", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: "wrong-user" }),
+    });
+
+    expect(res.status).toBe(403);
+  });
+});
+
+describe("DELETE /api/setlists/:id/publish", () => {
+  beforeEach(() => {
+    mockSend.mockReset();
+  });
+
+  it("unpublishes a setlist and returns 200", async () => {
+    mockSend.mockResolvedValue({
+      Attributes: { id: "abc", status: "unpublished" },
+    });
+
+    const { app } = await import("../app");
+    const res = await app.request("/api/setlists/abc/publish", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: "user1" }),
+    });
+
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.status).toBe("unpublished");
+  });
+
+  it("returns 404 when setlist not found or userId mismatch", async () => {
+    const err = new Error("ConditionalCheckFailedException");
+    err.name = "ConditionalCheckFailedException";
+    mockSend.mockRejectedValue(err);
+
+    const { app } = await import("../app");
+    const res = await app.request("/api/setlists/abc/publish", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId: "wrong-user" }),
+    });
+
+    expect(res.status).toBe(404);
+  });
+});
