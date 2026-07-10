@@ -1,9 +1,4 @@
-import serverlessExpress from "@codegenie/serverless-express";
-import { createApp } from "./app";
+import { handle } from "hono/aws-lambda";
+import { app } from "./app";
 
-const app = createApp();
-const serverlessExpressInstance = serverlessExpress({ app });
-
-export const handler = async (event: unknown, context: unknown) => {
-  return serverlessExpressInstance(event, context);
-};
+export const handler = handle(app);

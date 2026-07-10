@@ -1,8 +1,8 @@
-import { createApp } from "./app";
+import { serve } from "@hono/node-server";
+import { app } from "./app";
 
-const app = createApp({ corsOrigin: "http://localhost:5173" });
-const PORT = process.env.PORT || 3001;
+const PORT = Number(process.env.PORT) || 3001;
 
-app.listen(PORT, () => {
+serve({ fetch: app.fetch, port: PORT }, () => {
   console.log(`Backend running on http://localhost:${PORT}`);
 });
