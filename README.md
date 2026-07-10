@@ -69,4 +69,4 @@ npm test
 
 ## ライセンス
 
-Private
+[MIT](./LICENSE)
