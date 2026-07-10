@@ -2,7 +2,9 @@ import { Routes, Route, Link } from "react-router-dom";
 import SetlistPage from "./pages/SetlistPage";
 import SignupPage from "./pages/SignupPage";
 import ConfirmPage from "./pages/ConfirmPage";
+import LoginPage from "./pages/LoginPage";
 import NotFoundPage from "./pages/NotFoundPage";
+import { ProtectedRoute } from "./features/auth/components/ProtectedRoute";
 
 export default function App() {
   return (
@@ -17,6 +19,10 @@ export default function App() {
         <Route path="/s/:id" element={<SetlistPage />} />
         <Route path="/signup" element={<SignupPage />} />
         <Route path="/confirm" element={<ConfirmPage />} />
+        <Route path="/login" element={<LoginPage />} />
+        <Route element={<ProtectedRoute />}>
+          <Route path="/dashboard" element={<div>ダッシュボード</div>} />
+        </Route>
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
       <footer className="footer">
