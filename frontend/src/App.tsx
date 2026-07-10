@@ -4,6 +4,7 @@ import SignupPage from "./pages/SignupPage";
 import ConfirmPage from "./pages/ConfirmPage";
 import LoginPage from "./pages/LoginPage";
 import NotFoundPage from "./pages/NotFoundPage";
+import DashboardPage from "./pages/DashboardPage";
 import { ProtectedRoute } from "./features/auth/components/ProtectedRoute";
 
 export default function App() {
@@ -21,7 +22,7 @@ export default function App() {
         <Route path="/confirm" element={<ConfirmPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route element={<ProtectedRoute />}>
-          <Route path="/dashboard" element={<div>ダッシュボード</div>} />
+          <Route path="/dashboard" element={<DashboardPage />} />
         </Route>
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
