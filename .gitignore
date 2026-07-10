@@ -1,0 +1,16 @@
+node_modules/
+dist/
+*.db
+*.db-shm
+*.db-wal
+.env
+
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
+
+.DS_Store
+.claude/
+tsconfig.tsbuildinfo
