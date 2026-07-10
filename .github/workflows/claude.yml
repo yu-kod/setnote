@@ -29,14 +29,6 @@ jobs:
       - uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          allowed_tools: |
-            Bash
-            Read
-            Write
-            Edit
-            Glob
-            Grep
-            WebFetch
-          direct_prompt: |
+          prompt: |
             Follow the coding standards defined in .claude/skills/coding-standards.md.
             Follow project rules defined in CLAUDE.md.
