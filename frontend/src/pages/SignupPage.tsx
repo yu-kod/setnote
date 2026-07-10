@@ -1,14 +1,24 @@
 import { Link } from "react-router-dom";
 import { SignupForm } from "../features/auth/components/SignupForm";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function SignupPage() {
   return (
-    <div className="card">
-      <h2>アカウント作成</h2>
-      <SignupForm />
-      <p className="text-muted mt-16 text-center">
-        アカウントをお持ちの方は <Link to="/login">ログイン</Link>
-      </p>
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>
+          <h2 className="text-xl font-bold">アカウント作成</h2>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <SignupForm />
+        <p className="mt-4 text-center text-sm text-muted-foreground">
+          アカウントをお持ちの方は{" "}
+          <Link to="/login" className="text-primary hover:text-primary/80">
+            ログイン
+          </Link>
+        </p>
+      </CardContent>
+    </Card>
   );
 }

@@ -2,6 +2,10 @@ import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import { AuthError } from "../api";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function LoginForm() {
   const { login } = useAuth();
@@ -32,41 +36,35 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit}>
+    <form onSubmit={handleSubmit} className="space-y-4">
       {error && (
-        <div role="alert" className="error-message">
-          {error}
-        </div>
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
-      <div className="form-group">
-        <label htmlFor="login-email" className="label">
-          メールアドレス
-        </label>
-        <input
+      <div className="space-y-2">
+        <Label htmlFor="login-email">メールアドレス</Label>
+        <Input
           id="login-email"
           type="email"
-          className="input"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
         />
       </div>
-      <div className="form-group">
-        <label htmlFor="login-password" className="label">
-          パスワード
-        </label>
-        <input
+      <div className="space-y-2">
+        <Label htmlFor="login-password">パスワード</Label>
+        <Input
           id="login-password"
           type="password"
-          className="input"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
         />
       </div>
-      <button type="submit" className="btn" disabled={loading}>
+      <Button type="submit" className="w-full" disabled={loading}>
         {loading ? "ログイン中..." : "ログイン"}
-      </button>
+      </Button>
     </form>
   );
 }
