@@ -1,0 +1,136 @@
+name: AWS Diagnostics
+
+on:
+  workflow_dispatch:
+    inputs:
+      passphrase:
+        description: "復号用パスフレーズ（結果の暗号化に使用）"
+        required: true
+        type: string
+
+env:
+  AWS_REGION: ap-northeast-1
+  PROJECT_NAME: setnote
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mask passphrase
+        run: echo "::add-mask::${{ inputs.passphrase }}"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Run diagnostics
+        run: |
+          exec > diagnostics.txt 2>&1
+          set +e
+
+          echo "===== DIAGNOSTIC REPORT ====="
+          echo "Timestamp: $(date -u)"
+          echo ""
+
+          echo "--- Lambda Function ---"
+          aws lambda get-function-configuration \
+            --function-name ${PROJECT_NAME}-api \
+            --query '{Runtime:Runtime,Timeout:Timeout,MemorySize:MemorySize,State:State,LastModified:LastModified,EnvVars:Environment.Variables|keys(@)}' \
+            --output json
+          echo ""
+
+          echo "--- Lambda IAM Role ---"
+          ROLE_NAME="${PROJECT_NAME}-lambda-role"
+          echo "Role: $ROLE_NAME"
+
+          echo ""
+          echo "Inline policies:"
+          aws iam list-role-policies --role-name "$ROLE_NAME" --output json
+
+          echo ""
+          echo "Attached policies:"
+          aws iam list-attached-role-policies --role-name "$ROLE_NAME" --output json
+
+          echo ""
+          echo "Inline policy details:"
+          for policy in $(aws iam list-role-policies --role-name "$ROLE_NAME" --query 'PolicyNames[]' --output text); do
+            echo "  Policy: $policy"
+            aws iam get-role-policy --role-name "$ROLE_NAME" --policy-name "$policy" --output json
+            echo ""
+          done
+
+          echo "--- Cognito User Pool ---"
+          POOL_ID=$(aws cognito-idp list-user-pools --max-results 10 --query "UserPools[?Name=='${PROJECT_NAME}-user-pool'].Id" --output text)
+          if [ -n "$POOL_ID" ]; then
+            echo "Pool found: $POOL_ID"
+            aws cognito-idp describe-user-pool --user-pool-id "$POOL_ID" \
+              --query '{Status:UserPool.Status,MfaConfig:UserPool.MfaConfiguration,SchemaAttributes:UserPool.SchemaAttributes[*].Name}' \
+              --output json
+          else
+            echo "ERROR: User pool not found"
+          fi
+
+          echo ""
+          echo "--- API Gateway ---"
+          aws apigatewayv2 get-apis \
+            --query "Items[?Name=='${PROJECT_NAME}-api']" \
+            --output json
+
+          echo ""
+          echo "--- CloudWatch Logs (last 30 min errors) ---"
+          LOG_GROUP="/aws/lambda/${PROJECT_NAME}-api"
+          START_TIME=$(date -u -d '30 minutes ago' +%s000 2>/dev/null || date -u -v-30M +%s000)
+          aws logs filter-log-events \
+            --log-group-name "$LOG_GROUP" \
+            --start-time "$START_TIME" \
+            --filter-pattern "ERROR" \
+            --limit 20 \
+            --query 'events[*].message' \
+            --output json 2>&1 || echo "Could not fetch logs"
+
+          echo ""
+          echo "--- CloudWatch Logs (last 30 min all) ---"
+          aws logs filter-log-events \
+            --log-group-name "$LOG_GROUP" \
+            --start-time "$START_TIME" \
+            --limit 30 \
+            --query 'events[*].message' \
+            --output json 2>&1 || echo "Could not fetch logs"
+
+          echo ""
+          echo "--- API Endpoint Test ---"
+          API_URL=$(aws apigatewayv2 get-apis --query "Items[?Name=='${PROJECT_NAME}-api'].ApiEndpoint" --output text)
+          if [ -n "$API_URL" ]; then
+            echo "Endpoint: $API_URL"
+            echo "POST /api/auth/signup response:"
+            curl -s -o /tmp/response.txt -w "HTTP %{http_code}" \
+              -X POST "$API_URL/api/auth/signup" \
+              -H "Content-Type: application/json" \
+              -d '{"email":"diag-test@example.com","password":"DiagTest123!","username":"diagtest"}'
+            echo ""
+            cat /tmp/response.txt
+          else
+            echo "ERROR: API endpoint not found"
+          fi
+
+          echo ""
+          echo "===== END DIAGNOSTIC REPORT ====="
+
+      - name: Encrypt results
+        run: openssl enc -aes-256-cbc -pbkdf2 -in diagnostics.txt -out diagnostics.enc -pass pass:${{ inputs.passphrase }}
+
+      - name: Upload encrypted results
+        uses: actions/upload-artifact@v4
+        with:
+          name: diagnostics
+          path: diagnostics.enc
+          retention-days: 3
+
+      - name: Summary
+        run: echo "診断完了。Artifacts から diagnostics.enc をダウンロードし、以下で復号してください：" >> $GITHUB_STEP_SUMMARY && echo '```' >> $GITHUB_STEP_SUMMARY && echo "openssl enc -aes-256-cbc -pbkdf2 -d -in diagnostics.enc -out diagnostics.txt -pass pass:YOUR_PASSPHRASE" >> $GITHUB_STEP_SUMMARY && echo '```' >> $GITHUB_STEP_SUMMARY
