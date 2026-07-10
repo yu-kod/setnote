@@ -37,5 +37,5 @@ export function fetchMySetlists(): Promise<Setlist[]> {
 }
 
 export function createSetlist(name: string): Promise<Setlist> {
-  return setlistRequest<Setlist>("/", { method: "POST", body: { name } });
+  return setlistRequest<Setlist>("", { method: "POST", body: { name } });
 }

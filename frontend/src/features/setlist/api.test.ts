@@ -49,7 +49,7 @@ describe("fetchMySetlists", () => {
 });
 
 describe("createSetlist", () => {
-  it("calls POST /api/setlists/ with name in body", async () => {
+  it("calls POST /api/setlists (no trailing slash) with name in body", async () => {
     localStorage.setItem("setnote_access_token", "test-token");
     mockFetch.mockResolvedValue({
       ok: true,
@@ -59,7 +59,7 @@ describe("createSetlist", () => {
 
     const result = await createSetlist("New Set");
 
-    expect(mockFetch).toHaveBeenCalledWith("/api/setlists/", {
+    expect(mockFetch).toHaveBeenCalledWith("/api/setlists", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
