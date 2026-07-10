@@ -149,8 +149,7 @@ setlistsRoute.post("/:id/publish", async (c) => {
     new UpdateCommand({
       TableName: TABLES.setlists,
       Key: { id },
-      UpdateExpression:
-        "SET #status = :published, publishedSnapshot = :snapshot, updatedAt = :now",
+      UpdateExpression: "SET #status = :published, publishedSnapshot = :snapshot, updatedAt = :now",
       ExpressionAttributeNames: { "#status": "status" },
       ExpressionAttributeValues: {
         ":published": "published",

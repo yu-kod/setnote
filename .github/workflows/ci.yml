@@ -42,6 +42,12 @@ jobs:
       - name: Install dependencies
         run: cd frontend && npm install
 
+      - name: Lint
+        run: cd frontend && npm run lint
+
+      - name: Format check
+        run: cd frontend && npm run format:check
+
       - name: Typecheck
         run: cd frontend && npx tsc --noEmit
 
@@ -64,6 +70,12 @@ jobs:
 
       - name: Install dependencies
         run: cd backend && npm install
+
+      - name: Lint
+        run: cd backend && npm run lint
+
+      - name: Format check
+        run: cd backend && npm run format:check
 
       - name: Test
         run: cd backend && npm test
