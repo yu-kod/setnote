@@ -29,12 +29,7 @@ jobs:
       - uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
-          claude_args: '--allowedTools "Bash(gh pr review:*)" "Bash(gh pr comment:*)" "Bash(gh pr diff:*)" "Bash(gh pr view:*)"'
           prompt: |
             Follow the coding standards defined in .claude/skills/coding-standards.md.
             Follow project rules defined in CLAUDE.md.
             Review the PR diff. If you find issues, fix them by pushing commits.
-            After reviewing, submit a formal review using the gh CLI:
-            - If no issues: gh pr review <number> --approve --body "LGTM"
-            - If issues remain: gh pr review <number> --request-changes --body "<summary>"
-            The PR number is ${{ github.event.pull_request.number }}.
