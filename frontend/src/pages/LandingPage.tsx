@@ -25,9 +25,7 @@ export default function LandingPage() {
   return (
     <div className="py-8">
       <section className="text-center">
-        <h2 className="text-2xl font-bold md:text-3xl">
-          DJ セットリストを、かんたんに作成・共有
-        </h2>
+        <h2 className="text-2xl font-bold md:text-3xl">DJ セットリストを、かんたんに作成・共有</h2>
         <p className="mx-auto mt-3 max-w-md text-muted-foreground">
           プレイした曲をまとめて、公開URL一つでファンに届けよう。
         </p>

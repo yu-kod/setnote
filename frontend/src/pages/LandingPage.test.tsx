@@ -25,35 +25,24 @@ describe("LandingPage", () => {
   it("shows a service introduction", () => {
     mockUseAuth.mockReturnValue({ isAuthenticated: false });
     renderLanding();
-    expect(
-      screen.getByRole("heading", { name: /セットリスト/ })
-    ).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /セットリスト/ })).toBeInTheDocument();
   });
 
   it("shows login and signup CTAs when not authenticated", () => {
     mockUseAuth.mockReturnValue({ isAuthenticated: false });
     renderLanding();
-    expect(screen.getByRole("link", { name: "ログイン" })).toHaveAttribute(
-      "href",
-      "/login"
-    );
-    expect(screen.getByRole("link", { name: "新規登録" })).toHaveAttribute(
-      "href",
-      "/signup"
-    );
-    expect(
-      screen.queryByRole("link", { name: "ダッシュボードへ" })
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "ログイン" })).toHaveAttribute("href", "/login");
+    expect(screen.getByRole("link", { name: "新規登録" })).toHaveAttribute("href", "/signup");
+    expect(screen.queryByRole("link", { name: "ダッシュボードへ" })).not.toBeInTheDocument();
   });
 
   it("shows a dashboard CTA when authenticated", () => {
     mockUseAuth.mockReturnValue({ isAuthenticated: true });
     renderLanding();
-    expect(
-      screen.getByRole("link", { name: "ダッシュボードへ" })
-    ).toHaveAttribute("href", "/dashboard");
-    expect(
-      screen.queryByRole("link", { name: "ログイン" })
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "ダッシュボードへ" })).toHaveAttribute(
+      "href",
+      "/dashboard"
+    );
+    expect(screen.queryByRole("link", { name: "ログイン" })).not.toBeInTheDocument();
   });
 });
