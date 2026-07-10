@@ -47,6 +47,8 @@ triggers:
 
 - **失敗するテストなしにプロダクションコードを書かない**
 - **1つのサイクルでは1つの振る舞いだけを扱う** — 一度に複数の機能を実装しない
+  - 例: CRUD API なら POST → GET → PUT → DELETE を1つずつサイクルする。全エンドポイントのテストを一括で書いてから一括で実装するのは禁止
+  - サイクルの単位 = 1つのエンドポイント or 1つの振る舞い（正常系/異常系は同じサイクルでOK）
 - **テストが通っている間は新しいコードを書かない** — 次の失敗するテストを書くことから始める
 - **テスト実行の確認を省略しない** — Red で本当に失敗すること、Green で本当に通ることを毎回確認する
 
@@ -70,11 +72,21 @@ triggers:
 - `BrowserRouter` 等を含む `renderWithProviders()` ラッパーを作る
 - テストしないもの: スタイリング、内部コンポーネントstate、サードパーティライブラリの内部
 
-### Express/バックエンドのテスト
+### Hono バックエンドのテスト
 
-- `supertest` で app インスタンス経由でテスト（サーバーを起動しない）
+- `app.request()` メソッドで直接テスト（HTTP サーバー不要、supertest 不要）
 - DynamoDB は `vi.mock('@aws-sdk/lib-dynamodb')` でクライアントレベルでモック
-- ルートはインテグレーションテスト（supertest）、複雑なビジネスロジックはユニットテスト
+- ルートはインテグレーションテスト（app.request）、複雑なビジネスロジックはユニットテスト
+- テスト例:
+  ```ts
+  const { app } = await import("../app");
+  const res = await app.request("/api/setlists", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: "My Set", userId: "user1" }),
+  });
+  expect(res.status).toBe(201);
+  ```
 
 ### モック戦略
 
