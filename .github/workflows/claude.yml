@@ -32,3 +32,6 @@ jobs:
           prompt: |
             Follow the coding standards defined in .claude/skills/coding-standards.md.
             Follow project rules defined in CLAUDE.md.
+            Review the PR diff. If you find issues, fix them by pushing commits.
+            If the code looks good, submit an APPROVE review with a short summary.
+            Always submit a review: APPROVE if no issues, REQUEST_CHANGES if issues remain after your fixes.
