@@ -84,7 +84,25 @@ describe("SetlistList", () => {
     expect(mockNavigate).toHaveBeenCalledWith("/setlists/abc123/edit");
   });
 
-  it("creates a new setlist and navigates to edit page", async () => {
+  it("opens modal dialog when clicking new setlist button", async () => {
+    mockFetchMySetlists.mockResolvedValue([]);
+    const user = userEvent.setup();
+
+    renderWithProviders(<SetlistList />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "新規作成" })).toBeInTheDocument();
+    });
+
+    const dialog = screen.getByRole("dialog", { hidden: true });
+    expect(dialog).not.toHaveAttribute("open");
+
+    await user.click(screen.getByRole("button", { name: "新規作成" }));
+
+    expect(dialog.hasAttribute("open")).toBe(true);
+  });
+
+  it("creates a new setlist via modal and navigates to edit page", async () => {
     mockFetchMySetlists.mockResolvedValue([]);
     mockCreateSetlist.mockResolvedValue({ id: "new123", name: "New Set" });
     const user = userEvent.setup();
@@ -103,6 +121,25 @@ describe("SetlistList", () => {
       expect(mockCreateSetlist).toHaveBeenCalledWith("New Set");
     });
     expect(mockNavigate).toHaveBeenCalledWith("/setlists/new123/edit");
+  });
+
+  it("closes modal when cancel button is clicked", async () => {
+    mockFetchMySetlists.mockResolvedValue([]);
+    const user = userEvent.setup();
+
+    renderWithProviders(<SetlistList />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "新規作成" })).toBeInTheDocument();
+    });
+    await user.click(screen.getByRole("button", { name: "新規作成" }));
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog.hasAttribute("open")).toBe(true);
+
+    await user.click(screen.getByRole("button", { name: "キャンセル" }));
+
+    expect(dialog.hasAttribute("open")).toBe(false);
   });
 
   it("shows error when fetch fails", async () => {
