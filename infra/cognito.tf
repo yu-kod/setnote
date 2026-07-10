@@ -45,8 +45,8 @@ resource "aws_cognito_user_pool" "main" {
 
   verification_message_template {
     default_email_option = "CONFIRM_WITH_CODE"
-    email_subject        = "setnote - メール認証コード"
-    email_message        = "認証コード: {####}"
+    email_subject        = "【setnote】メールアドレスの確認"
+    email_message        = "setnoteへのご登録ありがとうございます。<br><br>以下の認証コードを入力して、メールアドレスの確認を完了してください。<br><br>認証コード: <strong>{####}</strong><br><br>このコードの有効期限は24時間です。<br>心当たりのない場合は、このメールを無視してください。"
   }
 }
 
