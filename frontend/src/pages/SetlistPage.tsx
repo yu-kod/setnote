@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { fetchPublicSetlist } from "../features/setlist/api";
 import type { Setlist } from "../features/setlist/types";
@@ -18,6 +18,8 @@ export default function SetlistPage() {
   const { id } = useParams<{ id: string }>();
   const [setlist, setSetlist] = useState<Setlist | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const playerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchPublicSetlist(id!)
@@ -39,6 +41,17 @@ export default function SetlistPage() {
   if (!setlist) {
     return <NotFoundPage />;
   }
+
+  const tracks = setlist.tracks;
+  // 未選択（初期表示）は先頭曲を開いた状態にする。
+  const selected = tracks.find((t) => t.id === selectedId) ?? tracks[0];
+
+  const handleSelect = (trackId: string) => {
+    setSelectedId(trackId);
+    // 長いリストでも下のプレイヤーが画面内に来るよう寄せる。
+    // playerRef は目次を描画している間（＝行がクリックできる間）は必ず存在する。
+    playerRef.current!.scrollIntoView({ block: "nearest" });
+  };
 
   return (
     <div className="space-y-6">
@@ -63,50 +76,71 @@ export default function SetlistPage() {
         )}
       </div>
 
-      <ol className="space-y-3">
-        {setlist.tracks.map((track, i) => (
-          <li key={track.id}>
+      {selected ? (
+        <div className="space-y-4">
+          {/* 目次：全曲を一覧表示。行をタップすると下のプレイヤーが切り替わる。 */}
+          <ol className="divide-y overflow-hidden rounded-md border">
+            {tracks.map((track, i) => {
+              const active = track.id === selected.id;
+              return (
+                <li key={track.id}>
+                  <button
+                    type="button"
+                    onClick={() => handleSelect(track.id)}
+                    aria-current={active ? "true" : undefined}
+                    className={`flex w-full items-baseline gap-2 px-4 py-3 text-left transition-colors ${
+                      active ? "bg-muted" : "hover:bg-muted/50"
+                    }`}
+                  >
+                    <span className="text-muted-foreground">{i + 1}.</span>
+                    <span className="font-medium">{track.title}</span>
+                    {track.artist && (
+                      <span className="text-sm text-muted-foreground">— {track.artist}</span>
+                    )}
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
+
+          {/* 選択中の1曲だけをプレイヤーとして開く。 */}
+          <div ref={playerRef}>
             <Card>
-              <CardContent className="flex gap-4 pt-6">
-                {track.songLink && (
-                  <div className="w-40 shrink-0">
-                    <MediaEmbed url={track.songLink} />
+              <CardContent className="space-y-3 pt-6">
+                {selected.songLink ? (
+                  <MediaEmbed url={selected.songLink} />
+                ) : (
+                  <p className="text-sm text-muted-foreground">再生リンクはありません</p>
+                )}
+                {selected.source &&
+                  (isUrl(selected.source) ? (
+                    <a
+                      href={selected.source}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block text-sm text-primary underline underline-offset-4"
+                    >
+                      入手元
+                    </a>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">入手元: {selected.source}</p>
+                  ))}
+                {selected.customFields.length > 0 && (
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                    {selected.customFields.map((f) => (
+                      <span key={f.id}>
+                        {f.label}: {f.value}
+                      </span>
+                    ))}
                   </div>
                 )}
-                <div className="min-w-0 flex-1 space-y-1">
-                  <div className="flex gap-2">
-                    <span className="text-muted-foreground">{i + 1}.</span>
-                    <span className="font-semibold">{track.title}</span>
-                  </div>
-                  {track.artist && <p className="text-sm text-muted-foreground">{track.artist}</p>}
-                  {track.source &&
-                    (isUrl(track.source) ? (
-                      <a
-                        href={track.source}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="block text-sm text-primary underline underline-offset-4"
-                      >
-                        入手元
-                      </a>
-                    ) : (
-                      <p className="text-sm text-muted-foreground">入手元: {track.source}</p>
-                    ))}
-                  {track.customFields.length > 0 && (
-                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                      {track.customFields.map((f) => (
-                        <span key={f.id}>
-                          {f.label}: {f.value}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
               </CardContent>
             </Card>
-          </li>
-        ))}
-      </ol>
+          </div>
+        </div>
+      ) : (
+        <p className="text-muted-foreground">曲がまだありません</p>
+      )}
     </div>
   );
 }
