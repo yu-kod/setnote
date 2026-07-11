@@ -13,9 +13,7 @@ export default function App() {
     <div className="mx-auto max-w-2xl px-4 py-2 md:px-6">
       <Link to="/" className="block no-underline">
         <header className="py-6 pb-4 text-center">
-          <h1 className="text-3xl font-bold bg-gradient-to-br from-primary to-accent bg-clip-text text-transparent">
-            setnote
-          </h1>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground">setnote</h1>
           <p className="mt-1 text-sm text-muted-foreground">DJセットリストを作成・共有</p>
         </header>
       </Link>
