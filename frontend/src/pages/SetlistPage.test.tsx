@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import userEvent from "@testing-library/user-event";
 import { renderWithProviders, screen, waitFor } from "../test-utils";
 import SetlistPage from "./SetlistPage";
 import { fetchPublicSetlist } from "../features/setlist/api";
@@ -34,6 +35,8 @@ function buildPublicSetlist(overrides: Partial<Setlist> = {}): Setlist {
 
 beforeEach(() => {
   mockFetch.mockReset();
+  // jsdom は scrollIntoView 未実装のためモックする。
+  Element.prototype.scrollIntoView = vi.fn();
 });
 
 describe("SetlistPage", () => {
@@ -53,7 +56,7 @@ describe("SetlistPage", () => {
     });
   });
 
-  it("renders the setlist with event info and tracks", async () => {
+  it("lists all tracks, opens the first track's player, and switches on selection", async () => {
     mockFetch.mockResolvedValue(
       buildPublicSetlist({
         name: "Summer Set",
@@ -81,6 +84,7 @@ describe("SetlistPage", () => {
         ],
       })
     );
+    const user = userEvent.setup();
     renderWithProviders(<SetlistPage />);
 
     await waitFor(() => {
@@ -94,29 +98,39 @@ describe("SetlistPage", () => {
       "https://fes.example.com"
     );
 
+    // 目次に全曲が並ぶ
     expect(screen.getByText("Song A")).toBeInTheDocument();
-    expect(screen.getByText("DJ X")).toBeInTheDocument();
-    // 対応サービス（YouTube）は iframe 埋め込み
+    expect(screen.getByText("Song B")).toBeInTheDocument();
+
+    // 初期表示は先頭曲(t1)のプレイヤーが開いている
     expect(screen.getByTitle("YouTube").getAttribute("src")).toContain(
       "youtube.com/embed/dQw4w9WgXcQ"
     );
-    // 未対応リンクはフォールバックのリンク表示
-    expect(screen.getByRole("link", { name: "再生・リンク" })).toHaveAttribute(
-      "href",
-      "https://example.com/track"
-    );
-    // ソースが URL のときはリンク
     expect(screen.getByRole("link", { name: "入手元" })).toHaveAttribute(
       "href",
       "https://shop.example.com"
     );
     expect(screen.getByText("BPM: 128")).toBeInTheDocument();
+    // t2 の情報はまだ表示されない
+    expect(screen.queryByText("入手元: レコード店で購入")).not.toBeInTheDocument();
+
+    // 2曲目を選ぶとプレイヤーが切り替わる
+    await user.click(screen.getByRole("button", { name: /Song B/ }));
+
+    expect(screen.queryByTitle("YouTube")).not.toBeInTheDocument();
+    // 未対応リンクはフォールバックのリンク表示
+    expect(screen.getByRole("link", { name: "再生・リンク" })).toHaveAttribute(
+      "href",
+      "https://example.com/track"
+    );
     // ソースが自由文のときはテキスト
     expect(screen.getByText("入手元: レコード店で購入")).toBeInTheDocument();
-    expect(screen.getByText("Song B")).toBeInTheDocument();
+    expect(screen.queryByText("BPM: 128")).not.toBeInTheDocument();
+    // 下のプレイヤーが画面内に寄せられる
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
   });
 
-  it("renders a minimal setlist without event info or optional track fields", async () => {
+  it("shows a no-link message for a track without a song link", async () => {
     mockFetch.mockResolvedValue(
       buildPublicSetlist({
         name: "Bare",
@@ -131,6 +145,17 @@ describe("SetlistPage", () => {
       expect(screen.getByRole("heading", { name: "Bare" })).toBeInTheDocument();
     });
     expect(screen.getByText("Solo")).toBeInTheDocument();
+    expect(screen.getByText("再生リンクはありません")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "イベントページ" })).not.toBeInTheDocument();
+  });
+
+  it("shows an empty message when the setlist has no tracks", async () => {
+    mockFetch.mockResolvedValue(buildPublicSetlist({ name: "Empty", tracks: [] }));
+    renderWithProviders(<SetlistPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "Empty" })).toBeInTheDocument();
+    });
+    expect(screen.getByText("曲がまだありません")).toBeInTheDocument();
   });
 });
