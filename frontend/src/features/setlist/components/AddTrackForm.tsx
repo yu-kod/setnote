@@ -6,9 +6,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Field, FieldGroup } from "@/components/ui/field";
 
-export function AddTrackForm({ onAdd }: { onAdd: (track: Track) => void }) {
+export function AddTrackForm({
+  onAdd,
+  suggestions = [],
+}: {
+  onAdd: (track: Track) => void;
+  suggestions?: Track[];
+}) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
+
+  const query = title.trim().toLowerCase();
+  // 入力途中に、過去入力から部分一致する曲を候補表示する。
+  const matches = query
+    ? suggestions.filter((s) => s.title.toLowerCase().includes(query)).slice(0, 8)
+    : [];
 
   function close() {
     setTitle("");
@@ -18,6 +30,20 @@ export function AddTrackForm({ onAdd }: { onAdd: (track: Track) => void }) {
   function submit(e: React.FormEvent) {
     e.preventDefault();
     onAdd(createTrack({ title: title.trim() }));
+    close();
+  }
+
+  // 候補選択：リンク等も含め全項目をコピーした新しいトラックを追加する。
+  function selectSuggestion(s: Track) {
+    onAdd(
+      createTrack({
+        title: s.title,
+        artist: s.artist,
+        songLink: s.songLink,
+        source: s.source,
+        customFields: s.customFields,
+      })
+    );
     close();
   }
 
@@ -42,6 +68,24 @@ export function AddTrackForm({ onAdd }: { onAdd: (track: Track) => void }) {
             required
             autoFocus
           />
+          {matches.length > 0 && (
+            <ul role="listbox" className="mt-1 overflow-hidden rounded-md border">
+              {matches.map((s) => (
+                <li key={s.id}>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={false}
+                    onClick={() => selectSuggestion(s)}
+                    className="flex w-full items-baseline gap-2 px-3 py-1.5 text-left text-sm hover:bg-muted/50"
+                  >
+                    <span className="font-medium">{s.title}</span>
+                    {s.artist && <span className="text-muted-foreground">— {s.artist}</span>}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </Field>
         <div className="flex gap-2">
           <Button type="submit" disabled={!title.trim()}>
