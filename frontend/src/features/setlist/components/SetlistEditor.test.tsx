@@ -1,13 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderWithProviders, screen, within, userEvent, waitFor } from "../../../test-utils";
 import { SetlistEditor } from "./SetlistEditor";
-import { fetchSetlist, updateSetlist } from "../api";
+import { fetchSetlist, updateSetlist, publishSetlist, unpublishSetlist } from "../api";
 import { toast } from "sonner";
 import type { Setlist } from "../types";
 
 vi.mock("../api", () => ({
   fetchSetlist: vi.fn(),
   updateSetlist: vi.fn(),
+  publishSetlist: vi.fn(),
+  unpublishSetlist: vi.fn(),
 }));
 
 vi.mock("sonner", () => ({
@@ -16,6 +18,8 @@ vi.mock("sonner", () => ({
 
 const mockFetchSetlist = vi.mocked(fetchSetlist);
 const mockUpdateSetlist = vi.mocked(updateSetlist);
+const mockPublishSetlist = vi.mocked(publishSetlist);
+const mockUnpublishSetlist = vi.mocked(unpublishSetlist);
 
 function buildSetlist(overrides: Partial<Setlist> = {}): Setlist {
   return {
@@ -36,6 +40,8 @@ function buildSetlist(overrides: Partial<Setlist> = {}): Setlist {
 beforeEach(() => {
   mockFetchSetlist.mockReset();
   mockUpdateSetlist.mockReset();
+  mockPublishSetlist.mockReset();
+  mockUnpublishSetlist.mockReset();
   vi.mocked(toast.success).mockReset();
   vi.mocked(toast.error).mockReset();
 });
@@ -226,5 +232,125 @@ describe("SetlistEditor", () => {
     const payload = mockUpdateSetlist.mock.calls[0][1];
     expect(payload.tracks).toHaveLength(1);
     expect(payload.tracks[0]).toMatchObject({ id: "a", title: "First", artist: "DJ One" });
+  });
+
+  it("shows the draft status and a publish button", async () => {
+    mockFetchSetlist.mockResolvedValue(buildSetlist({ status: "draft" }));
+    renderWithProviders(<SetlistEditor id="s1" />);
+
+    await screen.findByLabelText("セットリスト名");
+    expect(screen.getByText("下書き")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "公開する" })).toBeInTheDocument();
+  });
+
+  it("saves then publishes and shows a success toast", async () => {
+    mockFetchSetlist.mockResolvedValue(buildSetlist({ status: "draft" }));
+    mockUpdateSetlist.mockResolvedValue(buildSetlist());
+    let resolvePublish: (v: Setlist) => void = () => {};
+    mockPublishSetlist.mockReturnValue(
+      new Promise<Setlist>((res) => {
+        resolvePublish = res;
+      })
+    );
+    const user = userEvent.setup();
+    renderWithProviders(<SetlistEditor id="s1" />);
+    await screen.findByLabelText("セットリスト名");
+
+    await user.click(screen.getByRole("button", { name: "公開する" }));
+
+    expect(screen.getByRole("button", { name: "公開中..." })).toBeInTheDocument();
+    expect(mockUpdateSetlist).toHaveBeenCalled();
+    expect(mockPublishSetlist).toHaveBeenCalledWith("s1");
+
+    resolvePublish(buildSetlist({ status: "published" }));
+
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith("公開しました");
+    });
+    expect(screen.getByText("公開中")).toBeInTheDocument();
+  });
+
+  it("shows an error toast when publishing fails", async () => {
+    mockFetchSetlist.mockResolvedValue(buildSetlist({ status: "draft" }));
+    mockUpdateSetlist.mockResolvedValue(buildSetlist());
+    mockPublishSetlist.mockRejectedValue(new Error("boom"));
+    const user = userEvent.setup();
+    renderWithProviders(<SetlistEditor id="s1" />);
+    await screen.findByLabelText("セットリスト名");
+
+    await user.click(screen.getByRole("button", { name: "公開する" }));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("公開に失敗しました");
+    });
+  });
+
+  it("shows the public URL and unpublish button when published", async () => {
+    mockFetchSetlist.mockResolvedValue(buildSetlist({ status: "published" }));
+    renderWithProviders(<SetlistEditor id="s1" />);
+
+    await screen.findByLabelText("セットリスト名");
+    expect(screen.getByText("公開中")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "非公開にする" })).toBeInTheDocument();
+    const urlInput = screen.getByLabelText("公開URL") as HTMLInputElement;
+    expect(urlInput.value).toContain("/s/s1");
+  });
+
+  it("unpublishes and shows a success toast", async () => {
+    mockFetchSetlist.mockResolvedValue(buildSetlist({ status: "published" }));
+    let resolveUnpublish: (v: Setlist) => void = () => {};
+    mockUnpublishSetlist.mockReturnValue(
+      new Promise<Setlist>((res) => {
+        resolveUnpublish = res;
+      })
+    );
+    const user = userEvent.setup();
+    renderWithProviders(<SetlistEditor id="s1" />);
+    await screen.findByLabelText("セットリスト名");
+
+    await user.click(screen.getByRole("button", { name: "非公開にする" }));
+
+    expect(screen.getByRole("button", { name: "処理中..." })).toBeInTheDocument();
+    expect(mockUnpublishSetlist).toHaveBeenCalledWith("s1");
+
+    resolveUnpublish(buildSetlist({ status: "unpublished" }));
+
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith("非公開にしました");
+    });
+    expect(screen.getByText("非公開")).toBeInTheDocument();
+  });
+
+  it("shows an error toast when unpublishing fails", async () => {
+    mockFetchSetlist.mockResolvedValue(buildSetlist({ status: "published" }));
+    mockUnpublishSetlist.mockRejectedValue(new Error("boom"));
+    const user = userEvent.setup();
+    renderWithProviders(<SetlistEditor id="s1" />);
+    await screen.findByLabelText("セットリスト名");
+
+    await user.click(screen.getByRole("button", { name: "非公開にする" }));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("非公開に失敗しました");
+    });
+  });
+
+  it("copies the public URL to the clipboard", async () => {
+    mockFetchSetlist.mockResolvedValue(buildSetlist({ status: "published" }));
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", {
+      value: { writeText },
+      configurable: true,
+    });
+    renderWithProviders(<SetlistEditor id="s1" />);
+    await screen.findByLabelText("セットリスト名");
+
+    await user.click(screen.getByRole("button", { name: "コピー" }));
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith(expect.stringContaining("/s/s1"));
+    });
+    expect(toast.success).toHaveBeenCalledWith("コピーしました");
   });
 });
