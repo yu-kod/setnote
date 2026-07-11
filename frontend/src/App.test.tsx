@@ -1,10 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { renderWithProviders } from "./test-utils";
 import App from "./App";
 
 const mockUseAuth = vi.fn();
+const mockLogout = vi.fn();
 
 vi.mock("./features/auth/AuthContext", () => ({
   useAuth: () => mockUseAuth(),
@@ -20,7 +22,8 @@ function renderApp(path: string) {
 
 describe("App", () => {
   beforeEach(() => {
-    mockUseAuth.mockReturnValue({ isAuthenticated: false, login: vi.fn() });
+    mockLogout.mockReset();
+    mockUseAuth.mockReturnValue({ isAuthenticated: false, login: vi.fn(), logout: mockLogout });
   });
 
   it("renders the site title", () => {
@@ -35,33 +38,55 @@ describe("App", () => {
   });
 
   it("renders the landing page at /", () => {
-    mockUseAuth.mockReturnValue({ isAuthenticated: false });
     renderApp("/");
-    expect(screen.getByRole("link", { name: "新規登録" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "ログイン" })).toBeInTheDocument();
+    const main = screen.getByRole("main");
+    expect(within(main).getByRole("link", { name: "新規登録" })).toBeInTheDocument();
+    expect(within(main).getByRole("link", { name: "ログイン" })).toBeInTheDocument();
   });
 
   it("renders the not-found page for an unknown route", () => {
-    mockUseAuth.mockReturnValue({ isAuthenticated: false });
     renderApp("/no/such/path");
     expect(screen.getByText("お探しのページが見つかりませんでした")).toBeInTheDocument();
   });
 
   it("renders login page at /login", () => {
-    mockUseAuth.mockReturnValue({ isAuthenticated: false, login: vi.fn() });
     renderApp("/login");
     expect(screen.getByRole("heading", { name: "ログイン" })).toBeInTheDocument();
   });
 
   it("redirects /dashboard to /login when not authenticated", () => {
-    mockUseAuth.mockReturnValue({ isAuthenticated: false });
     renderApp("/dashboard");
     expect(screen.getByRole("heading", { name: "ログイン" })).toBeInTheDocument();
   });
 
-  it("renders dashboard placeholder when authenticated", () => {
-    mockUseAuth.mockReturnValue({ isAuthenticated: true });
+  it("renders dashboard when authenticated", () => {
+    mockUseAuth.mockReturnValue({ isAuthenticated: true, logout: mockLogout });
     renderApp("/dashboard");
-    expect(screen.getByText("ダッシュボード")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "ダッシュボード" })).toBeInTheDocument();
+  });
+
+  it("shows the logout button and dashboard link in the header when authenticated", () => {
+    mockUseAuth.mockReturnValue({ isAuthenticated: true, logout: mockLogout });
+    renderApp("/dashboard");
+    const banner = screen.getByRole("banner");
+    expect(within(banner).getByRole("button", { name: "ログアウト" })).toBeInTheDocument();
+    expect(within(banner).getByRole("link", { name: "ダッシュボード" })).toBeInTheDocument();
+  });
+
+  it("calls logout when the logout button is clicked", async () => {
+    mockUseAuth.mockReturnValue({ isAuthenticated: true, logout: mockLogout });
+    const user = userEvent.setup();
+    renderApp("/dashboard");
+    await user.click(
+      within(screen.getByRole("banner")).getByRole("button", { name: "ログアウト" })
+    );
+    expect(mockLogout).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows a login link in the header when not authenticated", () => {
+    renderApp("/login");
+    expect(
+      within(screen.getByRole("banner")).getByRole("link", { name: "ログイン" })
+    ).toBeInTheDocument();
   });
 });
