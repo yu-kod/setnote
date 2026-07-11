@@ -1,15 +1,28 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderWithProviders, screen, within, userEvent, waitFor } from "../../../test-utils";
 import { SetlistEditor } from "./SetlistEditor";
-import { fetchSetlist, updateSetlist, publishSetlist, unpublishSetlist } from "../api";
+import {
+  fetchSetlist,
+  updateSetlist,
+  publishSetlist,
+  unpublishSetlist,
+  deleteSetlist,
+} from "../api";
 import { toast } from "sonner";
 import type { Setlist } from "../types";
+
+const { mockNavigate } = vi.hoisted(() => ({ mockNavigate: vi.fn() }));
+vi.mock("react-router-dom", async () => {
+  const actual = await vi.importActual<typeof import("react-router-dom")>("react-router-dom");
+  return { ...actual, useNavigate: () => mockNavigate };
+});
 
 vi.mock("../api", () => ({
   fetchSetlist: vi.fn(),
   updateSetlist: vi.fn(),
   publishSetlist: vi.fn(),
   unpublishSetlist: vi.fn(),
+  deleteSetlist: vi.fn(),
 }));
 
 vi.mock("sonner", () => ({
@@ -20,6 +33,7 @@ const mockFetchSetlist = vi.mocked(fetchSetlist);
 const mockUpdateSetlist = vi.mocked(updateSetlist);
 const mockPublishSetlist = vi.mocked(publishSetlist);
 const mockUnpublishSetlist = vi.mocked(unpublishSetlist);
+const mockDeleteSetlist = vi.mocked(deleteSetlist);
 
 function buildSetlist(overrides: Partial<Setlist> = {}): Setlist {
   return {
@@ -43,6 +57,8 @@ beforeEach(() => {
   mockUpdateSetlist.mockReset();
   mockPublishSetlist.mockReset();
   mockUnpublishSetlist.mockReset();
+  mockDeleteSetlist.mockReset();
+  mockNavigate.mockReset();
   vi.mocked(toast.success).mockReset();
   vi.mocked(toast.error).mockReset();
 });
@@ -355,5 +371,41 @@ describe("SetlistEditor", () => {
       expect(writeText).toHaveBeenCalledWith(expect.stringContaining("/s/s1"));
     });
     expect(toast.success).toHaveBeenCalledWith("コピーしました");
+  });
+
+  it("deletes the setlist after confirming and navigates to the dashboard", async () => {
+    mockFetchSetlist.mockResolvedValue(buildSetlist({ name: "Doomed" }));
+    mockDeleteSetlist.mockResolvedValue(undefined);
+    const user = userEvent.setup();
+    renderWithProviders(<SetlistEditor id="s1" />);
+    await screen.findByLabelText("セットリスト名");
+
+    await user.click(screen.getByRole("button", { name: "セットリストを削除" }));
+    const dialog = await screen.findByRole("alertdialog");
+    await user.click(within(dialog).getByRole("button", { name: "削除する" }));
+
+    await waitFor(() => {
+      expect(mockDeleteSetlist).toHaveBeenCalledWith("s1");
+    });
+    expect(toast.success).toHaveBeenCalledWith("削除しました");
+    expect(mockNavigate).toHaveBeenCalledWith("/dashboard");
+  });
+
+  it("keeps the setlist and shows an error toast when deletion fails", async () => {
+    mockFetchSetlist.mockResolvedValue(buildSetlist({ name: "Doomed" }));
+    mockDeleteSetlist.mockRejectedValue(new Error("boom"));
+    const user = userEvent.setup();
+    renderWithProviders(<SetlistEditor id="s1" />);
+    await screen.findByLabelText("セットリスト名");
+
+    await user.click(screen.getByRole("button", { name: "セットリストを削除" }));
+    const dialog = await screen.findByRole("alertdialog");
+    await user.click(within(dialog).getByRole("button", { name: "削除する" }));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("削除に失敗しました");
+    });
+    expect(mockNavigate).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "セットリストを削除" })).toBeEnabled();
   });
 });
