@@ -36,9 +36,10 @@ type Props = {
   index: number;
   onChange: (track: Track) => void;
   onDelete: () => void;
+  dragHandle?: React.ReactNode;
 };
 
-export function TrackCard({ track, index, onChange, onDelete }: Props) {
+export function TrackCard({ track, index, onChange, onDelete, dragHandle }: Props) {
   const set = (patch: Partial<Track>) => onChange({ ...track, ...patch });
 
   const setField = (id: string, patch: Partial<CustomField>) =>
@@ -56,7 +57,8 @@ export function TrackCard({ track, index, onChange, onDelete }: Props) {
   return (
     <Card role="group" aria-label={`トラック ${index + 1}`}>
       <CardContent className="space-y-0.5 pt-6">
-        <div className="flex items-start justify-between gap-2">
+        <div className="flex items-start gap-2">
+          {dragHandle}
           <InlineInput
             aria-label="曲名"
             value={track.title}
