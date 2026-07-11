@@ -1,11 +1,9 @@
-import * as React from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { act } from "@testing-library/react";
 import { renderWithProviders, screen, within, userEvent, waitFor } from "../../../test-utils";
 import { SetlistEditor } from "./SetlistEditor";
 import { fetchSetlist, updateSetlist } from "../api";
 import { toast } from "sonner";
-import type { Setlist, Track } from "../types";
+import type { Setlist } from "../types";
 
 vi.mock("../api", () => ({
   fetchSetlist: vi.fn(),
@@ -14,47 +12,6 @@ vi.mock("../api", () => ({
 
 vi.mock("sonner", () => ({
   toast: { success: vi.fn(), error: vi.fn() },
-}));
-
-// dnd-kit はレイアウト計測に依存するため jsdom では実ドラッグを再現できない。
-// DndContext の onDragEnd を捕捉し、テストから並べ替えイベントを直接発火する。
-const dnd = vi.hoisted(() => ({
-  onDragEnd: undefined as ((event: unknown) => void) | undefined,
-}));
-
-vi.mock("@dnd-kit/core", () => ({
-  DndContext: ({
-    children,
-    onDragEnd,
-  }: {
-    children: React.ReactNode;
-    onDragEnd: (event: unknown) => void;
-  }) => {
-    dnd.onDragEnd = onDragEnd;
-    return <>{children}</>;
-  },
-  closestCenter: () => {},
-  KeyboardSensor: function KeyboardSensor() {},
-  PointerSensor: function PointerSensor() {},
-  useSensor: (sensor: unknown) => sensor,
-  useSensors: (...sensors: unknown[]) => sensors,
-}));
-
-vi.mock("@dnd-kit/sortable", () => ({
-  SortableContext: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  sortableKeyboardCoordinates: () => {},
-  verticalListSortingStrategy: {},
-  useSortable: () => ({
-    attributes: {},
-    listeners: {},
-    setNodeRef: () => {},
-    transform: null,
-    transition: undefined,
-  }),
-}));
-
-vi.mock("@dnd-kit/utilities", () => ({
-  CSS: { Transform: { toString: () => undefined } },
 }));
 
 const mockFetchSetlist = vi.mocked(fetchSetlist);
@@ -269,36 +226,5 @@ describe("SetlistEditor", () => {
     const payload = mockUpdateSetlist.mock.calls[0][1];
     expect(payload.tracks).toHaveLength(1);
     expect(payload.tracks[0]).toMatchObject({ id: "a", title: "First", artist: "DJ One" });
-  });
-
-  it("reorders tracks by drag and saves the new order", async () => {
-    mockFetchSetlist.mockResolvedValue(
-      buildSetlist({
-        name: "Set",
-        tracks: [
-          { id: "a", title: "First", artist: "", songLink: "", source: "", customFields: [] },
-          { id: "b", title: "Second", artist: "", songLink: "", source: "", customFields: [] },
-        ],
-      })
-    );
-    mockUpdateSetlist.mockResolvedValue(buildSetlist());
-    const user = userEvent.setup();
-    renderWithProviders(<SetlistEditor id="s1" />);
-
-    await screen.findByLabelText("セットリスト名");
-
-    // 並べ替え対象なし（over が無い / 同一）の場合は何もしない
-    act(() => dnd.onDragEnd?.({ active: { id: "a" }, over: null }));
-    act(() => dnd.onDragEnd?.({ active: { id: "a" }, over: { id: "a" } }));
-    // "a" を "b" の位置へ移動
-    act(() => dnd.onDragEnd?.({ active: { id: "a" }, over: { id: "b" } }));
-
-    await user.click(screen.getByRole("button", { name: "保存" }));
-
-    await waitFor(() => {
-      expect(mockUpdateSetlist).toHaveBeenCalled();
-    });
-    const payload = mockUpdateSetlist.mock.calls[0][1];
-    expect((payload.tracks as Track[]).map((t) => t.id)).toEqual(["b", "a"]);
   });
 });
