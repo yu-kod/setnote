@@ -1,15 +1,111 @@
+import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
+import { fetchPublicSetlist } from "../features/setlist/api";
+import type { Setlist } from "../features/setlist/types";
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import NotFoundPage from "./NotFoundPage";
+
+const isUrl = (s: string) => /^https?:\/\//.test(s);
+
+function formatEventDate(date: string): string {
+  const [year, month, day] = date.split("-");
+  return `${year}/${Number(month)}/${Number(day)}`;
+}
 
 export default function SetlistPage() {
   const { id } = useParams<{ id: string }>();
+  const [setlist, setSetlist] = useState<Setlist | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchPublicSetlist(id!)
+      .then(setSetlist)
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div role="status" aria-label="読み込み中" className="space-y-4">
+        <Skeleton className="h-8 w-48" />
+        <Skeleton className="h-40 w-full" />
+      </div>
+    );
+  }
+
+  // 未公開・削除・存在しないIDはすべて共通の404（情報漏洩防止）。
+  if (!setlist) {
+    return <NotFoundPage />;
+  }
 
   return (
-    <Card>
-      <CardContent className="pt-6">
-        <p className="text-muted-foreground">セットリスト: {id}</p>
-        <p className="mt-4 text-sm text-muted-foreground">（実装予定）</p>
-      </CardContent>
-    </Card>
+    <div className="space-y-6">
+      <div className="space-y-1">
+        <h1 className="text-2xl font-bold tracking-tight">{setlist.name}</h1>
+        {setlist.eventName && <p className="text-muted-foreground">{setlist.eventName}</p>}
+        {setlist.eventDate && (
+          <p className="text-sm text-muted-foreground">{formatEventDate(setlist.eventDate)}</p>
+        )}
+        {setlist.eventLink && (
+          <a
+            href={setlist.eventLink}
+            target="_blank"
+            rel="noreferrer"
+            className="text-sm text-primary underline underline-offset-4"
+          >
+            イベントページ
+          </a>
+        )}
+      </div>
+
+      <ol className="space-y-3">
+        {setlist.tracks.map((track, i) => (
+          <li key={track.id}>
+            <Card>
+              <CardContent className="space-y-1 pt-6">
+                <div className="flex gap-2">
+                  <span className="text-muted-foreground">{i + 1}.</span>
+                  <span className="font-semibold">{track.title}</span>
+                </div>
+                {track.artist && <p className="text-sm text-muted-foreground">{track.artist}</p>}
+                {track.songLink && (
+                  <a
+                    href={track.songLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="block text-sm text-primary underline underline-offset-4"
+                  >
+                    再生・リンク
+                  </a>
+                )}
+                {track.source &&
+                  (isUrl(track.source) ? (
+                    <a
+                      href={track.source}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="block text-sm text-primary underline underline-offset-4"
+                    >
+                      入手元
+                    </a>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">入手元: {track.source}</p>
+                  ))}
+                {track.customFields.length > 0 && (
+                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                    {track.customFields.map((f) => (
+                      <span key={f.id}>
+                        {f.label}: {f.value}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </li>
+        ))}
+      </ol>
+    </div>
   );
 }

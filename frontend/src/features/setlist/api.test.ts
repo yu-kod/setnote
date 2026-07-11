@@ -6,6 +6,7 @@ import {
   updateSetlist,
   publishSetlist,
   unpublishSetlist,
+  fetchPublicSetlist,
 } from "./api";
 import { clearSession, redirectToLogin } from "../auth/session";
 
@@ -122,6 +123,27 @@ describe("updateSetlist", () => {
       body: JSON.stringify(input),
     });
     expect(result).toEqual({ id: "a1", name: "Updated" });
+  });
+});
+
+describe("fetchPublicSetlist", () => {
+  it("fetches GET /api/setlists/:id without an auth header", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ id: "pub1", name: "Public Set" }),
+    });
+
+    const result = await fetchPublicSetlist("pub1");
+
+    expect(mockFetch).toHaveBeenCalledWith("/api/setlists/pub1");
+    expect(result).toEqual({ id: "pub1", name: "Public Set" });
+  });
+
+  it("throws when the response is not ok (404)", async () => {
+    mockFetch.mockResolvedValue({ ok: false, status: 404, json: () => Promise.resolve({}) });
+
+    await expect(fetchPublicSetlist("missing")).rejects.toThrow();
   });
 });
 
