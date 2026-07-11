@@ -1,5 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fetchMySetlists, createSetlist, fetchSetlist, updateSetlist } from "./api";
+import {
+  fetchMySetlists,
+  createSetlist,
+  fetchSetlist,
+  updateSetlist,
+  publishSetlist,
+  unpublishSetlist,
+} from "./api";
 import { clearSession, redirectToLogin } from "../auth/session";
 
 vi.mock("../auth/session", () => ({
@@ -115,6 +122,50 @@ describe("updateSetlist", () => {
       body: JSON.stringify(input),
     });
     expect(result).toEqual({ id: "a1", name: "Updated" });
+  });
+});
+
+describe("publishSetlist", () => {
+  it("calls POST /api/setlists/:id/publish", async () => {
+    localStorage.setItem("setnote_access_token", "test-token");
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ id: "a1", status: "published" }),
+    });
+
+    const result = await publishSetlist("a1");
+
+    expect(mockFetch).toHaveBeenCalledWith("/api/setlists/a1/publish", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer test-token",
+      },
+    });
+    expect(result).toEqual({ id: "a1", status: "published" });
+  });
+});
+
+describe("unpublishSetlist", () => {
+  it("calls DELETE /api/setlists/:id/publish", async () => {
+    localStorage.setItem("setnote_access_token", "test-token");
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ id: "a1", status: "unpublished" }),
+    });
+
+    const result = await unpublishSetlist("a1");
+
+    expect(mockFetch).toHaveBeenCalledWith("/api/setlists/a1/publish", {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer test-token",
+      },
+    });
+    expect(result).toEqual({ id: "a1", status: "unpublished" });
   });
 });
 

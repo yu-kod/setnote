@@ -63,3 +63,11 @@ export async function fetchSetlist(id: string): Promise<Setlist | null> {
 export function updateSetlist(id: string, input: UpdateSetlistInput): Promise<Setlist> {
   return setlistRequest<Setlist>(`/${id}`, { method: "PUT", body: input });
 }
+
+export function publishSetlist(id: string): Promise<Setlist> {
+  return setlistRequest<Setlist>(`/${id}/publish`, { method: "POST" });
+}
+
+export function unpublishSetlist(id: string): Promise<Setlist> {
+  return setlistRequest<Setlist>(`/${id}/publish`, { method: "DELETE" });
+}
