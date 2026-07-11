@@ -71,3 +71,12 @@ export function publishSetlist(id: string): Promise<Setlist> {
 export function unpublishSetlist(id: string): Promise<Setlist> {
   return setlistRequest<Setlist>(`/${id}/publish`, { method: "DELETE" });
 }
+
+// 公開ページ用。認証不要で、公開中のセットリストのスナップショットを取得する。
+export async function fetchPublicSetlist(id: string): Promise<Setlist> {
+  const res = await fetch(`/api/setlists/${id}`);
+  if (!res.ok) {
+    throw new Error("Not found");
+  }
+  return res.json() as Promise<Setlist>;
+}
