@@ -107,6 +107,7 @@ describe("updateSetlist", () => {
 
     const input = {
       name: "Updated",
+      artistName: "DJ Cool",
       eventName: "Fes",
       eventLink: null,
       eventDate: "2026-08-01",

@@ -237,6 +237,24 @@ describe("PUT /api/setlists/:id (authenticated)", () => {
     expect(body.name).toBe("Updated Set");
   });
 
+  it("saves the artist name (名義) on update", async () => {
+    mockVerify.mockResolvedValue({ sub: "user1", email: "dj@example.com" });
+    mockSend.mockResolvedValue({ Attributes: { id: "abc", artistName: "DJ Cool" } });
+
+    const { app } = await import("../app");
+    const res = await app.request("/api/setlists/abc", {
+      method: "PUT",
+      headers: authHeaders(),
+      body: JSON.stringify({ name: "Set", tracks: [], artistName: "DJ Cool" }),
+    });
+
+    expect(res.status).toBe(200);
+    const command = mockSend.mock.calls.at(-1)?.[0] as {
+      input: { ExpressionAttributeValues: Record<string, unknown> };
+    };
+    expect(command.input.ExpressionAttributeValues[":artistName"]).toBe("DJ Cool");
+  });
+
   it("returns 404 when setlist does not exist or userId mismatch", async () => {
     mockVerify.mockResolvedValue({ sub: "user1", email: "dj@example.com" });
     const err = new Error("ConditionalCheckFailedException");

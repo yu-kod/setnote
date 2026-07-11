@@ -23,6 +23,7 @@ import { TrackCard } from "./TrackCard";
 
 type FormState = {
   name: string;
+  artistName: string;
   eventName: string;
   eventLink: string;
   eventDate: string;
@@ -37,6 +38,7 @@ export function SetlistEditor({ id }: { id: string }) {
   const [tracks, setTracks] = useState<Track[]>([]);
   const [form, setForm] = useState<FormState>({
     name: "",
+    artistName: "",
     eventName: "",
     eventLink: "",
     eventDate: "",
@@ -58,6 +60,7 @@ export function SetlistEditor({ id }: { id: string }) {
         setStatus(data.status);
         setForm({
           name: data.name,
+          artistName: nullToEmpty(data.artistName),
           eventName: nullToEmpty(data.eventName),
           eventLink: nullToEmpty(data.eventLink),
           eventDate: nullToEmpty(data.eventDate),
@@ -86,6 +89,7 @@ export function SetlistEditor({ id }: { id: string }) {
   function currentInput(): UpdateSetlistInput {
     return {
       name: form.name.trim(),
+      artistName: toNullable(form.artistName),
       eventName: toNullable(form.eventName),
       eventLink: toNullable(form.eventLink),
       eventDate: toNullable(form.eventDate),
@@ -192,6 +196,15 @@ export function SetlistEditor({ id }: { id: string }) {
                 value={form.name}
                 onChange={(e) => update("name", e.target.value)}
                 required
+              />
+            </Field>
+            <Field>
+              <Label htmlFor="artist-name">名義（DJ / アーティスト名）</Label>
+              <Input
+                id="artist-name"
+                value={form.artistName}
+                onChange={(e) => update("artistName", e.target.value)}
+                placeholder="公開ページに表示される作成者名"
               />
             </Field>
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">

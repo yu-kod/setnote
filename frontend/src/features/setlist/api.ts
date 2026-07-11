@@ -40,6 +40,7 @@ async function setlistRequest<T>(
 
 export type UpdateSetlistInput = {
   name: string;
+  artistName: string | null;
   eventName: string | null;
   eventLink: string | null;
   eventDate: string | null;

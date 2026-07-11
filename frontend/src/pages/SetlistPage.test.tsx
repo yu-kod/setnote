@@ -20,6 +20,7 @@ function buildPublicSetlist(overrides: Partial<Setlist> = {}): Setlist {
     id: "abc123",
     userId: "u1",
     name: "My Set",
+    artistName: null,
     eventName: null,
     eventLink: null,
     eventDate: null,
@@ -56,6 +57,7 @@ describe("SetlistPage", () => {
     mockFetch.mockResolvedValue(
       buildPublicSetlist({
         name: "Summer Set",
+        artistName: "DJ Star",
         eventName: "Summer Fes",
         eventLink: "https://fes.example.com",
         eventDate: "2026-08-01",
@@ -84,6 +86,7 @@ describe("SetlistPage", () => {
     await waitFor(() => {
       expect(screen.getByRole("heading", { name: "Summer Set" })).toBeInTheDocument();
     });
+    expect(screen.getByText("by DJ Star")).toBeInTheDocument();
     expect(screen.getByText("Summer Fes")).toBeInTheDocument();
     expect(screen.getByText("2026/8/1")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "イベントページ" })).toHaveAttribute(

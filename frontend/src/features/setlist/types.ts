@@ -17,6 +17,8 @@ export type Setlist = {
   id: string;
   userId: string;
   name: string;
+  // 作成者の名義（DJ/アーティスト名）。トラックの artist とは別。
+  artistName: string | null;
   eventName: string | null;
   eventLink: string | null;
   eventDate: string | null;
