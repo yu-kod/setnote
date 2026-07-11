@@ -13,7 +13,6 @@ import { GripVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Field, FieldGroup } from "@/components/ui/field";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -33,18 +32,6 @@ type Status = Setlist["status"];
 
 const nullToEmpty = (v: string | null) => v ?? "";
 const toNullable = (v: string) => (v.trim() ? v.trim() : null);
-
-const statusLabel: Record<Status, string> = {
-  draft: "下書き",
-  published: "公開中",
-  unpublished: "非公開",
-};
-
-const statusVariant: Record<Status, "default" | "secondary" | "outline"> = {
-  draft: "secondary",
-  published: "default",
-  unpublished: "outline",
-};
 
 export function SetlistEditor({ id }: { id: string }) {
   const [tracks, setTracks] = useState<Track[]>([]);
@@ -168,32 +155,34 @@ export function SetlistEditor({ id }: { id: string }) {
 
   return (
     <div className="space-y-4">
-      <Link to="/dashboard" className="text-sm text-muted-foreground hover:text-primary">
-        ← ダッシュボードへ戻る
-      </Link>
+      <div className="flex items-center justify-between gap-2">
+        <Link to="/dashboard" className="text-sm text-muted-foreground hover:text-primary">
+          ← ダッシュボードへ戻る
+        </Link>
+        {status === "published" ? (
+          <Button variant="ghost" size="sm" onClick={handleUnpublish} disabled={publishing}>
+            {publishing ? "処理中..." : "非公開にする"}
+          </Button>
+        ) : (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handlePublish}
+            disabled={publishing || !form.name.trim()}
+          >
+            {publishing ? "公開中..." : "公開する"}
+          </Button>
+        )}
+      </div>
 
-      <Card>
-        <CardContent className="flex flex-wrap items-center gap-3 pt-6">
-          <Badge variant={statusVariant[status]}>{statusLabel[status]}</Badge>
-          {status === "published" ? (
-            <>
-              <Button variant="outline" size="sm" onClick={handleUnpublish} disabled={publishing}>
-                {publishing ? "処理中..." : "非公開にする"}
-              </Button>
-              <div className="flex w-full items-center gap-2">
-                <Input readOnly aria-label="公開URL" value={publicUrl} className="text-xs" />
-                <Button type="button" variant="outline" size="sm" onClick={handleCopy}>
-                  コピー
-                </Button>
-              </div>
-            </>
-          ) : (
-            <Button size="sm" onClick={handlePublish} disabled={publishing || !form.name.trim()}>
-              {publishing ? "公開中..." : "公開する"}
-            </Button>
-          )}
-        </CardContent>
-      </Card>
+      {status === "published" && (
+        <div className="flex items-center gap-2">
+          <Input readOnly aria-label="公開URL" value={publicUrl} className="text-xs" />
+          <Button type="button" variant="outline" size="sm" onClick={handleCopy}>
+            コピー
+          </Button>
+        </div>
+      )}
 
       <Card>
         <CardHeader>

@@ -239,7 +239,6 @@ describe("SetlistEditor", () => {
     renderWithProviders(<SetlistEditor id="s1" />);
 
     await screen.findByLabelText("セットリスト名");
-    expect(screen.getByText("下書き")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "公開する" })).toBeInTheDocument();
   });
 
@@ -267,7 +266,8 @@ describe("SetlistEditor", () => {
     await waitFor(() => {
       expect(toast.success).toHaveBeenCalledWith("公開しました");
     });
-    expect(screen.getByText("公開中")).toBeInTheDocument();
+    expect(screen.getByLabelText("公開URL")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "非公開にする" })).toBeInTheDocument();
   });
 
   it("shows an error toast when publishing fails", async () => {
@@ -290,7 +290,6 @@ describe("SetlistEditor", () => {
     renderWithProviders(<SetlistEditor id="s1" />);
 
     await screen.findByLabelText("セットリスト名");
-    expect(screen.getByText("公開中")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "非公開にする" })).toBeInTheDocument();
     const urlInput = screen.getByLabelText("公開URL") as HTMLInputElement;
     expect(urlInput.value).toContain("/s/s1");
@@ -318,7 +317,7 @@ describe("SetlistEditor", () => {
     await waitFor(() => {
       expect(toast.success).toHaveBeenCalledWith("非公開にしました");
     });
-    expect(screen.getByText("非公開")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "公開する" })).toBeInTheDocument();
   });
 
   it("shows an error toast when unpublishing fails", async () => {
