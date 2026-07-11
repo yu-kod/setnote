@@ -66,7 +66,7 @@ describe("SetlistPage", () => {
             id: "t1",
             title: "Song A",
             artist: "DJ X",
-            songLink: "https://youtu.be/1",
+            songLink: "https://youtu.be/dQw4w9WgXcQ",
             source: "https://shop.example.com",
             customFields: [{ id: "c1", label: "BPM", value: "128" }],
           },
@@ -74,7 +74,7 @@ describe("SetlistPage", () => {
             id: "t2",
             title: "Song B",
             artist: "",
-            songLink: "",
+            songLink: "https://example.com/track",
             source: "レコード店で購入",
             customFields: [],
           },
@@ -96,9 +96,14 @@ describe("SetlistPage", () => {
 
     expect(screen.getByText("Song A")).toBeInTheDocument();
     expect(screen.getByText("DJ X")).toBeInTheDocument();
+    // 対応サービス（YouTube）は iframe 埋め込み
+    expect(screen.getByTitle("YouTube").getAttribute("src")).toContain(
+      "youtube.com/embed/dQw4w9WgXcQ"
+    );
+    // 未対応リンクはフォールバックのリンク表示
     expect(screen.getByRole("link", { name: "再生・リンク" })).toHaveAttribute(
       "href",
-      "https://youtu.be/1"
+      "https://example.com/track"
     );
     // ソースが URL のときはリンク
     expect(screen.getByRole("link", { name: "入手元" })).toHaveAttribute(

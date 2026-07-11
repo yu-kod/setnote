@@ -4,6 +4,7 @@ import { fetchPublicSetlist } from "../features/setlist/api";
 import type { Setlist } from "../features/setlist/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { MediaEmbed } from "../features/setlist/components/MediaEmbed";
 import NotFoundPage from "./NotFoundPage";
 
 const isUrl = (s: string) => /^https?:\/\//.test(s);
@@ -72,16 +73,7 @@ export default function SetlistPage() {
                   <span className="font-semibold">{track.title}</span>
                 </div>
                 {track.artist && <p className="text-sm text-muted-foreground">{track.artist}</p>}
-                {track.songLink && (
-                  <a
-                    href={track.songLink}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="block text-sm text-primary underline underline-offset-4"
-                  >
-                    再生・リンク
-                  </a>
-                )}
+                {track.songLink && <MediaEmbed url={track.songLink} />}
                 {track.source &&
                   (isUrl(track.source) ? (
                     <a
