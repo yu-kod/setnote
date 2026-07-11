@@ -1,8 +1,9 @@
 import { Link } from "react-router-dom";
+import { ArrowRight } from "lucide-react";
 import { useAuth } from "../features/auth/AuthContext";
 
 const ctaBase =
-  "inline-flex h-11 items-center justify-center rounded-md px-6 text-sm font-semibold no-underline transition-colors";
+  "inline-flex h-11 items-center justify-center gap-2 rounded-md px-6 text-sm font-semibold no-underline transition-colors";
 
 const features = [
   {
@@ -39,6 +40,7 @@ export default function LandingPage() {
               className={`${ctaBase} bg-primary text-primary-foreground hover:bg-primary/90`}
             >
               ダッシュボードへ
+              <ArrowRight className="size-4" aria-hidden="true" />
             </Link>
           ) : (
             <>

@@ -24,11 +24,11 @@ beforeEach(() => {
 });
 
 describe("SetlistList", () => {
-  it("shows loading state while fetching", () => {
+  it("shows a loading skeleton while fetching", () => {
     mockFetchMySetlists.mockReturnValue(new Promise(() => {}));
     renderWithProviders(<SetlistList />);
 
-    expect(screen.getByText("読み込み中...")).toBeInTheDocument();
+    expect(screen.getByRole("status", { name: "読み込み中" })).toBeInTheDocument();
   });
 
   it("shows empty state when no setlists", async () => {
