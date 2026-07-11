@@ -88,11 +88,12 @@ setlistsRoute.put("/:id", authMiddleware, async (c) => {
         TableName: TABLES.setlists,
         Key: { id },
         UpdateExpression:
-          "SET #name = :name, tracks = :tracks, eventName = :eventName, eventLink = :eventLink, eventDate = :eventDate, updatedAt = :now",
+          "SET #name = :name, artistName = :artistName, tracks = :tracks, eventName = :eventName, eventLink = :eventLink, eventDate = :eventDate, updatedAt = :now",
         ConditionExpression: "attribute_exists(id) AND userId = :uid",
         ExpressionAttributeNames: { "#name": "name" },
         ExpressionAttributeValues: {
           ":name": body.name,
+          ":artistName": body.artistName ?? null,
           ":tracks": body.tracks ?? [],
           ":eventName": body.eventName ?? null,
           ":eventLink": body.eventLink ?? null,

@@ -43,6 +43,9 @@ export default function SetlistPage() {
     <div className="space-y-6">
       <div className="space-y-1">
         <h1 className="text-2xl font-bold tracking-tight">{setlist.name}</h1>
+        {setlist.artistName && (
+          <p className="text-sm font-medium text-foreground">by {setlist.artistName}</p>
+        )}
         {setlist.eventName && <p className="text-muted-foreground">{setlist.eventName}</p>}
         {setlist.eventDate && (
           <p className="text-sm text-muted-foreground">{formatEventDate(setlist.eventDate)}</p>

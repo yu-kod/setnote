@@ -26,6 +26,7 @@ function buildSetlist(overrides: Partial<Setlist> = {}): Setlist {
     id: "s1",
     userId: "u1",
     name: "My Set",
+    artistName: null,
     eventName: null,
     eventLink: null,
     eventDate: null,
@@ -139,6 +140,7 @@ describe("SetlistEditor", () => {
     const nameInput = await screen.findByLabelText("セットリスト名");
     await user.clear(nameInput);
     await user.type(nameInput, "New Name");
+    await user.type(screen.getByLabelText("名義（DJ / アーティスト名）"), "DJ Me");
     await user.type(screen.getByLabelText("イベント名"), "Club Night");
     await user.type(screen.getByLabelText("イベントリンク"), "https://example.com");
     await user.type(screen.getByLabelText("開催日"), "2026-08-01");
@@ -148,6 +150,7 @@ describe("SetlistEditor", () => {
     expect(screen.getByRole("button", { name: "保存中..." })).toBeInTheDocument();
     expect(mockUpdateSetlist).toHaveBeenCalledWith("s1", {
       name: "New Name",
+      artistName: "DJ Me",
       eventName: "Club Night",
       eventLink: "https://example.com",
       eventDate: "2026-08-01",
@@ -175,6 +178,7 @@ describe("SetlistEditor", () => {
     });
     expect(mockUpdateSetlist).toHaveBeenCalledWith("s1", {
       name: "Keep",
+      artistName: null,
       eventName: null,
       eventLink: null,
       eventDate: null,
