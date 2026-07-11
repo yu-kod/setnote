@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders, screen, waitFor } from "../test-utils";
 import SetlistPage from "./SetlistPage";
@@ -99,32 +100,37 @@ describe("SetlistPage", () => {
     );
 
     // 目次に全曲が並ぶ
-    expect(screen.getByText("Song A")).toBeInTheDocument();
-    expect(screen.getByText("Song B")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Song A/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Song B/ })).toBeInTheDocument();
 
-    // 初期表示は先頭曲(t1)のプレイヤーが開いている
-    expect(screen.getByTitle("YouTube").getAttribute("src")).toContain(
+    // 初期表示は先頭曲(t1)のプレイヤーが開いている（曲名・作者・埋め込み・詳細）
+    const player = within(screen.getByRole("region", { name: "選択中の曲" }));
+    expect(player.getByText("Song A")).toBeInTheDocument();
+    expect(player.getByText("DJ X")).toBeInTheDocument();
+    expect(player.getByTitle("YouTube").getAttribute("src")).toContain(
       "youtube.com/embed/dQw4w9WgXcQ"
     );
-    expect(screen.getByRole("link", { name: "入手元" })).toHaveAttribute(
+    expect(player.getByRole("link", { name: "入手元" })).toHaveAttribute(
       "href",
       "https://shop.example.com"
     );
-    expect(screen.getByText("BPM: 128")).toBeInTheDocument();
+    expect(player.getByText("BPM: 128")).toBeInTheDocument();
     // t2 の情報はまだ表示されない
     expect(screen.queryByText("入手元: レコード店で購入")).not.toBeInTheDocument();
 
     // 2曲目を選ぶとプレイヤーが切り替わる
     await user.click(screen.getByRole("button", { name: /Song B/ }));
 
+    const player2 = within(screen.getByRole("region", { name: "選択中の曲" }));
+    expect(player2.getByText("Song B")).toBeInTheDocument();
     expect(screen.queryByTitle("YouTube")).not.toBeInTheDocument();
     // 未対応リンクはフォールバックのリンク表示
-    expect(screen.getByRole("link", { name: "再生・リンク" })).toHaveAttribute(
+    expect(player2.getByRole("link", { name: "再生・リンク" })).toHaveAttribute(
       "href",
       "https://example.com/track"
     );
     // ソースが自由文のときはテキスト
-    expect(screen.getByText("入手元: レコード店で購入")).toBeInTheDocument();
+    expect(player2.getByText("入手元: レコード店で購入")).toBeInTheDocument();
     expect(screen.queryByText("BPM: 128")).not.toBeInTheDocument();
     // 下のプレイヤーが画面内に寄せられる
     expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
@@ -144,7 +150,7 @@ describe("SetlistPage", () => {
     await waitFor(() => {
       expect(screen.getByRole("heading", { name: "Bare" })).toBeInTheDocument();
     });
-    expect(screen.getByText("Solo")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Solo/ })).toBeInTheDocument();
     expect(screen.getByText("再生リンクはありません")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: "イベントページ" })).not.toBeInTheDocument();
   });
