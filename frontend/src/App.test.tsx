@@ -49,6 +49,16 @@ describe("App", () => {
     expect(screen.getByText("お探しのページが見つかりませんでした")).toBeInTheDocument();
   });
 
+  it("renders the terms page at /terms", () => {
+    renderApp("/terms");
+    expect(screen.getByRole("heading", { name: "利用規約" })).toBeInTheDocument();
+  });
+
+  it("renders the privacy policy page at /privacy", () => {
+    renderApp("/privacy");
+    expect(screen.getByRole("heading", { name: "プライバシーポリシー" })).toBeInTheDocument();
+  });
+
   it("renders login page at /login", () => {
     renderApp("/login");
     expect(screen.getByRole("heading", { name: "ログイン" })).toBeInTheDocument();
