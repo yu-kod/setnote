@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fetchMySetlists, createSetlist } from "./api";
+import { fetchMySetlists, createSetlist, fetchSetlist, updateSetlist } from "./api";
 import { clearSession, redirectToLogin } from "../auth/session";
 
 vi.mock("../auth/session", () => ({
@@ -53,6 +53,68 @@ describe("fetchMySetlists", () => {
         headers: expect.objectContaining({ Authorization: "Bearer " }),
       })
     );
+  });
+});
+
+describe("fetchSetlist", () => {
+  it("returns the setlist matching the id from the user's setlists", async () => {
+    localStorage.setItem("setnote_access_token", "test-token");
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve([
+          { id: "a1", name: "Set A" },
+          { id: "b2", name: "Set B" },
+        ]),
+    });
+
+    const result = await fetchSetlist("b2");
+
+    expect(mockFetch).toHaveBeenCalledWith("/api/setlists/mine", expect.anything());
+    expect(result).toEqual({ id: "b2", name: "Set B" });
+  });
+
+  it("returns null when no setlist matches the id", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve([{ id: "a1", name: "Set A" }]),
+    });
+
+    const result = await fetchSetlist("missing");
+
+    expect(result).toBeNull();
+  });
+});
+
+describe("updateSetlist", () => {
+  it("calls PUT /api/setlists/:id with the update payload", async () => {
+    localStorage.setItem("setnote_access_token", "test-token");
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ id: "a1", name: "Updated" }),
+    });
+
+    const input = {
+      name: "Updated",
+      eventName: "Fes",
+      eventLink: null,
+      eventDate: "2026-08-01",
+      tracks: [],
+    };
+    const result = await updateSetlist("a1", input);
+
+    expect(mockFetch).toHaveBeenCalledWith("/api/setlists/a1", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer test-token",
+      },
+      body: JSON.stringify(input),
+    });
+    expect(result).toEqual({ id: "a1", name: "Updated" });
   });
 });
 
