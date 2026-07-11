@@ -73,6 +73,10 @@ export function unpublishSetlist(id: string): Promise<Setlist> {
   return setlistRequest<Setlist>(`/${id}/publish`, { method: "DELETE" });
 }
 
+export function deleteSetlist(id: string): Promise<void> {
+  return setlistRequest<void>(`/${id}`, { method: "DELETE" });
+}
+
 // 公開ページ用。認証不要で、公開中のセットリストのスナップショットを取得する。
 export async function fetchPublicSetlist(id: string): Promise<Setlist> {
   const res = await fetch(`/api/setlists/${id}`);

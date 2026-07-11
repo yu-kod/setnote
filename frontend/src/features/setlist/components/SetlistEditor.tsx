@@ -1,22 +1,34 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import {
   fetchSetlist,
   updateSetlist,
   publishSetlist,
   unpublishSetlist,
+  deleteSetlist,
   type UpdateSetlistInput,
 } from "../api";
 import type { Setlist, Track } from "../types";
 import { GripVertical } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Field, FieldGroup } from "@/components/ui/field";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sortable, SortableItem, SortableItemHandle } from "@/components/ui/sortable";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import NotFoundPage from "@/pages/NotFoundPage";
 import { AddTrackForm } from "./AddTrackForm";
 import { TrackCard } from "./TrackCard";
@@ -48,6 +60,8 @@ export function SetlistEditor({ id }: { id: string }) {
   const [notFound, setNotFound] = useState(false);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchSetlist(id)
@@ -134,6 +148,18 @@ export function SetlistEditor({ id }: { id: string }) {
       toast.error("非公開に失敗しました");
     } finally {
       setPublishing(false);
+    }
+  }
+
+  async function handleDelete() {
+    setDeleting(true);
+    try {
+      await deleteSetlist(id);
+      toast.success("削除しました");
+      navigate("/dashboard");
+    } catch {
+      toast.error("削除に失敗しました");
+      setDeleting(false);
     }
   }
 
@@ -279,6 +305,34 @@ export function SetlistEditor({ id }: { id: string }) {
         <Button type="button" onClick={handleSave} disabled={saving || !form.name.trim()}>
           {saving ? "保存中..." : "保存"}
         </Button>
+      </div>
+
+      {/* 危険な操作（削除）は下部に分離し、確認ダイアログを挟む。 */}
+      <div className="border-t pt-4">
+        <AlertDialog>
+          <AlertDialogTrigger asChild>
+            <Button type="button" variant="destructive" size="sm" disabled={deleting}>
+              {deleting ? "削除中..." : "セットリストを削除"}
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>セットリストを削除しますか？</AlertDialogTitle>
+              <AlertDialogDescription>
+                この操作は取り消せません。「{form.name}」を完全に削除します。
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>キャンセル</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDelete}
+                className={buttonVariants({ variant: "destructive" })}
+              >
+                削除する
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </div>
   );

@@ -6,6 +6,7 @@ import {
   updateSetlist,
   publishSetlist,
   unpublishSetlist,
+  deleteSetlist,
   fetchPublicSetlist,
 } from "./api";
 import { clearSession, redirectToLogin } from "../auth/session";
@@ -189,6 +190,24 @@ describe("unpublishSetlist", () => {
       },
     });
     expect(result).toEqual({ id: "a1", status: "unpublished" });
+  });
+});
+
+describe("deleteSetlist", () => {
+  it("calls DELETE /api/setlists/:id and resolves on 204", async () => {
+    localStorage.setItem("setnote_access_token", "test-token");
+    mockFetch.mockResolvedValue({ ok: true, status: 204 });
+
+    const result = await deleteSetlist("a1");
+
+    expect(mockFetch).toHaveBeenCalledWith("/api/setlists/a1", {
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer test-token",
+      },
+    });
+    expect(result).toBeUndefined();
   });
 });
 
