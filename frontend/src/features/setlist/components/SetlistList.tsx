@@ -20,11 +20,18 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 
-const statusVariant: Record<string, "default" | "secondary" | "destructive"> = {
+// 非公開(unpublished)は実質 draft と同じ扱いにする。
+const statusVariant: Record<string, "default" | "secondary"> = {
   published: "default",
   draft: "secondary",
-  unpublished: "destructive",
-} as const;
+  unpublished: "secondary",
+};
+
+const statusLabel: Record<string, string> = {
+  published: "published",
+  draft: "draft",
+  unpublished: "draft",
+};
 
 // 開催日（YYYY-MM-DD）をタイムゾーンに依存せず表示用に整形する。
 function formatEventDate(date: string): string {
@@ -91,7 +98,7 @@ export function SetlistList() {
       )}
       <Dialog open={dialogOpen} onOpenChange={handleDialogChange}>
         <DialogTrigger asChild>
-          <Button className="w-full">新規作成</Button>
+          <Button>新規作成</Button>
         </DialogTrigger>
         <DialogContent className="sm:max-w-sm">
           <form onSubmit={handleCreate}>
@@ -151,7 +158,7 @@ export function SetlistList() {
                     </div>
                   )}
                 </div>
-                <Badge variant={statusVariant[s.status]}>{s.status}</Badge>
+                <Badge variant={statusVariant[s.status]}>{statusLabel[s.status]}</Badge>
               </button>
             </li>
           ))}
