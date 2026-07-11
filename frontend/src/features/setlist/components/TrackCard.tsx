@@ -56,8 +56,8 @@ export function TrackCard({ track, index, onChange, onDelete, dragHandle }: Prop
 
   return (
     <Card role="group" aria-label={`トラック ${index + 1}`}>
-      <CardContent className="space-y-0.5 pt-6">
-        <div className="flex items-start gap-2">
+      <CardContent className="space-y-0.5">
+        <div className="flex items-center gap-2">
           {dragHandle}
           <InlineInput
             aria-label="曲名"
