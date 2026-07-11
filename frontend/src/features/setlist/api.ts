@@ -38,10 +38,28 @@ async function setlistRequest<T>(
   return res.json() as Promise<T>;
 }
 
+export type UpdateSetlistInput = {
+  name: string;
+  eventName: string | null;
+  eventLink: string | null;
+  eventDate: string | null;
+  tracks: unknown[];
+};
+
 export function fetchMySetlists(): Promise<Setlist[]> {
   return setlistRequest<Setlist[]>("/mine");
 }
 
 export function createSetlist(name: string): Promise<Setlist> {
   return setlistRequest<Setlist>("", { method: "POST", body: { name } });
+}
+
+// 編集用の取得は所有者専用の GET が無いため、認証付きの一覧から id で絞る。
+export async function fetchSetlist(id: string): Promise<Setlist | null> {
+  const setlists = await fetchMySetlists();
+  return setlists.find((s) => s.id === id) ?? null;
+}
+
+export function updateSetlist(id: string, input: UpdateSetlistInput): Promise<Setlist> {
+  return setlistRequest<Setlist>(`/${id}`, { method: "PUT", body: input });
 }

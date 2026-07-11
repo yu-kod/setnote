@@ -6,7 +6,9 @@ import LoginPage from "./pages/LoginPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import DashboardPage from "./pages/DashboardPage";
 import LandingPage from "./pages/LandingPage";
+import SetlistEditPage from "./pages/SetlistEditPage";
 import { ProtectedRoute } from "./features/auth/components/ProtectedRoute";
+import { Toaster } from "./components/ui/sonner";
 
 export default function App() {
   return (
@@ -25,6 +27,7 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route element={<ProtectedRoute />}>
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/setlists/:id/edit" element={<SetlistEditPage />} />
         </Route>
         <Route path="*" element={<NotFoundPage />} />
       </Routes>
@@ -37,6 +40,7 @@ export default function App() {
           プライバシーポリシー
         </Link>
       </footer>
+      <Toaster />
     </div>
   );
 }
