@@ -121,14 +121,25 @@ export function SetlistEditor({ id }: { id: string }) {
                 required
               />
             </Field>
-            <Field>
-              <Label htmlFor="event-name">イベント名</Label>
-              <Input
-                id="event-name"
-                value={form.eventName}
-                onChange={(e) => update("eventName", e.target.value)}
-              />
-            </Field>
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+              <Field>
+                <Label htmlFor="event-name">イベント名</Label>
+                <Input
+                  id="event-name"
+                  value={form.eventName}
+                  onChange={(e) => update("eventName", e.target.value)}
+                />
+              </Field>
+              <Field>
+                <Label htmlFor="event-date">開催日</Label>
+                <Input
+                  id="event-date"
+                  type="date"
+                  value={form.eventDate}
+                  onChange={(e) => update("eventDate", e.target.value)}
+                />
+              </Field>
+            </div>
             <Field>
               <Label htmlFor="event-link">イベントリンク</Label>
               <Input
@@ -137,15 +148,6 @@ export function SetlistEditor({ id }: { id: string }) {
                 value={form.eventLink}
                 onChange={(e) => update("eventLink", e.target.value)}
                 placeholder="https://"
-              />
-            </Field>
-            <Field>
-              <Label htmlFor="event-date">開催日</Label>
-              <Input
-                id="event-date"
-                type="date"
-                value={form.eventDate}
-                onChange={(e) => update("eventDate", e.target.value)}
               />
             </Field>
           </FieldGroup>
