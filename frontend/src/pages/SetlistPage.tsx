@@ -4,6 +4,7 @@ import { fetchPublicSetlist } from "../features/setlist/api";
 import type { Setlist } from "../features/setlist/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ExternalLink } from "lucide-react";
 import { MediaEmbed } from "../features/setlist/components/MediaEmbed";
 import NotFoundPage from "./NotFoundPage";
 
@@ -55,25 +56,33 @@ export default function SetlistPage() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h1 className="text-2xl font-bold tracking-tight">{setlist.name}</h1>
-        {setlist.artistName && (
-          <p className="text-sm font-medium text-foreground">by {setlist.artistName}</p>
-        )}
-        {setlist.eventName && <p className="text-muted-foreground">{setlist.eventName}</p>}
-        {setlist.eventDate && (
-          <p className="text-sm text-muted-foreground">{formatEventDate(setlist.eventDate)}</p>
-        )}
-        {setlist.eventLink && (
-          <a
-            href={setlist.eventLink}
-            target="_blank"
-            rel="noreferrer"
-            className="text-sm text-primary underline underline-offset-4"
-          >
-            イベントページ
-          </a>
-        )}
+      <div className="flex items-start justify-between gap-4">
+        <div className="min-w-0 space-y-1">
+          <h1 className="text-2xl font-bold tracking-tight">{setlist.name}</h1>
+          {setlist.artistName && (
+            <p className="text-sm font-medium text-foreground">by {setlist.artistName}</p>
+          )}
+        </div>
+        {/* イベント情報は右寄せ。リンクがあればイベント名自体をリンク化し末尾にアイコンを付ける。 */}
+        <div className="space-y-1 text-right">
+          {setlist.eventName &&
+            (setlist.eventLink ? (
+              <a
+                href={setlist.eventLink}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 text-sm font-medium text-primary underline underline-offset-4"
+              >
+                {setlist.eventName}
+                <ExternalLink aria-hidden="true" className="size-3.5" />
+              </a>
+            ) : (
+              <p className="font-medium">{setlist.eventName}</p>
+            ))}
+          {setlist.eventDate && (
+            <p className="text-sm text-muted-foreground">{formatEventDate(setlist.eventDate)}</p>
+          )}
+        </div>
       </div>
 
       {selected ? (

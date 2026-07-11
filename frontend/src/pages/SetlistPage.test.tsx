@@ -92,9 +92,9 @@ describe("SetlistPage", () => {
       expect(screen.getByRole("heading", { name: "Summer Set" })).toBeInTheDocument();
     });
     expect(screen.getByText("by DJ Star")).toBeInTheDocument();
-    expect(screen.getByText("Summer Fes")).toBeInTheDocument();
     expect(screen.getByText("2026/8/1")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "イベントページ" })).toHaveAttribute(
+    // イベント名自体がリンクになっている
+    expect(screen.getByRole("link", { name: "Summer Fes" })).toHaveAttribute(
       "href",
       "https://fes.example.com"
     );
@@ -152,7 +152,24 @@ describe("SetlistPage", () => {
     });
     expect(screen.getByRole("button", { name: /Solo/ })).toBeInTheDocument();
     expect(screen.getByText("再生リンクはありません")).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "イベントページ" })).not.toBeInTheDocument();
+  });
+
+  it("shows the event name as plain text when there is no event link", async () => {
+    mockFetch.mockResolvedValue(
+      buildPublicSetlist({
+        name: "Set",
+        eventName: "Club Night",
+        tracks: [{ id: "t9", title: "X", artist: "", songLink: "", source: "", customFields: [] }],
+      })
+    );
+    renderWithProviders(<SetlistPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "Set" })).toBeInTheDocument();
+    });
+    expect(screen.getByText("Club Night")).toBeInTheDocument();
+    // リンクが無いのでリンク化されない
+    expect(screen.queryByRole("link", { name: "Club Night" })).not.toBeInTheDocument();
   });
 
   it("shows an empty message when the setlist has no tracks", async () => {
