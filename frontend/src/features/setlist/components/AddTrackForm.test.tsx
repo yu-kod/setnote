@@ -66,4 +66,62 @@ describe("AddTrackForm", () => {
     expect(onAdd).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "トラックを追加" })).toBeInTheDocument();
   });
+
+  it("suggests matching past tracks and hides suggestions when nothing matches", async () => {
+    const suggestions = [
+      {
+        id: "p1",
+        title: "Song A",
+        artist: "DJ X",
+        songLink: "https://youtu.be/1",
+        source: "shop",
+        customFields: [],
+      },
+      { id: "p2", title: "Song B", artist: "", songLink: "", source: "", customFields: [] },
+    ];
+    const user = userEvent.setup();
+    renderWithProviders(<AddTrackForm onAdd={onAdd} suggestions={suggestions} />);
+
+    await user.click(screen.getByRole("button", { name: "トラックを追加" }));
+    await user.type(screen.getByLabelText("曲名"), "Song");
+
+    expect(screen.getByRole("option", { name: /Song A/ })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: /Song B/ })).toBeInTheDocument();
+
+    await user.clear(screen.getByLabelText("曲名"));
+    await user.type(screen.getByLabelText("曲名"), "zzz");
+
+    expect(screen.queryByRole("option")).not.toBeInTheDocument();
+  });
+
+  it("adds a full copy of a selected suggestion with a new id", async () => {
+    const suggestions = [
+      {
+        id: "p1",
+        title: "Song A",
+        artist: "DJ X",
+        songLink: "https://youtu.be/1",
+        source: "shop",
+        customFields: [{ id: "c1", label: "BPM", value: "128" }],
+      },
+    ];
+    const user = userEvent.setup();
+    renderWithProviders(<AddTrackForm onAdd={onAdd} suggestions={suggestions} />);
+
+    await user.click(screen.getByRole("button", { name: "トラックを追加" }));
+    await user.type(screen.getByLabelText("曲名"), "Song");
+    await user.click(screen.getByRole("option", { name: /Song A/ }));
+
+    expect(onAdd).toHaveBeenCalledTimes(1);
+    const added = onAdd.mock.calls[0][0];
+    expect(added).toMatchObject({
+      title: "Song A",
+      artist: "DJ X",
+      songLink: "https://youtu.be/1",
+      source: "shop",
+    });
+    expect(added.customFields).toEqual([{ id: "c1", label: "BPM", value: "128" }]);
+    expect(added.id).not.toBe("p1");
+    expect(screen.getByRole("button", { name: "トラックを追加" })).toBeInTheDocument();
+  });
 });

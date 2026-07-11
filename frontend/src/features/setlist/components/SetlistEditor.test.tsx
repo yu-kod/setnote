@@ -7,6 +7,7 @@ import {
   publishSetlist,
   unpublishSetlist,
   deleteSetlist,
+  fetchTrackSuggestions,
 } from "../api";
 import { toast } from "sonner";
 import type { Setlist } from "../types";
@@ -23,6 +24,7 @@ vi.mock("../api", () => ({
   publishSetlist: vi.fn(),
   unpublishSetlist: vi.fn(),
   deleteSetlist: vi.fn(),
+  fetchTrackSuggestions: vi.fn(),
 }));
 
 vi.mock("sonner", () => ({
@@ -34,6 +36,7 @@ const mockUpdateSetlist = vi.mocked(updateSetlist);
 const mockPublishSetlist = vi.mocked(publishSetlist);
 const mockUnpublishSetlist = vi.mocked(unpublishSetlist);
 const mockDeleteSetlist = vi.mocked(deleteSetlist);
+const mockFetchTrackSuggestions = vi.mocked(fetchTrackSuggestions);
 
 function buildSetlist(overrides: Partial<Setlist> = {}): Setlist {
   return {
@@ -58,6 +61,8 @@ beforeEach(() => {
   mockPublishSetlist.mockReset();
   mockUnpublishSetlist.mockReset();
   mockDeleteSetlist.mockReset();
+  mockFetchTrackSuggestions.mockReset();
+  mockFetchTrackSuggestions.mockResolvedValue([]);
   mockNavigate.mockReset();
   vi.mocked(toast.success).mockReset();
   vi.mocked(toast.error).mockReset();
@@ -407,5 +412,28 @@ describe("SetlistEditor", () => {
     });
     expect(mockNavigate).not.toHaveBeenCalled();
     expect(screen.getByRole("button", { name: "セットリストを削除" })).toBeEnabled();
+  });
+
+  it("suggests past tracks in the add-track form", async () => {
+    mockFetchSetlist.mockResolvedValue(buildSetlist({ name: "Set", tracks: [] }));
+    mockFetchTrackSuggestions.mockResolvedValue([
+      { id: "p1", title: "Past Song", artist: "DJ P", songLink: "", source: "", customFields: [] },
+    ]);
+    const user = userEvent.setup();
+    renderWithProviders(<SetlistEditor id="s1" />);
+    await screen.findByLabelText("セットリスト名");
+
+    await user.click(screen.getByRole("button", { name: "トラックを追加" }));
+    await user.type(screen.getByLabelText("曲名"), "Past");
+
+    expect(await screen.findByRole("option", { name: /Past Song/ })).toBeInTheDocument();
+  });
+
+  it("still renders when the suggestion fetch fails", async () => {
+    mockFetchSetlist.mockResolvedValue(buildSetlist({ name: "Set" }));
+    mockFetchTrackSuggestions.mockRejectedValue(new Error("boom"));
+    renderWithProviders(<SetlistEditor id="s1" />);
+
+    expect(await screen.findByLabelText("セットリスト名")).toBeInTheDocument();
   });
 });

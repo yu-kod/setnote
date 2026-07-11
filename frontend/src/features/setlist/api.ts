@@ -1,4 +1,5 @@
-import type { Setlist } from "./types";
+import type { Setlist, Track } from "./types";
+import { collectTrackSuggestions } from "./suggestions";
 import { clearSession, redirectToLogin } from "../auth/session";
 
 function getToken(): string {
@@ -75,6 +76,13 @@ export function unpublishSetlist(id: string): Promise<Setlist> {
 
 export function deleteSetlist(id: string): Promise<void> {
   return setlistRequest<void>(`/${id}`, { method: "DELETE" });
+}
+
+// オートコンプリート用。過去入力の曲を集約する。
+// 専用エンドポイントは将来課題で、当面は /mine の全 tracks から集約する。
+export async function fetchTrackSuggestions(): Promise<Track[]> {
+  const setlists = await fetchMySetlists();
+  return collectTrackSuggestions(setlists);
 }
 
 // 公開ページ用。認証不要で、公開中のセットリストのスナップショットを取得する。

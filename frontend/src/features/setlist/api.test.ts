@@ -8,6 +8,7 @@ import {
   unpublishSetlist,
   deleteSetlist,
   fetchPublicSetlist,
+  fetchTrackSuggestions,
 } from "./api";
 import { clearSession, redirectToLogin } from "../auth/session";
 
@@ -208,6 +209,40 @@ describe("deleteSetlist", () => {
       },
     });
     expect(result).toBeUndefined();
+  });
+});
+
+describe("fetchTrackSuggestions", () => {
+  it("aggregates deduped past tracks from the user's setlists", async () => {
+    localStorage.setItem("setnote_access_token", "test-token");
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () =>
+        Promise.resolve([
+          {
+            id: "s1",
+            tracks: [
+              {
+                id: "t1",
+                title: "Song A",
+                artist: "DJ",
+                songLink: "",
+                source: "",
+                customFields: [],
+              },
+            ],
+            updatedAt: "2026-01-01T00:00:00Z",
+          },
+        ]),
+    });
+
+    const result = await fetchTrackSuggestions();
+
+    expect(mockFetch).toHaveBeenCalledWith("/api/setlists/mine", expect.anything());
+    expect(result).toEqual([
+      { id: "t1", title: "Song A", artist: "DJ", songLink: "", source: "", customFields: [] },
+    ]);
   });
 });
 

@@ -7,6 +7,7 @@ import {
   publishSetlist,
   unpublishSetlist,
   deleteSetlist,
+  fetchTrackSuggestions,
   type UpdateSetlistInput,
 } from "../api";
 import type { Setlist, Track } from "../types";
@@ -61,7 +62,15 @@ export function SetlistEditor({ id }: { id: string }) {
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [suggestions, setSuggestions] = useState<Track[]>([]);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // サジェストは非必須。取得失敗しても編集は続行できるよう握りつぶす。
+    fetchTrackSuggestions()
+      .then(setSuggestions)
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     fetchSetlist(id)
@@ -298,7 +307,7 @@ export function SetlistEditor({ id }: { id: string }) {
             </SortableItem>
           ))}
         </Sortable>
-        <AddTrackForm onAdd={addTrack} />
+        <AddTrackForm onAdd={addTrack} suggestions={suggestions} />
       </div>
 
       <div className="flex justify-end">
