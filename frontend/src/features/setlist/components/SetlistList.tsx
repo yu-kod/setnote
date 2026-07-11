@@ -26,6 +26,12 @@ const statusVariant: Record<string, "default" | "secondary" | "destructive"> = {
   unpublished: "destructive",
 } as const;
 
+// 開催日（YYYY-MM-DD）をタイムゾーンに依存せず表示用に整形する。
+function formatEventDate(date: string): string {
+  const [year, month, day] = date.split("-");
+  return `${year}/${Number(month)}/${Number(day)}`;
+}
+
 export function SetlistList() {
   const navigate = useNavigate();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -135,11 +141,17 @@ export function SetlistList() {
                 className="flex w-full items-center gap-3 rounded-lg border border-border bg-card p-4 text-left text-card-foreground transition-colors hover:border-primary"
                 onClick={() => navigate(`/setlists/${s.id}/edit`)}
               >
-                <span className="flex-1 font-semibold">{s.name}</span>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate font-semibold">{s.name}</div>
+                  {(s.eventName || s.eventDate) && (
+                    <div className="mt-0.5 truncate text-xs text-muted-foreground">
+                      {[s.eventName, s.eventDate ? formatEventDate(s.eventDate) : null]
+                        .filter(Boolean)
+                        .join(" ・ ")}
+                    </div>
+                  )}
+                </div>
                 <Badge variant={statusVariant[s.status]}>{s.status}</Badge>
-                <span className="text-xs text-muted-foreground">
-                  {new Date(s.updatedAt).toLocaleDateString("ja-JP")}
-                </span>
               </button>
             </li>
           ))}

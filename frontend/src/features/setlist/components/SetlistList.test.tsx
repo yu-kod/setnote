@@ -42,19 +42,31 @@ describe("SetlistList", () => {
     });
   });
 
-  it("displays setlist items with name, status badge, and updated date", async () => {
+  it("displays setlist items with name, status, event name and event date", async () => {
     mockFetchMySetlists.mockResolvedValue([
       {
-        id: "abc123",
+        id: "a",
         name: "Summer Festival Set",
         status: "draft",
+        eventName: "Summer Fes",
+        eventDate: null,
         updatedAt: "2026-07-01T12:00:00Z",
       },
       {
-        id: "def456",
+        id: "b",
         name: "Club Night Mix",
         status: "published",
+        eventName: null,
+        eventDate: "2026-08-01",
         updatedAt: "2026-07-05T18:00:00Z",
+      },
+      {
+        id: "c",
+        name: "Bare Set",
+        status: "unpublished",
+        eventName: null,
+        eventDate: null,
+        updatedAt: "2026-07-06T18:00:00Z",
       },
     ]);
 
@@ -64,8 +76,18 @@ describe("SetlistList", () => {
       expect(screen.getByText("Summer Festival Set")).toBeInTheDocument();
     });
     expect(screen.getByText("Club Night Mix")).toBeInTheDocument();
+    expect(screen.getByText("Bare Set")).toBeInTheDocument();
+
+    // イベント名は設定時のみ表示
+    expect(screen.getByText("Summer Fes")).toBeInTheDocument();
+    // 開催日は設定時のみ、タイムゾーン非依存で整形表示
+    expect(screen.getByText("2026/8/1")).toBeInTheDocument();
+    // 更新日（旧表示）はもう出さない
+    expect(screen.queryByText("2026/7/1")).not.toBeInTheDocument();
+
     expect(screen.getByText("draft")).toBeInTheDocument();
     expect(screen.getByText("published")).toBeInTheDocument();
+    expect(screen.getByText("unpublished")).toBeInTheDocument();
   });
 
   it("navigates to edit page when setlist item is clicked", async () => {
