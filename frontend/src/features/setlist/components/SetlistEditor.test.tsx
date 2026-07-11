@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderWithProviders, screen, userEvent, waitFor } from "../../../test-utils";
+import { renderWithProviders, screen, within, userEvent, waitFor } from "../../../test-utils";
 import { SetlistEditor } from "./SetlistEditor";
 import { fetchSetlist, updateSetlist } from "../api";
 import { toast } from "sonner";
@@ -111,7 +111,15 @@ describe("SetlistEditor", () => {
   });
 
   it("saves edited fields and shows a success toast", async () => {
-    const original = buildSetlist({ name: "Old", tracks: [{ title: "keep me" }] });
+    const keepTrack = {
+      id: "tk1",
+      title: "keep me",
+      artist: "",
+      songLink: "",
+      source: "",
+      customFields: [],
+    };
+    const original = buildSetlist({ name: "Old", tracks: [keepTrack] });
     mockFetchSetlist.mockResolvedValue(original);
     let resolveUpdate: (v: Setlist) => void = () => {};
     mockUpdateSetlist.mockReturnValue(
@@ -137,7 +145,7 @@ describe("SetlistEditor", () => {
       eventName: "Club Night",
       eventLink: "https://example.com",
       eventDate: "2026-08-01",
-      tracks: [{ title: "keep me" }],
+      tracks: [keepTrack],
     });
 
     resolveUpdate(buildSetlist({ name: "New Name" }));
@@ -166,5 +174,57 @@ describe("SetlistEditor", () => {
       eventDate: null,
       tracks: [],
     });
+  });
+
+  it("adds a track and includes it when saving", async () => {
+    mockFetchSetlist.mockResolvedValue(buildSetlist({ name: "Set", tracks: [] }));
+    mockUpdateSetlist.mockResolvedValue(buildSetlist());
+    const user = userEvent.setup();
+    renderWithProviders(<SetlistEditor id="s1" />);
+
+    await screen.findByLabelText("セットリスト名");
+    await user.click(screen.getByRole("button", { name: "トラックを追加" }));
+    await user.type(screen.getByLabelText("曲名"), "Opening Track");
+    await user.click(screen.getByRole("button", { name: "追加" }));
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    await waitFor(() => {
+      expect(mockUpdateSetlist).toHaveBeenCalled();
+    });
+    const payload = mockUpdateSetlist.mock.calls[0][1];
+    expect(payload.tracks).toHaveLength(1);
+    expect(payload.tracks[0]).toMatchObject({ title: "Opening Track" });
+  });
+
+  it("edits and deletes tracks before saving", async () => {
+    mockFetchSetlist.mockResolvedValue(
+      buildSetlist({
+        name: "Set",
+        tracks: [
+          { id: "a", title: "First", artist: "", songLink: "", source: "", customFields: [] },
+          { id: "b", title: "Second", artist: "", songLink: "", source: "", customFields: [] },
+        ],
+      })
+    );
+    mockUpdateSetlist.mockResolvedValue(buildSetlist());
+    const user = userEvent.setup();
+    renderWithProviders(<SetlistEditor id="s1" />);
+
+    await screen.findByLabelText("セットリスト名");
+    await user.type(screen.getAllByLabelText("アーティスト")[0], "DJ One");
+
+    const deleteButtons = screen.getAllByRole("button", { name: "削除" });
+    await user.click(deleteButtons[1]);
+    const dialog = await screen.findByRole("alertdialog");
+    await user.click(within(dialog).getByRole("button", { name: "削除" }));
+
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    await waitFor(() => {
+      expect(mockUpdateSetlist).toHaveBeenCalled();
+    });
+    const payload = mockUpdateSetlist.mock.calls[0][1];
+    expect(payload.tracks).toHaveLength(1);
+    expect(payload.tracks[0]).toMatchObject({ id: "a", title: "First", artist: "DJ One" });
   });
 });

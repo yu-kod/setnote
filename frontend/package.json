@@ -13,6 +13,7 @@
     "format:check": "prettier --check src/"
   },
   "dependencies": {
+    "@radix-ui/react-alert-dialog": "^1.1.19",
     "@radix-ui/react-dialog": "^1.1.19",
     "@radix-ui/react-slot": "^1.3.0",
     "@tailwindcss/vite": "^4.3.2",

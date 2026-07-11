@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { fetchSetlist, updateSetlist } from "../api";
-import type { Setlist } from "../types";
+import type { Track } from "../types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,6 +10,8 @@ import { Field, FieldGroup } from "@/components/ui/field";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import NotFoundPage from "@/pages/NotFoundPage";
+import { AddTrackForm } from "./AddTrackForm";
+import { TrackCard } from "./TrackCard";
 
 type FormState = {
   name: string;
@@ -22,7 +24,7 @@ const nullToEmpty = (v: string | null) => v ?? "";
 const toNullable = (v: string) => (v.trim() ? v.trim() : null);
 
 export function SetlistEditor({ id }: { id: string }) {
-  const [setlist, setSetlist] = useState<Setlist | null>(null);
+  const [tracks, setTracks] = useState<Track[]>([]);
   const [form, setForm] = useState<FormState>({
     name: "",
     eventName: "",
@@ -40,7 +42,7 @@ export function SetlistEditor({ id }: { id: string }) {
           setNotFound(true);
           return;
         }
-        setSetlist(data);
+        setTracks(data.tracks);
         setForm({
           name: data.name,
           eventName: nullToEmpty(data.eventName),
@@ -56,18 +58,29 @@ export function SetlistEditor({ id }: { id: string }) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
+  function addTrack(track: Track) {
+    setTracks((prev) => [...prev, track]);
+  }
+
+  function updateTrack(trackId: string, updated: Track) {
+    setTracks((prev) => prev.map((t) => (t.id === trackId ? updated : t)));
+  }
+
+  function removeTrack(trackId: string) {
+    setTracks((prev) => prev.filter((t) => t.id !== trackId));
+  }
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     try {
-      const updated = await updateSetlist(id, {
+      await updateSetlist(id, {
         name: form.name.trim(),
         eventName: toNullable(form.eventName),
         eventLink: toNullable(form.eventLink),
         eventDate: toNullable(form.eventDate),
-        tracks: setlist!.tracks,
+        tracks,
       });
-      setSetlist(updated);
       toast.success("保存しました");
     } catch {
       toast.error("保存に失敗しました");
@@ -144,16 +157,20 @@ export function SetlistEditor({ id }: { id: string }) {
           </form>
         </CardContent>
       </Card>
-      <Card>
-        <CardHeader>
-          <CardTitle>トラック</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground">
-            トラックの追加は今後のアップデートで対応します。
-          </p>
-        </CardContent>
-      </Card>
+
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold text-muted-foreground">トラック</h3>
+        {tracks.map((track, i) => (
+          <TrackCard
+            key={track.id}
+            track={track}
+            index={i}
+            onChange={(updated) => updateTrack(track.id, updated)}
+            onDelete={() => removeTrack(track.id)}
+          />
+        ))}
+        <AddTrackForm onAdd={addTrack} />
+      </div>
     </div>
   );
 }
