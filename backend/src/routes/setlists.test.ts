@@ -394,10 +394,10 @@ describe("DELETE /api/setlists/:id/publish (authenticated)", () => {
     mockVerify.mockReset();
   });
 
-  it("unpublishes a setlist and returns 200", async () => {
+  it("unpublishes a setlist by reverting to draft and returns 200", async () => {
     mockVerify.mockResolvedValue({ sub: "user1", email: "dj@example.com" });
     mockSend.mockResolvedValue({
-      Attributes: { id: "abc", status: "unpublished" },
+      Attributes: { id: "abc", status: "draft" },
     });
 
     const { app } = await import("../app");
@@ -408,7 +408,12 @@ describe("DELETE /api/setlists/:id/publish (authenticated)", () => {
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as Record<string, unknown>;
-    expect(body.status).toBe("unpublished");
+    expect(body.status).toBe("draft");
+    // status を draft に戻していることを検証する
+    const command = mockSend.mock.calls.at(-1)?.[0] as {
+      input: { ExpressionAttributeValues: Record<string, unknown> };
+    };
+    expect(Object.values(command.input.ExpressionAttributeValues)).toContain("draft");
   });
 
   it("returns 404 when setlist not found or userId mismatch", async () => {

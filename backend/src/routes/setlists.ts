@@ -180,11 +180,12 @@ setlistsRoute.delete("/:id/publish", authMiddleware, async (c) => {
       new UpdateCommand({
         TableName: TABLES.setlists,
         Key: { id: c.req.param("id") },
-        UpdateExpression: "SET #status = :unpublished, updatedAt = :now",
+        // 非公開化は下書きに戻す（"unpublished" という別状態は持たない）。
+        UpdateExpression: "SET #status = :draft, updatedAt = :now",
         ConditionExpression: "attribute_exists(id) AND userId = :uid",
         ExpressionAttributeNames: { "#status": "status" },
         ExpressionAttributeValues: {
-          ":unpublished": "unpublished",
+          ":draft": "draft",
           ":now": new Date().toISOString(),
           ":uid": userId,
         },
