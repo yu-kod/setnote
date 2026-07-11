@@ -70,8 +70,7 @@ export function SetlistEditor({ id }: { id: string }) {
     setTracks((prev) => prev.filter((t) => t.id !== trackId));
   }
 
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSave() {
     setSaving(true);
     try {
       await updateSetlist(id, {
@@ -112,49 +111,44 @@ export function SetlistEditor({ id }: { id: string }) {
           <CardTitle>セットリストを編集</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSave}>
-            <FieldGroup>
-              <Field>
-                <Label htmlFor="setlist-name">セットリスト名</Label>
-                <Input
-                  id="setlist-name"
-                  value={form.name}
-                  onChange={(e) => update("name", e.target.value)}
-                  required
-                />
-              </Field>
-              <Field>
-                <Label htmlFor="event-name">イベント名</Label>
-                <Input
-                  id="event-name"
-                  value={form.eventName}
-                  onChange={(e) => update("eventName", e.target.value)}
-                />
-              </Field>
-              <Field>
-                <Label htmlFor="event-link">イベントリンク</Label>
-                <Input
-                  id="event-link"
-                  type="url"
-                  value={form.eventLink}
-                  onChange={(e) => update("eventLink", e.target.value)}
-                  placeholder="https://"
-                />
-              </Field>
-              <Field>
-                <Label htmlFor="event-date">開催日</Label>
-                <Input
-                  id="event-date"
-                  type="date"
-                  value={form.eventDate}
-                  onChange={(e) => update("eventDate", e.target.value)}
-                />
-              </Field>
-              <Button type="submit" disabled={saving || !form.name.trim()}>
-                {saving ? "保存中..." : "保存"}
-              </Button>
-            </FieldGroup>
-          </form>
+          <FieldGroup>
+            <Field>
+              <Label htmlFor="setlist-name">セットリスト名</Label>
+              <Input
+                id="setlist-name"
+                value={form.name}
+                onChange={(e) => update("name", e.target.value)}
+                required
+              />
+            </Field>
+            <Field>
+              <Label htmlFor="event-name">イベント名</Label>
+              <Input
+                id="event-name"
+                value={form.eventName}
+                onChange={(e) => update("eventName", e.target.value)}
+              />
+            </Field>
+            <Field>
+              <Label htmlFor="event-link">イベントリンク</Label>
+              <Input
+                id="event-link"
+                type="url"
+                value={form.eventLink}
+                onChange={(e) => update("eventLink", e.target.value)}
+                placeholder="https://"
+              />
+            </Field>
+            <Field>
+              <Label htmlFor="event-date">開催日</Label>
+              <Input
+                id="event-date"
+                type="date"
+                value={form.eventDate}
+                onChange={(e) => update("eventDate", e.target.value)}
+              />
+            </Field>
+          </FieldGroup>
         </CardContent>
       </Card>
 
@@ -171,6 +165,15 @@ export function SetlistEditor({ id }: { id: string }) {
         ))}
         <AddTrackForm onAdd={addTrack} />
       </div>
+
+      <Button
+        type="button"
+        onClick={handleSave}
+        disabled={saving || !form.name.trim()}
+        className="w-full"
+      >
+        {saving ? "保存中..." : "保存"}
+      </Button>
     </div>
   );
 }
