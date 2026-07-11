@@ -67,35 +67,41 @@ export default function SetlistPage() {
         {setlist.tracks.map((track, i) => (
           <li key={track.id}>
             <Card>
-              <CardContent className="space-y-1 pt-6">
-                <div className="flex gap-2">
-                  <span className="text-muted-foreground">{i + 1}.</span>
-                  <span className="font-semibold">{track.title}</span>
-                </div>
-                {track.artist && <p className="text-sm text-muted-foreground">{track.artist}</p>}
-                {track.songLink && <MediaEmbed url={track.songLink} />}
-                {track.source &&
-                  (isUrl(track.source) ? (
-                    <a
-                      href={track.source}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="block text-sm text-primary underline underline-offset-4"
-                    >
-                      入手元
-                    </a>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">入手元: {track.source}</p>
-                  ))}
-                {track.customFields.length > 0 && (
-                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                    {track.customFields.map((f) => (
-                      <span key={f.id}>
-                        {f.label}: {f.value}
-                      </span>
-                    ))}
+              <CardContent className="flex gap-4 pt-6">
+                {track.songLink && (
+                  <div className="w-40 shrink-0">
+                    <MediaEmbed url={track.songLink} />
                   </div>
                 )}
+                <div className="min-w-0 flex-1 space-y-1">
+                  <div className="flex gap-2">
+                    <span className="text-muted-foreground">{i + 1}.</span>
+                    <span className="font-semibold">{track.title}</span>
+                  </div>
+                  {track.artist && <p className="text-sm text-muted-foreground">{track.artist}</p>}
+                  {track.source &&
+                    (isUrl(track.source) ? (
+                      <a
+                        href={track.source}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="block text-sm text-primary underline underline-offset-4"
+                      >
+                        入手元
+                      </a>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">入手元: {track.source}</p>
+                    ))}
+                  {track.customFields.length > 0 && (
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                      {track.customFields.map((f) => (
+                        <span key={f.id}>
+                          {f.label}: {f.value}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </li>
