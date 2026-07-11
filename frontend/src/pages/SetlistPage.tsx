@@ -106,18 +106,18 @@ export default function SetlistPage() {
           {/* 選択中の1曲だけをプレイヤーとして開く。 */}
           <div ref={playerRef} role="region" aria-label="選択中の曲">
             <Card>
-              <CardContent className="space-y-3 pt-6">
+              <CardContent className="space-y-3">
+                {selected.songLink ? (
+                  <MediaEmbed url={selected.songLink} />
+                ) : (
+                  <p className="text-sm text-muted-foreground">再生リンクはありません</p>
+                )}
                 <div>
                   <p className="font-semibold">{selected.title}</p>
                   {selected.artist && (
                     <p className="text-sm text-muted-foreground">{selected.artist}</p>
                   )}
                 </div>
-                {selected.songLink ? (
-                  <MediaEmbed url={selected.songLink} />
-                ) : (
-                  <p className="text-sm text-muted-foreground">再生リンクはありません</p>
-                )}
                 {selected.source &&
                   (isUrl(selected.source) ? (
                     <a
