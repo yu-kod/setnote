@@ -85,9 +85,10 @@ describe("SetlistList", () => {
     // 更新日（旧表示）はもう出さない
     expect(screen.queryByText("2026/7/1")).not.toBeInTheDocument();
 
-    expect(screen.getByText("draft")).toBeInTheDocument();
+    // draft と unpublished はどちらも "draft" 表示（unpublished は draft 扱い）
+    expect(screen.getAllByText("draft")).toHaveLength(2);
     expect(screen.getByText("published")).toBeInTheDocument();
-    expect(screen.getByText("unpublished")).toBeInTheDocument();
+    expect(screen.queryByText("unpublished")).not.toBeInTheDocument();
   });
 
   it("navigates to edit page when setlist item is clicked", async () => {

@@ -160,16 +160,11 @@ export function SetlistEditor({ id }: { id: string }) {
           ← ダッシュボードへ戻る
         </Link>
         {status === "published" ? (
-          <Button variant="ghost" size="sm" onClick={handleUnpublish} disabled={publishing}>
+          <Button variant="outline" size="sm" onClick={handleUnpublish} disabled={publishing}>
             {publishing ? "処理中..." : "非公開にする"}
           </Button>
         ) : (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handlePublish}
-            disabled={publishing || !form.name.trim()}
-          >
+          <Button size="sm" onClick={handlePublish} disabled={publishing || !form.name.trim()}>
             {publishing ? "公開中..." : "公開する"}
           </Button>
         )}
@@ -267,14 +262,11 @@ export function SetlistEditor({ id }: { id: string }) {
         <AddTrackForm onAdd={addTrack} />
       </div>
 
-      <Button
-        type="button"
-        onClick={handleSave}
-        disabled={saving || !form.name.trim()}
-        className="w-full"
-      >
-        {saving ? "保存中..." : "保存"}
-      </Button>
+      <div className="flex justify-end">
+        <Button type="button" onClick={handleSave} disabled={saving || !form.name.trim()}>
+          {saving ? "保存中..." : "保存"}
+        </Button>
+      </div>
     </div>
   );
 }
