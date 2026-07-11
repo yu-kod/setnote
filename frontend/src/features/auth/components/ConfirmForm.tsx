@@ -53,14 +53,14 @@ export function ConfirmForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {fromSignup && (
-        <Alert variant="success" role="status">
+        <Alert variant="default" role="status">
           <AlertDescription>
             アカウントを作成しました。確認コードをメールで送信しました。
           </AlertDescription>
         </Alert>
       )}
       {info && (
-        <Alert variant="success" role="status">
+        <Alert variant="default" role="status">
           <AlertDescription>{info}</AlertDescription>
         </Alert>
       )}

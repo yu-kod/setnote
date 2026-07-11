@@ -15,9 +15,9 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 
-const statusVariant: Record<string, "success" | "draft" | "destructive"> = {
-  published: "success",
-  draft: "draft",
+const statusVariant: Record<string, "default" | "secondary" | "destructive"> = {
+  published: "default",
+  draft: "secondary",
   unpublished: "destructive",
 } as const;
 
