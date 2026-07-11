@@ -7,11 +7,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Field, FieldGroup } from "@/components/ui/field";
 import {
   Dialog,
+  DialogTrigger,
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
 
@@ -61,7 +66,15 @@ export function SetlistList() {
     }
   }
 
-  if (loading) return <p>読み込み中...</p>;
+  if (loading) {
+    return (
+      <div role="status" aria-label="読み込み中" className="space-y-2">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-[68px] w-full" />
+        <Skeleton className="h-[68px] w-full" />
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -71,39 +84,42 @@ export function SetlistList() {
         </Alert>
       )}
       <Dialog open={dialogOpen} onOpenChange={handleDialogChange}>
-        <Button onClick={() => handleDialogChange(true)} className="w-full">
-          新規作成
-        </Button>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>新規作成</DialogTitle>
-          </DialogHeader>
-          {createError && (
-            <Alert variant="destructive">
-              <AlertDescription>{createError}</AlertDescription>
-            </Alert>
-          )}
-          <form onSubmit={handleCreate} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="new-setlist-name">セットリスト名</Label>
-              <Input
-                id="new-setlist-name"
-                type="text"
-                value={newName}
-                onChange={(e) => setNewName(e.target.value)}
-                required
-              />
-            </div>
-            <div className="flex items-center gap-3">
-              <Button type="submit" className="flex-1" disabled={creating}>
-                {creating ? "作成中..." : "作成"}
-              </Button>
+        <DialogTrigger asChild>
+          <Button className="w-full">新規作成</Button>
+        </DialogTrigger>
+        <DialogContent className="sm:max-w-sm">
+          <form onSubmit={handleCreate}>
+            <DialogHeader>
+              <DialogTitle>新規作成</DialogTitle>
+              <DialogDescription>セットリストの名前を入力してください。</DialogDescription>
+            </DialogHeader>
+            {createError && (
+              <Alert variant="destructive" className="mt-4">
+                <AlertDescription>{createError}</AlertDescription>
+              </Alert>
+            )}
+            <FieldGroup className="py-4">
+              <Field>
+                <Label htmlFor="new-setlist-name">セットリスト名</Label>
+                <Input
+                  id="new-setlist-name"
+                  type="text"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  required
+                />
+              </Field>
+            </FieldGroup>
+            <DialogFooter>
               <DialogClose asChild>
-                <Button type="button" variant="ghost">
+                <Button type="button" variant="outline">
                   キャンセル
                 </Button>
               </DialogClose>
-            </div>
+              <Button type="submit" disabled={creating}>
+                {creating ? "作成中..." : "作成"}
+              </Button>
+            </DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
