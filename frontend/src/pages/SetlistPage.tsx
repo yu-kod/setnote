@@ -88,14 +88,14 @@ export default function SetlistPage() {
                     type="button"
                     onClick={() => handleSelect(track.id)}
                     aria-current={active ? "true" : undefined}
-                    className={`flex w-full items-baseline gap-2 px-4 py-3 text-left transition-colors ${
+                    className={`flex w-full items-baseline gap-2 px-3 py-1.5 text-left text-sm transition-colors ${
                       active ? "bg-muted" : "hover:bg-muted/50"
                     }`}
                   >
                     <span className="text-muted-foreground">{i + 1}.</span>
                     <span className="font-medium">{track.title}</span>
                     {track.artist && (
-                      <span className="text-sm text-muted-foreground">— {track.artist}</span>
+                      <span className="text-muted-foreground">— {track.artist}</span>
                     )}
                   </button>
                 </li>
@@ -104,9 +104,15 @@ export default function SetlistPage() {
           </ol>
 
           {/* 選択中の1曲だけをプレイヤーとして開く。 */}
-          <div ref={playerRef}>
+          <div ref={playerRef} role="region" aria-label="選択中の曲">
             <Card>
               <CardContent className="space-y-3 pt-6">
+                <div>
+                  <p className="font-semibold">{selected.title}</p>
+                  {selected.artist && (
+                    <p className="text-sm text-muted-foreground">{selected.artist}</p>
+                  )}
+                </div>
                 {selected.songLink ? (
                   <MediaEmbed url={selected.songLink} />
                 ) : (
