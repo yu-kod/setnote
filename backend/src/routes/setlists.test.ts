@@ -56,17 +56,15 @@ describe("GET /api/setlists/:id (public)", () => {
     mockVerify.mockReset();
   });
 
-  it("returns published setlist snapshot", async () => {
-    const snapshot = { id: "abc", name: "My Set", tracks: [] };
-    mockSend.mockResolvedValue({
-      Item: { id: "abc", status: "published", publishedSnapshot: snapshot },
-    });
+  it("returns the live published setlist", async () => {
+    const item = { id: "abc", userId: "u1", name: "My Set", status: "published", tracks: [] };
+    mockSend.mockResolvedValue({ Item: item });
 
     const { app } = await import("../app");
     const res = await app.request("/api/setlists/abc");
 
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual(snapshot);
+    expect(await res.json()).toEqual(item);
   });
 
   it("returns 404 when setlist not found", async () => {
@@ -349,18 +347,9 @@ describe("POST /api/setlists/:id/publish (authenticated)", () => {
     mockVerify.mockReset();
   });
 
-  it("publishes a draft setlist and returns 200", async () => {
+  it("publishes a setlist and returns 200", async () => {
     mockVerify.mockResolvedValue({ sub: "user1", email: "dj@example.com" });
-    const setlist = {
-      id: "abc",
-      userId: "user1",
-      name: "My Set",
-      status: "draft",
-      tracks: [{ trackName: "Song 1" }],
-    };
-    mockSend.mockResolvedValueOnce({ Item: setlist }).mockResolvedValueOnce({
-      Attributes: { ...setlist, status: "published" },
-    });
+    mockSend.mockResolvedValue({ Attributes: { id: "abc", status: "published" } });
 
     const { app } = await import("../app");
     const res = await app.request("/api/setlists/abc/publish", {
@@ -373,9 +362,11 @@ describe("POST /api/setlists/:id/publish (authenticated)", () => {
     expect(body.status).toBe("published");
   });
 
-  it("returns 404 when setlist not found", async () => {
+  it("returns 404 when setlist not found or userId mismatch", async () => {
     mockVerify.mockResolvedValue({ sub: "user1", email: "dj@example.com" });
-    mockSend.mockResolvedValue({ Item: undefined });
+    const err = new Error("ConditionalCheckFailedException");
+    err.name = "ConditionalCheckFailedException";
+    mockSend.mockRejectedValue(err);
 
     const { app } = await import("../app");
     const res = await app.request("/api/setlists/abc/publish", {
@@ -386,14 +377,9 @@ describe("POST /api/setlists/:id/publish (authenticated)", () => {
     expect(res.status).toBe(404);
   });
 
-  it("returns 403 when userId does not match", async () => {
-    mockVerify.mockResolvedValue({
-      sub: "wrong-user",
-      email: "dj@example.com",
-    });
-    mockSend.mockResolvedValue({
-      Item: { id: "abc", userId: "user1", status: "draft" },
-    });
+  it("returns 500 on unexpected error", async () => {
+    mockVerify.mockResolvedValue({ sub: "user1", email: "dj@example.com" });
+    mockSend.mockRejectedValue(new Error("boom"));
 
     const { app } = await import("../app");
     const res = await app.request("/api/setlists/abc/publish", {
@@ -401,7 +387,7 @@ describe("POST /api/setlists/:id/publish (authenticated)", () => {
       headers: { Authorization: "Bearer valid-token" },
     });
 
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(500);
   });
 });
 

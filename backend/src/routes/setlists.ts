@@ -42,7 +42,8 @@ setlistsRoute.get("/:id", async (c) => {
     return c.json({ error: "Not found" }, 404);
   }
 
-  return c.json(result.Item.publishedSnapshot);
+  // 公開スナップショットは廃止。公開中なら保存済みの最新データをそのまま返す。
+  return c.json(result.Item);
 });
 
 setlistsRoute.post("/", authMiddleware, async (c) => {
@@ -135,42 +136,32 @@ setlistsRoute.delete("/:id", authMiddleware, async (c) => {
 });
 
 setlistsRoute.post("/:id/publish", authMiddleware, async (c) => {
-  const id = c.req.param("id");
   const userId = c.get("userId");
 
-  const result = await docClient.send(
-    new GetCommand({
-      TableName: TABLES.setlists,
-      Key: { id },
-    })
-  );
-
-  if (!result.Item) {
-    return c.json({ error: "Not found" }, 404);
+  try {
+    // 公開は「表示可能」にするだけ。スナップショットは作らず、保存済みの最新データが公開される。
+    const result = await docClient.send(
+      new UpdateCommand({
+        TableName: TABLES.setlists,
+        Key: { id: c.req.param("id") },
+        UpdateExpression: "SET #status = :published, updatedAt = :now",
+        ConditionExpression: "attribute_exists(id) AND userId = :uid",
+        ExpressionAttributeNames: { "#status": "status" },
+        ExpressionAttributeValues: {
+          ":published": "published",
+          ":now": new Date().toISOString(),
+          ":uid": userId,
+        },
+        ReturnValues: "ALL_NEW",
+      })
+    );
+    return c.json(result.Attributes);
+  } catch (err) {
+    if ((err as Error).name === "ConditionalCheckFailedException") {
+      return c.json({ error: "Not found" }, 404);
+    }
+    throw err;
   }
-
-  if (result.Item.userId !== userId) {
-    return c.json({ error: "Forbidden" }, 403);
-  }
-
-  const { status: _status, publishedSnapshot: _snap, ...snapshot } = result.Item;
-
-  const updated = await docClient.send(
-    new UpdateCommand({
-      TableName: TABLES.setlists,
-      Key: { id },
-      UpdateExpression: "SET #status = :published, publishedSnapshot = :snapshot, updatedAt = :now",
-      ExpressionAttributeNames: { "#status": "status" },
-      ExpressionAttributeValues: {
-        ":published": "published",
-        ":snapshot": snapshot,
-        ":now": new Date().toISOString(),
-      },
-      ReturnValues: "ALL_NEW",
-    })
-  );
-
-  return c.json(updated.Attributes);
 });
 
 setlistsRoute.delete("/:id/publish", authMiddleware, async (c) => {
