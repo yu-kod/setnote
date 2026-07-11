@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 import { fetchSetlist, updateSetlist } from "../api";
+import { moveTrack } from "../track";
 import type { Track } from "../types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,8 +11,22 @@ import { Field, FieldGroup } from "@/components/ui/field";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import NotFoundPage from "@/pages/NotFoundPage";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { AddTrackForm } from "./AddTrackForm";
-import { TrackCard } from "./TrackCard";
+import { SortableTrack } from "./SortableTrack";
 
 type FormState = {
   name: string;
@@ -68,6 +83,18 @@ export function SetlistEditor({ id }: { id: string }) {
 
   function removeTrack(trackId: string) {
     setTracks((prev) => prev.filter((t) => t.id !== trackId));
+  }
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setTracks((prev) => moveTrack(prev, String(active.id), String(over.id)));
+    }
   }
 
   async function handleSave() {
@@ -156,15 +183,21 @@ export function SetlistEditor({ id }: { id: string }) {
 
       <div className="space-y-3">
         <h3 className="text-sm font-semibold text-muted-foreground">トラック</h3>
-        {tracks.map((track, i) => (
-          <TrackCard
-            key={track.id}
-            track={track}
-            index={i}
-            onChange={(updated) => updateTrack(track.id, updated)}
-            onDelete={() => removeTrack(track.id)}
-          />
-        ))}
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={tracks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+            <div className="space-y-3">
+              {tracks.map((track, i) => (
+                <SortableTrack
+                  key={track.id}
+                  track={track}
+                  index={i}
+                  onChange={(updated) => updateTrack(track.id, updated)}
+                  onDelete={() => removeTrack(track.id)}
+                />
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
         <AddTrackForm onAdd={addTrack} />
       </div>
 
