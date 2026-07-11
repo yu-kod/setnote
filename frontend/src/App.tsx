@@ -7,6 +7,8 @@ import NotFoundPage from "./pages/NotFoundPage";
 import DashboardPage from "./pages/DashboardPage";
 import LandingPage from "./pages/LandingPage";
 import SetlistEditPage from "./pages/SetlistEditPage";
+import TermsPage from "./pages/TermsPage";
+import PrivacyPage from "./pages/PrivacyPage";
 import { ProtectedRoute } from "./features/auth/components/ProtectedRoute";
 import { useAuth } from "./features/auth/AuthContext";
 import { Button } from "./components/ui/button";
@@ -46,6 +48,8 @@ export default function App() {
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/confirm" element={<ConfirmPage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/terms" element={<TermsPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/setlists/:id/edit" element={<SetlistEditPage />} />
