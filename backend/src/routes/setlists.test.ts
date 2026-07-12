@@ -212,6 +212,75 @@ describe("POST /api/setlists/:id/tracks/:trackId/like (public)", () => {
   });
 });
 
+describe("DELETE /api/setlists/:id/tracks/:trackId/like (public, unlike)", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    mockSend.mockReset();
+    mockVerify.mockReset();
+  });
+
+  it("decrements the track like count and returns the new total, without auth", async () => {
+    mockSend.mockResolvedValue({ Attributes: { likeCounts: { t1: 2 } } });
+
+    const { app } = await import("../app");
+    const res = await app.request("/api/setlists/abc/tracks/t1/like", { method: "DELETE" });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ likeCount: 2 });
+    expect(mockVerify).not.toHaveBeenCalled();
+
+    const command = mockSend.mock.calls[0][0] as { input: Record<string, unknown> };
+    expect(command.input).toMatchObject({
+      Key: { id: "abc" },
+      UpdateExpression: "SET likeCounts.#tid = likeCounts.#tid - :one",
+      ConditionExpression:
+        "attribute_exists(id) AND #status = :published AND likeCounts.#tid > :zero",
+      ExpressionAttributeValues: { ":one": 1, ":zero": 0, ":published": "published" },
+    });
+  });
+
+  it("returns a count of 0 when there is nothing to remove (already 0 / unpublished)", async () => {
+    mockSend.mockRejectedValue(
+      Object.assign(new Error("cond"), { name: "ConditionalCheckFailedException" })
+    );
+
+    const { app } = await import("../app");
+    const res = await app.request("/api/setlists/abc/tracks/t1/like", { method: "DELETE" });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ likeCount: 0 });
+  });
+
+  it("returns a count of 0 when the like map does not exist", async () => {
+    mockSend.mockRejectedValue(Object.assign(new Error("path"), { name: "ValidationException" }));
+
+    const { app } = await import("../app");
+    const res = await app.request("/api/setlists/abc/tracks/t1/like", { method: "DELETE" });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ likeCount: 0 });
+  });
+
+  it("falls back to 0 when the update returns no attributes", async () => {
+    mockSend.mockResolvedValue({});
+
+    const { app } = await import("../app");
+    const res = await app.request("/api/setlists/abc/tracks/t1/like", { method: "DELETE" });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ likeCount: 0 });
+  });
+
+  it("surfaces an unexpected error as a 500", async () => {
+    mockSend.mockRejectedValue(new Error("dynamo down"));
+
+    const { app } = await import("../app");
+    const res = await app.request("/api/setlists/abc/tracks/t1/like", { method: "DELETE" });
+
+    expect(res.status).toBe(500);
+  });
+});
+
 describe("POST /api/setlists (authenticated)", () => {
   beforeEach(() => {
     vi.resetModules();

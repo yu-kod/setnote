@@ -3,7 +3,12 @@ import { within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders, screen, waitFor } from "../test-utils";
 import SetlistPage from "./SetlistPage";
-import { fetchPublicSetlist, recordSetlistView, likeTrack } from "../features/setlist/api";
+import {
+  fetchPublicSetlist,
+  recordSetlistView,
+  likeTrack,
+  unlikeTrack,
+} from "../features/setlist/api";
 import type { Setlist } from "../features/setlist/types";
 
 vi.mock("react-router-dom", async () => {
@@ -15,11 +20,13 @@ vi.mock("../features/setlist/api", () => ({
   fetchPublicSetlist: vi.fn(),
   recordSetlistView: vi.fn(),
   likeTrack: vi.fn(),
+  unlikeTrack: vi.fn(),
 }));
 
 const mockFetch = vi.mocked(fetchPublicSetlist);
 const mockRecordView = vi.mocked(recordSetlistView);
 const mockLikeTrack = vi.mocked(likeTrack);
+const mockUnlikeTrack = vi.mocked(unlikeTrack);
 
 function buildPublicSetlist(overrides: Partial<Setlist> = {}): Setlist {
   return {
@@ -42,6 +49,7 @@ beforeEach(() => {
   mockFetch.mockReset();
   mockRecordView.mockReset();
   mockLikeTrack.mockReset();
+  mockUnlikeTrack.mockReset();
   localStorage.clear();
   // jsdom は scrollIntoView 未実装のためモックする。
   Element.prototype.scrollIntoView = vi.fn();
@@ -223,25 +231,32 @@ describe("SetlistPage", () => {
 
     const button = await screen.findByRole("button", { name: "Song Aにいいね" });
     expect(within(button).getByText("2")).toBeInTheDocument();
+    expect(button).toHaveAttribute("aria-pressed", "false");
 
     await user.click(button);
 
     expect(mockLikeTrack).toHaveBeenCalledWith("abc123", "t1");
     expect(within(likeButton("Song A")).getByText("3")).toBeInTheDocument();
-    // 押下後は無効化され、二重送信できない
-    expect(likeButton("Song A")).toBeDisabled();
+    // いいね済みの状態になる（取り消しできるよう有効なまま）
+    expect(likeButton("Song A")).toHaveAttribute("aria-pressed", "true");
+    expect(likeButton("Song A")).toBeEnabled();
   });
 
-  it("keeps the like button disabled for an already-liked track", async () => {
+  it("lets a viewer undo a like on an already-liked track", async () => {
     localStorage.setItem("setnote_liked_abc123", JSON.stringify(["t1"]));
     mockFetch.mockResolvedValue(buildLikableSetlist());
+    mockUnlikeTrack.mockResolvedValue(1);
     const user = userEvent.setup();
     renderWithProviders(<SetlistPage />);
 
     const button = await screen.findByRole("button", { name: "Song Aにいいね" });
-    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute("aria-pressed", "true");
 
     await user.click(button);
+
+    expect(mockUnlikeTrack).toHaveBeenCalledWith("abc123", "t1");
     expect(mockLikeTrack).not.toHaveBeenCalled();
+    expect(within(likeButton("Song A")).getByText("1")).toBeInTheDocument();
+    expect(likeButton("Song A")).toHaveAttribute("aria-pressed", "false");
   });
 });

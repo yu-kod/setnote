@@ -95,6 +95,18 @@ export async function likeTrack(setlistId: string, trackId: string): Promise<num
   return data.likeCount;
 }
 
+// 公開ページからの曲いいね取り消し。認証不要。取り消し後のいいね数を返す。
+export async function unlikeTrack(setlistId: string, trackId: string): Promise<number> {
+  const res = await fetch(`/api/setlists/${setlistId}/tracks/${trackId}/like`, {
+    method: "DELETE",
+  });
+  if (!res.ok) {
+    throw new Error("いいねの取り消しに失敗しました");
+  }
+  const data = (await res.json()) as { likeCount: number };
+  return data.likeCount;
+}
+
 // 公開ページ表示のPVビーコン。認証不要・fire-and-forget（失敗しても無視する）。
 export async function recordSetlistView(id: string): Promise<void> {
   try {

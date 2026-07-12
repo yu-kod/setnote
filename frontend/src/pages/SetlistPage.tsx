@@ -1,7 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
-import { fetchPublicSetlist, recordSetlistView, likeTrack } from "../features/setlist/api";
-import { getLikedTrackIds, markLiked } from "../features/setlist/likes";
+import {
+  fetchPublicSetlist,
+  recordSetlistView,
+  likeTrack,
+  unlikeTrack,
+} from "../features/setlist/api";
+import { getLikedTrackIds, markLiked, unmarkLiked } from "../features/setlist/likes";
 import type { Setlist } from "../features/setlist/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -37,16 +42,23 @@ export default function SetlistPage() {
     recordSetlistView(id!);
   }, [id]);
 
-  // いいね（曲ごと1回まで）。押下済みボタンは disabled で無効化される。
-  // 成功したら数を更新し、端末ローカルに記録する。
-  const handleLike = async (trackId: string) => {
+  // いいねのトグル（曲ごと1回まで）。未いいねなら付け、いいね済みなら取り消す。
+  // 成功したら数を更新し、端末ローカルの記録も切り替える。
+  const handleToggleLike = async (trackId: string) => {
+    const alreadyLiked = liked.has(trackId);
     try {
-      const count = await likeTrack(id!, trackId);
+      const count = alreadyLiked ? await unlikeTrack(id!, trackId) : await likeTrack(id!, trackId);
       setLikeCounts((prev) => ({ ...prev, [trackId]: count }));
-      setLiked((prev) => new Set(prev).add(trackId));
-      markLiked(id!, trackId);
+      setLiked((prev) => {
+        const next = new Set(prev);
+        if (alreadyLiked) next.delete(trackId);
+        else next.add(trackId);
+        return next;
+      });
+      if (alreadyLiked) unmarkLiked(id!, trackId);
+      else markLiked(id!, trackId);
     } catch {
-      // いいね失敗はページ操作を妨げない。
+      // いいねの失敗はページ操作を妨げない。
     }
   };
 
@@ -131,11 +143,12 @@ export default function SetlistPage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => handleLike(track.id)}
-                    disabled={alreadyLiked}
+                    onClick={() => handleToggleLike(track.id)}
                     aria-label={`${track.title}にいいね`}
                     aria-pressed={alreadyLiked}
-                    className="flex shrink-0 items-center gap-1 px-3 text-xs text-muted-foreground transition-colors hover:text-primary disabled:cursor-default disabled:hover:text-primary"
+                    className={`flex shrink-0 items-center gap-1 px-3 text-xs transition-colors ${
+                      alreadyLiked ? "text-primary" : "text-muted-foreground"
+                    } ${active ? "bg-muted" : "hover:bg-muted/50"}`}
                   >
                     <Heart
                       aria-hidden="true"
