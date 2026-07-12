@@ -12,6 +12,10 @@ vi.mock("./features/auth/AuthContext", () => ({
   useAuth: () => mockUseAuth(),
 }));
 
+vi.mock("./features/analytics/api", () => ({
+  fetchTrackUsage: vi.fn().mockResolvedValue([]),
+}));
+
 function renderApp(path: string) {
   return render(
     <MemoryRouter initialEntries={[path]}>
@@ -81,6 +85,25 @@ describe("App", () => {
     const banner = screen.getByRole("banner");
     expect(within(banner).getByRole("button", { name: "ログアウト" })).toBeInTheDocument();
     expect(within(banner).getByRole("link", { name: "ダッシュボード" })).toBeInTheDocument();
+  });
+
+  it("shows an analytics link in the header when authenticated", () => {
+    mockUseAuth.mockReturnValue({ isAuthenticated: true, logout: mockLogout });
+    renderApp("/dashboard");
+    expect(
+      within(screen.getByRole("banner")).getByRole("link", { name: "分析" })
+    ).toBeInTheDocument();
+  });
+
+  it("renders the analytics page when authenticated at /analytics", async () => {
+    mockUseAuth.mockReturnValue({ isAuthenticated: true, logout: mockLogout });
+    renderApp("/analytics");
+    expect(await screen.findByRole("heading", { name: "分析" })).toBeInTheDocument();
+  });
+
+  it("redirects /analytics to /login when not authenticated", () => {
+    renderApp("/analytics");
+    expect(screen.getByRole("heading", { name: "ログイン" })).toBeInTheDocument();
   });
 
   it("calls logout when the logout button is clicked", async () => {

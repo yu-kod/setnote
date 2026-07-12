@@ -7,6 +7,7 @@ import NotFoundPage from "./pages/NotFoundPage";
 import DashboardPage from "./pages/DashboardPage";
 import LandingPage from "./pages/LandingPage";
 import SetlistEditPage from "./pages/SetlistEditPage";
+import AnalyticsPage from "./pages/AnalyticsPage";
 import TermsPage from "./pages/TermsPage";
 import PrivacyPage from "./pages/PrivacyPage";
 import { ProtectedRoute } from "./features/auth/components/ProtectedRoute";
@@ -30,6 +31,9 @@ export default function App() {
               <Button variant="ghost" size="sm" asChild>
                 <Link to="/dashboard">ダッシュボード</Link>
               </Button>
+              <Button variant="ghost" size="sm" asChild>
+                <Link to="/analytics">分析</Link>
+              </Button>
               <Button variant="outline" size="sm" onClick={() => logout()}>
                 ログアウト
               </Button>
@@ -52,6 +56,7 @@ export default function App() {
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route element={<ProtectedRoute />}>
             <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/setlists/:id/edit" element={<SetlistEditPage />} />
           </Route>
           <Route path="*" element={<NotFoundPage />} />
