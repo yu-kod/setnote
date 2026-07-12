@@ -24,6 +24,8 @@ export type Setlist = {
   eventDate: string | null;
   tracks: Track[];
   status: "draft" | "published" | "unpublished";
+  // 曲(trackId)ごとのいいね数。未設定・古いデータでは undefined のことがある。
+  likeCounts?: Record<string, number>;
   createdAt: string;
   updatedAt: string;
 };

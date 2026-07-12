@@ -68,6 +68,53 @@ setlistsRoute.post("/:id/view", async (c) => {
   return c.body(null, 204);
 });
 
+// 公開ページからの曲いいね（認証不要）。公開中のときだけ likeCounts[trackId] を +1 する。
+// 未認証ユーザー向けで、厳密な重複防止はしない（1人1回はフロントの localStorage で緩く担保）。
+async function addLike(id: string, trackId: string): Promise<number> {
+  const res = await docClient.send(
+    new UpdateCommand({
+      TableName: TABLES.setlists,
+      Key: { id },
+      UpdateExpression: "SET likeCounts.#tid = if_not_exists(likeCounts.#tid, :zero) + :one",
+      ConditionExpression: "attribute_exists(id) AND #status = :published",
+      ExpressionAttributeNames: { "#tid": trackId, "#status": "status" },
+      ExpressionAttributeValues: { ":zero": 0, ":one": 1, ":published": "published" },
+      ReturnValues: "UPDATED_NEW",
+    })
+  );
+  return (res.Attributes?.likeCounts?.[trackId] as number | undefined) ?? 1;
+}
+
+setlistsRoute.post("/:id/tracks/:trackId/like", async (c) => {
+  const id = c.req.param("id");
+  const trackId = c.req.param("trackId");
+
+  try {
+    try {
+      return c.json({ likeCount: await addLike(id, trackId) });
+    } catch (err) {
+      // likeCounts マップが未作成の既存セットリストは ValidationException になる。
+      // マップを初期化してから再試行する。
+      if ((err as Error).name !== "ValidationException") throw err;
+      await docClient.send(
+        new UpdateCommand({
+          TableName: TABLES.setlists,
+          Key: { id },
+          UpdateExpression: "SET likeCounts = if_not_exists(likeCounts, :empty)",
+          ConditionExpression: "attribute_exists(id)",
+          ExpressionAttributeValues: { ":empty": {} },
+        })
+      );
+      return c.json({ likeCount: await addLike(id, trackId) });
+    }
+  } catch (err) {
+    if ((err as Error).name === "ConditionalCheckFailedException") {
+      return c.json({ error: "Not found" }, 404);
+    }
+    throw err;
+  }
+});
+
 setlistsRoute.post("/", authMiddleware, async (c) => {
   const body = await c.req.json();
   const userId = c.get("userId");
@@ -86,6 +133,7 @@ setlistsRoute.post("/", authMiddleware, async (c) => {
     eventDate: body.eventDate ?? null,
     tracks: body.tracks ?? [],
     status: "draft",
+    likeCounts: {},
     createdAt: now,
     updatedAt: now,
   };

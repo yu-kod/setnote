@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
-import { fetchPublicSetlist, recordSetlistView } from "../features/setlist/api";
+import { fetchPublicSetlist, recordSetlistView, likeTrack } from "../features/setlist/api";
+import { getLikedTrackIds, markLiked } from "../features/setlist/likes";
 import type { Setlist } from "../features/setlist/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Heart } from "lucide-react";
 import { MediaEmbed } from "../features/setlist/components/MediaEmbed";
 import NotFoundPage from "./NotFoundPage";
 
@@ -20,16 +21,34 @@ export default function SetlistPage() {
   const [setlist, setSetlist] = useState<Setlist | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [likeCounts, setLikeCounts] = useState<Record<string, number>>({});
+  const [liked, setLiked] = useState<Set<string>>(() => getLikedTrackIds(id!));
   const playerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     fetchPublicSetlist(id!)
-      .then(setSetlist)
+      .then((s) => {
+        setSetlist(s);
+        setLikeCounts(s.likeCounts ?? {});
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
     // 公開ページ表示のPVを計測（fire-and-forget）。
     recordSetlistView(id!);
   }, [id]);
+
+  // いいね（曲ごと1回まで）。押下済みボタンは disabled で無効化される。
+  // 成功したら数を更新し、端末ローカルに記録する。
+  const handleLike = async (trackId: string) => {
+    try {
+      const count = await likeTrack(id!, trackId);
+      setLikeCounts((prev) => ({ ...prev, [trackId]: count }));
+      setLiked((prev) => new Set(prev).add(trackId));
+      markLiked(id!, trackId);
+    } catch {
+      // いいね失敗はページ操作を妨げない。
+    }
+  };
 
   if (loading) {
     return (
@@ -93,13 +112,14 @@ export default function SetlistPage() {
           <ol className="divide-y overflow-hidden rounded-md border">
             {tracks.map((track, i) => {
               const active = track.id === selected.id;
+              const alreadyLiked = liked.has(track.id);
               return (
-                <li key={track.id}>
+                <li key={track.id} className="flex items-stretch">
                   <button
                     type="button"
                     onClick={() => handleSelect(track.id)}
                     aria-current={active ? "true" : undefined}
-                    className={`flex w-full items-baseline gap-2 px-3 py-1.5 text-left text-sm transition-colors ${
+                    className={`flex flex-1 items-baseline gap-2 px-3 py-1.5 text-left text-sm transition-colors ${
                       active ? "bg-muted" : "hover:bg-muted/50"
                     }`}
                   >
@@ -108,6 +128,20 @@ export default function SetlistPage() {
                     {track.artist && (
                       <span className="text-muted-foreground">— {track.artist}</span>
                     )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleLike(track.id)}
+                    disabled={alreadyLiked}
+                    aria-label={`${track.title}にいいね`}
+                    aria-pressed={alreadyLiked}
+                    className="flex shrink-0 items-center gap-1 px-3 text-xs text-muted-foreground transition-colors hover:text-primary disabled:cursor-default disabled:hover:text-primary"
+                  >
+                    <Heart
+                      aria-hidden="true"
+                      className={`size-4 ${alreadyLiked ? "fill-primary text-primary" : ""}`}
+                    />
+                    <span className="tabular-nums">{likeCounts[track.id] ?? 0}</span>
                   </button>
                 </li>
               );

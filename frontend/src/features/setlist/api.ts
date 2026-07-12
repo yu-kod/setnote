@@ -85,6 +85,16 @@ export async function fetchTrackSuggestions(): Promise<Track[]> {
   return collectTrackSuggestions(setlists);
 }
 
+// 公開ページからの曲いいね。認証不要。新しいいいね数を返す。
+export async function likeTrack(setlistId: string, trackId: string): Promise<number> {
+  const res = await fetch(`/api/setlists/${setlistId}/tracks/${trackId}/like`, { method: "POST" });
+  if (!res.ok) {
+    throw new Error("いいねに失敗しました");
+  }
+  const data = (await res.json()) as { likeCount: number };
+  return data.likeCount;
+}
+
 // 公開ページ表示のPVビーコン。認証不要・fire-and-forget（失敗しても無視する）。
 export async function recordSetlistView(id: string): Promise<void> {
   try {
