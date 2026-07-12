@@ -33,4 +33,3 @@ describe("summarizeUsage", () => {
     expect(result.topSongs).toHaveLength(1);
   });
 });
-

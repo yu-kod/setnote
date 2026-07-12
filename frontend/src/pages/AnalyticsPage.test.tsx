@@ -98,9 +98,7 @@ describe("AnalyticsPage", () => {
   });
 
   it("hides the likes card when there are no likes", async () => {
-    mockFetchTrackUsage.mockResolvedValue([
-      { title: "Song A", artist: "", count: 1 },
-    ]);
+    mockFetchTrackUsage.mockResolvedValue([{ title: "Song A", artist: "", count: 1 }]);
     mockFetchLikes.mockResolvedValue([]);
 
     renderWithProviders(<AnalyticsPage />);
