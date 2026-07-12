@@ -53,16 +53,12 @@ describe("matchTracks", () => {
   });
 
   it("limits results to the given max", () => {
-    const tracks = Array.from({ length: 10 }, (_, i) =>
-      track({ id: `t${i}`, title: `Song ${i}` })
-    );
+    const tracks = Array.from({ length: 10 }, (_, i) => track({ id: `t${i}`, title: `Song ${i}` }));
     expect(matchTracks(tracks, "song", 8)).toHaveLength(8);
   });
 
   it("defaults the limit to 8", () => {
-    const tracks = Array.from({ length: 12 }, (_, i) =>
-      track({ id: `t${i}`, title: `Song ${i}` })
-    );
+    const tracks = Array.from({ length: 12 }, (_, i) => track({ id: `t${i}`, title: `Song ${i}` }));
     expect(matchTracks(tracks, "song")).toHaveLength(8);
   });
 });
