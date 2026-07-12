@@ -42,10 +42,13 @@ describe("App", () => {
     expect(screen.getByRole("heading", { name: "setnote" })).toBeInTheDocument();
   });
 
-  it("renders the footer with terms and privacy links", () => {
+  it("renders the footer with terms, privacy, and author links", () => {
     renderWithProviders(<App />);
     expect(screen.getByText("利用規約")).toBeInTheDocument();
     expect(screen.getByText("プライバシーポリシー")).toBeInTheDocument();
+    const authorLink = screen.getByRole("link", { name: "作者" });
+    expect(authorLink).toHaveAttribute("href", "https://x.com/tkgmirusen");
+    expect(authorLink).toHaveAttribute("target", "_blank");
   });
 
   it("renders the landing page at /", () => {
