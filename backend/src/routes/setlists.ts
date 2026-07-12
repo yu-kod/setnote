@@ -46,6 +46,28 @@ setlistsRoute.get("/:id", async (c) => {
   return c.json(result.Item);
 });
 
+// 公開ページ表示のPVビーコン（認証不要）。公開中のときだけ viewCount を +1 する。
+// 未公開・存在しないIDは黙って無視し、常に 204 を返す（fire-and-forget）。
+setlistsRoute.post("/:id/view", async (c) => {
+  try {
+    await docClient.send(
+      new UpdateCommand({
+        TableName: TABLES.setlists,
+        Key: { id: c.req.param("id") },
+        UpdateExpression: "ADD viewCount :one",
+        ConditionExpression: "attribute_exists(id) AND #status = :published",
+        ExpressionAttributeNames: { "#status": "status" },
+        ExpressionAttributeValues: { ":one": 1, ":published": "published" },
+      })
+    );
+  } catch (err) {
+    if ((err as Error).name !== "ConditionalCheckFailedException") {
+      throw err;
+    }
+  }
+  return c.body(null, 204);
+});
+
 setlistsRoute.post("/", authMiddleware, async (c) => {
   const body = await c.req.json();
   const userId = c.get("userId");

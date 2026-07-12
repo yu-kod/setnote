@@ -14,6 +14,7 @@ vi.mock("./features/auth/AuthContext", () => ({
 
 vi.mock("./features/analytics/api", () => ({
   fetchTrackUsage: vi.fn().mockResolvedValue([]),
+  fetchViews: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock("./features/setlist/api", () => ({

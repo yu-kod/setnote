@@ -6,13 +6,18 @@ export type TrackUsage = {
   count: number;
 };
 
+export type ViewRow = {
+  id: string;
+  name: string;
+  viewCount: number;
+};
+
 function getToken(): string {
   return localStorage.getItem("setnote_access_token") ?? "";
 }
 
-// 自分のセットリスト横断の曲使用回数ランキングを取得する。
-export async function fetchTrackUsage(): Promise<TrackUsage[]> {
-  const res = await fetch("/api/analytics/track-usage", {
+async function authorizedGet<T>(path: string): Promise<T> {
+  const res = await fetch(path, {
     method: "GET",
     headers: {
       "Content-Type": "application/json",
@@ -29,5 +34,15 @@ export async function fetchTrackUsage(): Promise<TrackUsage[]> {
     throw new Error("分析データの取得に失敗しました");
   }
 
-  return res.json() as Promise<TrackUsage[]>;
+  return res.json() as Promise<T>;
+}
+
+// 自分のセットリスト横断の曲使用回数ランキングを取得する。
+export function fetchTrackUsage(): Promise<TrackUsage[]> {
+  return authorizedGet<TrackUsage[]>("/api/analytics/track-usage");
+}
+
+// 自分のセットリストごとの表示回数(PV)一覧を取得する。
+export function fetchViews(): Promise<ViewRow[]> {
+  return authorizedGet<ViewRow[]>("/api/analytics/views");
 }

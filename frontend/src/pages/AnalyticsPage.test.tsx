@@ -1,24 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderWithProviders, screen, within } from "../test-utils";
 import AnalyticsPage from "./AnalyticsPage";
-import { fetchTrackUsage } from "../features/analytics/api";
-import { fetchMySetlists } from "../features/setlist/api";
+import { fetchTrackUsage, fetchViews } from "../features/analytics/api";
 
 vi.mock("../features/analytics/api", () => ({
   fetchTrackUsage: vi.fn(),
-}));
-
-vi.mock("../features/setlist/api", () => ({
-  fetchMySetlists: vi.fn(),
+  fetchViews: vi.fn(),
 }));
 
 const mockFetchTrackUsage = vi.mocked(fetchTrackUsage);
-const mockFetchMySetlists = vi.mocked(fetchMySetlists);
+const mockFetchViews = vi.mocked(fetchViews);
 
 beforeEach(() => {
   mockFetchTrackUsage.mockReset();
-  mockFetchMySetlists.mockReset();
-  mockFetchMySetlists.mockResolvedValue([]);
+  mockFetchViews.mockReset();
+  mockFetchViews.mockResolvedValue([]);
 });
 
 describe("AnalyticsPage (overview)", () => {
@@ -27,7 +23,11 @@ describe("AnalyticsPage (overview)", () => {
       { title: "Song A", artist: "DJ X", count: 5 },
       { title: "Song B", artist: "", count: 2 },
     ]);
-    mockFetchMySetlists.mockResolvedValue([{ id: "1" }, { id: "2" }, { id: "3" }] as never);
+    mockFetchViews.mockResolvedValue([
+      { id: "1", name: "S1", viewCount: 10 },
+      { id: "2", name: "S2", viewCount: 4 },
+      { id: "3", name: "S3", viewCount: 0 },
+    ]);
 
     renderWithProviders(<AnalyticsPage />);
 
@@ -35,7 +35,8 @@ describe("AnalyticsPage (overview)", () => {
     const hero = (await screen.findByText("最多演奏曲")).parentElement as HTMLElement;
     expect(within(hero).getByText("Song A")).toBeInTheDocument();
 
-    // KPI: セットリスト数 3, ユニーク曲 2, 総演奏回数 7
+    // KPI: 総表示回数 14, セットリスト数 3, ユニーク曲 2, 総演奏回数 7
+    expect(screen.getByText("総表示回数").previousSibling).toHaveTextContent("14");
     expect(screen.getByText("セットリスト").previousSibling).toHaveTextContent("3");
     expect(screen.getByText("ユニーク曲").previousSibling).toHaveTextContent("2");
     expect(screen.getByText("総演奏回数").previousSibling).toHaveTextContent("7");

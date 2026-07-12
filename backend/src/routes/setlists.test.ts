@@ -88,6 +88,59 @@ describe("GET /api/setlists/:id (public)", () => {
   });
 });
 
+describe("POST /api/setlists/:id/view (public beacon)", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    mockSend.mockReset();
+    mockVerify.mockReset();
+  });
+
+  it("increments the view count of a published setlist and returns 204", async () => {
+    mockSend.mockResolvedValue({});
+
+    const { app } = await import("../app");
+    const res = await app.request("/api/setlists/abc/view", { method: "POST" });
+
+    expect(res.status).toBe(204);
+    const command = mockSend.mock.calls[0][0] as { input: Record<string, unknown> };
+    expect(command.input).toMatchObject({
+      Key: { id: "abc" },
+      UpdateExpression: "ADD viewCount :one",
+      ExpressionAttributeValues: { ":one": 1, ":published": "published" },
+    });
+  });
+
+  it("silently no-ops with 204 for a non-published or missing setlist", async () => {
+    mockSend.mockRejectedValue(
+      Object.assign(new Error("conditional"), { name: "ConditionalCheckFailedException" })
+    );
+
+    const { app } = await import("../app");
+    const res = await app.request("/api/setlists/draft-id/view", { method: "POST" });
+
+    expect(res.status).toBe(204);
+  });
+
+  it("does not require authentication", async () => {
+    mockSend.mockResolvedValue({});
+
+    const { app } = await import("../app");
+    const res = await app.request("/api/setlists/abc/view", { method: "POST" });
+
+    expect(res.status).toBe(204);
+    expect(mockVerify).not.toHaveBeenCalled();
+  });
+
+  it("surfaces an unexpected error as a 500", async () => {
+    mockSend.mockRejectedValue(new Error("dynamo down"));
+
+    const { app } = await import("../app");
+    const res = await app.request("/api/setlists/abc/view", { method: "POST" });
+
+    expect(res.status).toBe(500);
+  });
+});
+
 describe("POST /api/setlists (authenticated)", () => {
   beforeEach(() => {
     vi.resetModules();
