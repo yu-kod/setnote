@@ -12,3 +12,4 @@ export function summarizeUsage(usage: TrackUsage[]): UsageSummary {
   const topSongs = [...usage].sort((a, b) => b.count - a.count).slice(0, 3);
   return { uniqueSongs: usage.length, totalPlays, topSongs };
 }
+
