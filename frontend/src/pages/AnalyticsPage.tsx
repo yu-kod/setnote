@@ -7,7 +7,7 @@ import {
   type TrackUsage,
   type TrackLike,
 } from "../features/analytics/api";
-import { summarizeUsage, topBars, topLikeBars } from "../features/analytics/summary";
+import { summarizeUsage } from "../features/analytics/summary";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -17,6 +17,59 @@ function StatTile({ label, value }: { label: string; value: number }) {
       <div className="text-3xl font-bold tabular-nums">{value}</div>
       <div className="mt-1 text-xs text-muted-foreground">{label}</div>
     </div>
+  );
+}
+
+function LinkedStatTile({ label, value, to }: { label: string; value: number; to: string }) {
+  return (
+    <Link
+      to={to}
+      className="rounded-xl border border-border bg-card p-4 text-center transition-colors hover:bg-muted/50"
+    >
+      <div className="text-3xl font-bold tabular-nums">{value}</div>
+      <div className="mt-1 text-xs text-muted-foreground">{label}</div>
+    </Link>
+  );
+}
+
+type RankingCardProps = {
+  title: string;
+  items: { title: string; artist: string; value: number }[];
+  unit: string;
+  to: string;
+};
+
+function RankingCard({ title, items, unit, to }: RankingCardProps) {
+  if (items.length === 0) return null;
+  const [first, ...rest] = items;
+  return (
+    <Link
+      to={to}
+      className="block rounded-xl border border-border bg-card p-5 transition-colors hover:bg-muted/50"
+    >
+      <div className="text-xs text-muted-foreground">{title}</div>
+      <div className="mt-1 truncate text-2xl font-bold">{first.title}</div>
+      {first.artist && <div className="truncate text-sm text-muted-foreground">{first.artist}</div>}
+      <div className="mt-2 text-3xl font-bold tabular-nums text-primary">
+        {first.value}
+        <span className="ml-0.5 text-base text-muted-foreground">{unit}</span>
+      </div>
+      {rest.length > 0 && (
+        <ol className="mt-3 space-y-1 border-t pt-3">
+          {rest.map((item, i) => (
+            <li key={item.title} className="flex items-baseline justify-between text-sm">
+              <span className="truncate text-muted-foreground">
+                {i + 2}. {item.title}
+              </span>
+              <span className="shrink-0 tabular-nums">
+                {item.value}
+                {unit}
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </Link>
   );
 }
 
@@ -55,8 +108,7 @@ export default function AnalyticsPage() {
   }
 
   const summary = summarizeUsage(usage);
-  const bars = topBars(usage, 8);
-  const likeBars = topLikeBars(likes, 8);
+  const topLikes = [...likes].sort((a, b) => b.likes - a.likes).slice(0, 3);
 
   return (
     <div>
@@ -69,89 +121,36 @@ export default function AnalyticsPage() {
       )}
 
       {!error && (
-        <>
-          {summary.topSong && (
-            <div className="mb-3 rounded-xl border border-border bg-card p-5">
-              <div className="text-xs text-muted-foreground">最多使用曲</div>
-              <div className="mt-1 truncate text-2xl font-bold">{summary.topSong.title}</div>
-              {summary.topSong.artist && (
-                <div className="truncate text-sm text-muted-foreground">
-                  {summary.topSong.artist}
-                </div>
-              )}
-              <div className="mt-2 text-3xl font-bold tabular-nums text-primary">
-                {summary.topSong.count}
-                <span className="ml-0.5 text-base text-muted-foreground">回</span>
-              </div>
-            </div>
-          )}
+        <div className="space-y-4">
+          <RankingCard
+            title="最多使用曲"
+            items={summary.topSongs.map((s) => ({
+              title: s.title,
+              artist: s.artist,
+              value: s.count,
+            }))}
+            unit="回"
+            to="/analytics/tracks"
+          />
 
           <div className="grid grid-cols-2 gap-3">
             <StatTile label="総表示回数" value={totalViews} />
             <StatTile label="セットリスト" value={setlistCount} />
-            <StatTile label="ユニーク曲" value={summary.uniqueSongs} />
+            <LinkedStatTile label="ユニーク曲" value={summary.uniqueSongs} to="/analytics/tracks" />
             <StatTile label="総使用回数" value={summary.totalPlays} />
           </div>
 
-          <section className="mt-6">
-            <h3 className="mb-3 text-sm font-semibold text-muted-foreground">
-              よく使う曲 TOP{bars.length || ""}
-            </h3>
-            {bars.length === 0 ? (
-              <p className="text-muted-foreground">
-                まだ集計できる曲がありません。セットリストに曲を追加しましょう
-              </p>
-            ) : (
-              <ol className="space-y-3">
-                {bars.map((b) => (
-                  <li key={b.title}>
-                    <div className="mb-1 flex items-baseline justify-between gap-2 text-sm">
-                      <span className="truncate">{b.title}</span>
-                      <span className="shrink-0 font-bold tabular-nums">{b.count}</span>
-                    </div>
-                    <div className="h-2.5 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className="h-full rounded-full bg-primary"
-                        style={{ width: `${b.ratio * 100}%` }}
-                      />
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            )}
-          </section>
-
-          {likeBars.length > 0 && (
-            <section className="mt-6">
-              <h3 className="mb-3 text-sm font-semibold text-muted-foreground">いいねが多い曲</h3>
-              <ol className="space-y-3">
-                {likeBars.map((b) => (
-                  <li key={b.title}>
-                    <div className="mb-1 flex items-baseline justify-between gap-2 text-sm">
-                      <span className="truncate">{b.title}</span>
-                      <span className="shrink-0 font-bold tabular-nums">{b.likes}</span>
-                    </div>
-                    <div className="h-2.5 overflow-hidden rounded-full bg-muted">
-                      <div
-                        className="h-full rounded-full bg-pink-500"
-                        style={{ width: `${b.ratio * 100}%` }}
-                      />
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            </section>
-          )}
-
-          <div className="mt-6">
-            <Link
-              to="/analytics/tracks"
-              className="text-sm font-medium text-primary hover:underline"
-            >
-              すべての曲を見る →
-            </Link>
-          </div>
-        </>
+          <RankingCard
+            title="いいねが多い曲"
+            items={topLikes.map((l) => ({
+              title: l.title,
+              artist: l.artist,
+              value: l.likes,
+            }))}
+            unit=""
+            to="/analytics/likes"
+          />
+        </div>
       )}
     </div>
   );

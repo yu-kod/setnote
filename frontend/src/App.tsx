@@ -9,6 +9,7 @@ import LandingPage from "./pages/LandingPage";
 import SetlistEditPage from "./pages/SetlistEditPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import AnalyticsTracksPage from "./pages/AnalyticsTracksPage";
+import AnalyticsLikesPage from "./pages/AnalyticsLikesPage";
 import TermsPage from "./pages/TermsPage";
 import PrivacyPage from "./pages/PrivacyPage";
 import { ProtectedRoute } from "./features/auth/components/ProtectedRoute";
@@ -59,6 +60,7 @@ export default function App() {
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/analytics" element={<AnalyticsPage />} />
             <Route path="/analytics/tracks" element={<AnalyticsTracksPage />} />
+            <Route path="/analytics/likes" element={<AnalyticsLikesPage />} />
             <Route path="/setlists/:id/edit" element={<SetlistEditPage />} />
           </Route>
           <Route path="*" element={<NotFoundPage />} />
