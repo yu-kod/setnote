@@ -115,6 +115,37 @@ setlistsRoute.post("/:id/tracks/:trackId/like", async (c) => {
   }
 });
 
+// 公開ページからの曲いいね取り消し（認証不要）。公開中かつ 1 以上のときだけ -1 する。
+// 減らすものが無い（0・マップ未作成・未公開）場合は 0 を返し、取り消しは冪等に扱う。
+setlistsRoute.delete("/:id/tracks/:trackId/like", async (c) => {
+  const id = c.req.param("id");
+  const trackId = c.req.param("trackId");
+
+  try {
+    const res = await docClient.send(
+      new UpdateCommand({
+        TableName: TABLES.setlists,
+        Key: { id },
+        UpdateExpression: "SET likeCounts.#tid = likeCounts.#tid - :one",
+        ConditionExpression:
+          "attribute_exists(id) AND #status = :published AND likeCounts.#tid > :zero",
+        ExpressionAttributeNames: { "#tid": trackId, "#status": "status" },
+        ExpressionAttributeValues: { ":one": 1, ":zero": 0, ":published": "published" },
+        ReturnValues: "UPDATED_NEW",
+      })
+    );
+    return c.json({
+      likeCount: (res.Attributes?.likeCounts?.[trackId] as number | undefined) ?? 0,
+    });
+  } catch (err) {
+    const name = (err as Error).name;
+    if (name === "ConditionalCheckFailedException" || name === "ValidationException") {
+      return c.json({ likeCount: 0 });
+    }
+    throw err;
+  }
+});
+
 setlistsRoute.post("/", authMiddleware, async (c) => {
   const body = await c.req.json();
   const userId = c.get("userId");

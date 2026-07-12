@@ -11,6 +11,7 @@ import {
   fetchTrackSuggestions,
   recordSetlistView,
   likeTrack,
+  unlikeTrack,
 } from "./api";
 import { clearSession, redirectToLogin } from "../auth/session";
 
@@ -380,6 +381,27 @@ describe("likeTrack", () => {
     mockFetch.mockResolvedValue({ ok: false, status: 404, json: () => Promise.resolve({}) });
 
     await expect(likeTrack("s1", "t1")).rejects.toThrow();
+  });
+});
+
+describe("unlikeTrack", () => {
+  it("deletes a like and returns the new count", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ likeCount: 1 }),
+    });
+
+    const count = await unlikeTrack("s1", "t1");
+
+    expect(mockFetch).toHaveBeenCalledWith("/api/setlists/s1/tracks/t1/like", { method: "DELETE" });
+    expect(count).toBe(1);
+  });
+
+  it("throws when the request fails", async () => {
+    mockFetch.mockResolvedValue({ ok: false, status: 500, json: () => Promise.resolve({}) });
+
+    await expect(unlikeTrack("s1", "t1")).rejects.toThrow();
   });
 });
 

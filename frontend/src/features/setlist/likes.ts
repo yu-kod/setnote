@@ -15,6 +15,16 @@ export function getLikedTrackIds(setlistId: string): Set<string> {
 export function markLiked(setlistId: string, trackId: string): void {
   const liked = getLikedTrackIds(setlistId);
   liked.add(trackId);
+  save(setlistId, liked);
+}
+
+export function unmarkLiked(setlistId: string, trackId: string): void {
+  const liked = getLikedTrackIds(setlistId);
+  liked.delete(trackId);
+  save(setlistId, liked);
+}
+
+function save(setlistId: string, liked: Set<string>): void {
   try {
     localStorage.setItem(storageKey(setlistId), JSON.stringify([...liked]));
   } catch {

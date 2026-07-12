@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { getLikedTrackIds, markLiked } from "./likes";
+import { getLikedTrackIds, markLiked, unmarkLiked } from "./likes";
 
 beforeEach(() => {
   localStorage.clear();
@@ -28,6 +28,17 @@ describe("likes (localStorage)", () => {
 
   it("tolerates malformed stored data", () => {
     localStorage.setItem("setnote_liked_s1", "not json");
+    expect(getLikedTrackIds("s1")).toEqual(new Set());
+  });
+
+  it("removes a like on unmark", () => {
+    markLiked("s1", "t1");
+    unmarkLiked("s1", "t1");
+    expect(getLikedTrackIds("s1").has("t1")).toBe(false);
+  });
+
+  it("tolerates unmarking a track that was never liked", () => {
+    expect(() => unmarkLiked("s1", "t1")).not.toThrow();
     expect(getLikedTrackIds("s1")).toEqual(new Set());
   });
 });
