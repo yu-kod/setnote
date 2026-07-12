@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderWithProviders, screen, within } from "../test-utils";
+import { renderWithProviders, screen } from "../test-utils";
 import AnalyticsPage from "./AnalyticsPage";
 import { fetchTrackUsage, fetchViews, fetchLikes } from "../features/analytics/api";
 
@@ -21,49 +21,99 @@ beforeEach(() => {
   mockFetchLikes.mockResolvedValue([]);
 });
 
-describe("AnalyticsPage (overview)", () => {
-  it("shows KPI numbers, the top song, and a top-songs chart after loading", async () => {
+describe("AnalyticsPage", () => {
+  it("shows a loading indicator before data arrives", () => {
+    mockFetchTrackUsage.mockReturnValue(new Promise(() => {}));
+    mockFetchLikes.mockReturnValue(new Promise(() => {}));
+
+    renderWithProviders(<AnalyticsPage />);
+
+    expect(screen.getByRole("status", { name: "読み込み中" })).toBeInTheDocument();
+  });
+
+  it("shows the top usage card with top 3 songs that links to /analytics/tracks", async () => {
     mockFetchTrackUsage.mockResolvedValue([
       { title: "Song A", artist: "DJ X", count: 5 },
+      { title: "Song B", artist: "", count: 3 },
+      { title: "Song C", artist: "", count: 2 },
+      { title: "Song D", artist: "", count: 1 },
+    ]);
+
+    renderWithProviders(<AnalyticsPage />);
+
+    expect(await screen.findByText("最多使用曲")).toBeInTheDocument();
+    expect(screen.getByText("Song A")).toBeInTheDocument();
+    expect(screen.getByText("2. Song B")).toBeInTheDocument();
+    expect(screen.getByText("3. Song C")).toBeInTheDocument();
+    // 4位は表示されない
+    expect(screen.queryByText("Song D")).not.toBeInTheDocument();
+    // カードはリンク
+    expect(screen.getByRole("link", { name: /最多使用曲/ })).toHaveAttribute(
+      "href",
+      "/analytics/tracks"
+    );
+  });
+
+  it("shows KPI tiles including a clickable unique songs tile", async () => {
+    mockFetchTrackUsage.mockResolvedValue([
+      { title: "Song A", artist: "", count: 5 },
       { title: "Song B", artist: "", count: 2 },
     ]);
     mockFetchViews.mockResolvedValue([
       { id: "1", name: "S1", viewCount: 10 },
       { id: "2", name: "S2", viewCount: 4 },
-      { id: "3", name: "S3", viewCount: 0 },
     ]);
 
     renderWithProviders(<AnalyticsPage />);
 
-    // 最多使用曲のヒーロー
-    const hero = (await screen.findByText("最多使用曲")).parentElement as HTMLElement;
-    expect(within(hero).getByText("Song A")).toBeInTheDocument();
-
-    // KPI: 総表示回数 14, セットリスト数 3, ユニーク曲 2, 総使用回数 7
+    await screen.findByText("最多使用曲");
     expect(screen.getByText("総表示回数").previousSibling).toHaveTextContent("14");
-    expect(screen.getByText("セットリスト").previousSibling).toHaveTextContent("3");
-    expect(screen.getByText("ユニーク曲").previousSibling).toHaveTextContent("2");
+    expect(screen.getByText("セットリスト").previousSibling).toHaveTextContent("2");
     expect(screen.getByText("総使用回数").previousSibling).toHaveTextContent("7");
-
-    // Top曲チャートに曲名が並ぶ
-    expect(screen.getByText("Song B")).toBeInTheDocument();
+    // ユニーク曲はリンク
+    expect(screen.getByRole("link", { name: /ユニーク曲/ })).toHaveAttribute(
+      "href",
+      "/analytics/tracks"
+    );
   });
 
-  it("links to the full track list", async () => {
+  it("shows the likes ranking card with top 3 that links to /analytics/likes", async () => {
+    mockFetchTrackUsage.mockResolvedValue([]);
+    mockFetchLikes.mockResolvedValue([
+      { title: "Liked A", artist: "DJ Z", likes: 8 },
+      { title: "Liked B", artist: "", likes: 5 },
+      { title: "Liked C", artist: "", likes: 3 },
+    ]);
+
+    renderWithProviders(<AnalyticsPage />);
+
+    expect(await screen.findByText("いいねが多い曲")).toBeInTheDocument();
+    expect(screen.getByText("Liked A")).toBeInTheDocument();
+    expect(screen.getByText("2. Liked B")).toBeInTheDocument();
+    expect(screen.getByText("3. Liked C")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /いいねが多い曲/ })).toHaveAttribute(
+      "href",
+      "/analytics/likes"
+    );
+  });
+
+  it("hides the likes card when there are no likes", async () => {
+    mockFetchTrackUsage.mockResolvedValue([{ title: "Song A", artist: "", count: 1 }]);
+    mockFetchLikes.mockResolvedValue([]);
+
+    renderWithProviders(<AnalyticsPage />);
+
+    await screen.findByText("最多使用曲");
+    expect(screen.queryByText("いいねが多い曲")).not.toBeInTheDocument();
+  });
+
+  it("hides the usage card when there are no tracks", async () => {
     mockFetchTrackUsage.mockResolvedValue([]);
 
     renderWithProviders(<AnalyticsPage />);
 
-    const link = await screen.findByRole("link", { name: /すべての曲を見る/ });
-    expect(link).toHaveAttribute("href", "/analytics/tracks");
-  });
-
-  it("shows an empty chart message when there is no usage data", async () => {
-    mockFetchTrackUsage.mockResolvedValue([]);
-
-    renderWithProviders(<AnalyticsPage />);
-
-    expect(await screen.findByText(/まだ.*ありません/)).toBeInTheDocument();
+    await screen.findByText("総表示回数");
+    expect(screen.queryByText("最多使用曲")).not.toBeInTheDocument();
   });
 
   it("shows an error message when loading fails", async () => {
@@ -80,38 +130,5 @@ describe("AnalyticsPage (overview)", () => {
     renderWithProviders(<AnalyticsPage />);
 
     expect(await screen.findByText("エラーが発生しました")).toBeInTheDocument();
-  });
-
-  it("shows a loading indicator before data arrives", () => {
-    mockFetchTrackUsage.mockReturnValue(new Promise(() => {}));
-    mockFetchLikes.mockReturnValue(new Promise(() => {}));
-
-    renderWithProviders(<AnalyticsPage />);
-
-    expect(screen.getByRole("status", { name: "読み込み中" })).toBeInTheDocument();
-  });
-
-  it("shows a liked-tracks chart when there are likes", async () => {
-    mockFetchTrackUsage.mockResolvedValue([]);
-    mockFetchLikes.mockResolvedValue([
-      { title: "Liked Song", artist: "DJ Z", likes: 8 },
-      { title: "Another", artist: "", likes: 3 },
-    ]);
-
-    renderWithProviders(<AnalyticsPage />);
-
-    expect(await screen.findByText("いいねが多い曲")).toBeInTheDocument();
-    expect(screen.getByText("Liked Song")).toBeInTheDocument();
-    expect(screen.getByText("Another")).toBeInTheDocument();
-  });
-
-  it("hides the likes section when there are no likes", async () => {
-    mockFetchTrackUsage.mockResolvedValue([]);
-    mockFetchLikes.mockResolvedValue([]);
-
-    renderWithProviders(<AnalyticsPage />);
-
-    await screen.findByText(/すべての曲を見る/);
-    expect(screen.queryByText("いいねが多い曲")).not.toBeInTheDocument();
   });
 });
