@@ -94,6 +94,19 @@ describe("AddTrackForm", () => {
     expect(screen.queryByRole("option")).not.toBeInTheDocument();
   });
 
+  it("suggests a katakana-titled track while typing hiragana (pre-conversion)", async () => {
+    const suggestions = [
+      { id: "p1", title: "サクラ", artist: "DJ X", songLink: "", source: "", customFields: [] },
+    ];
+    const user = userEvent.setup();
+    renderWithProviders(<AddTrackForm onAdd={onAdd} suggestions={suggestions} />);
+
+    await user.click(screen.getByRole("button", { name: "トラックを追加" }));
+    await user.type(screen.getByLabelText("曲名"), "さく");
+
+    expect(screen.getByRole("option", { name: /サクラ/ })).toBeInTheDocument();
+  });
+
   it("adds a full copy of a selected suggestion with a new id", async () => {
     const suggestions = [
       {
