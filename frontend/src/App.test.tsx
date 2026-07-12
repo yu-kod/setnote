@@ -16,6 +16,11 @@ vi.mock("./features/analytics/api", () => ({
   fetchTrackUsage: vi.fn().mockResolvedValue([]),
 }));
 
+vi.mock("./features/setlist/api", () => ({
+  fetchMySetlists: vi.fn().mockResolvedValue([]),
+  createSetlist: vi.fn(),
+}));
+
 function renderApp(path: string) {
   return render(
     <MemoryRouter initialEntries={[path]}>
@@ -104,6 +109,12 @@ describe("App", () => {
   it("redirects /analytics to /login when not authenticated", () => {
     renderApp("/analytics");
     expect(screen.getByRole("heading", { name: "ログイン" })).toBeInTheDocument();
+  });
+
+  it("renders the track-list detail page at /analytics/tracks when authenticated", async () => {
+    mockUseAuth.mockReturnValue({ isAuthenticated: true, logout: mockLogout });
+    renderApp("/analytics/tracks");
+    expect(await screen.findByRole("heading", { name: "曲の使用回数" })).toBeInTheDocument();
   });
 
   it("calls logout when the logout button is clicked", async () => {
