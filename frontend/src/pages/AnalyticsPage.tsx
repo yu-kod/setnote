@@ -123,9 +123,7 @@ export default function AnalyticsPage() {
 
           {likeBars.length > 0 && (
             <section className="mt-6">
-              <h3 className="mb-3 text-sm font-semibold text-muted-foreground">
-                いいねが多い曲
-              </h3>
+              <h3 className="mb-3 text-sm font-semibold text-muted-foreground">いいねが多い曲</h3>
               <ol className="space-y-3">
                 {likeBars.map((b) => (
                   <li key={b.title}>

@@ -35,7 +35,5 @@ export function aggregateLikes(setlists: LikesInput[]): TrackLike[] {
     }
   }
 
-  return [...byTitle.values()].sort(
-    (a, b) => b.likes - a.likes || a.title.localeCompare(b.title)
-  );
+  return [...byTitle.values()].sort((a, b) => b.likes - a.likes || a.title.localeCompare(b.title));
 }

@@ -44,9 +44,7 @@ describe("aggregateLikes", () => {
   });
 
   it("handles missing likeCounts gracefully", () => {
-    const setlists: LikesInput[] = [
-      { tracks: [{ id: "t1", title: "Song A", artist: "" }] },
-    ];
+    const setlists: LikesInput[] = [{ tracks: [{ id: "t1", title: "Song A", artist: "" }] }];
 
     expect(aggregateLikes(setlists)).toEqual([]);
   });
