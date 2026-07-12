@@ -55,8 +55,8 @@ export function TrackCard({ track, index, onChange, onDelete, dragHandle }: Prop
     onChange({ ...track, customFields: track.customFields.filter((f) => f.id !== id) });
 
   return (
-    <Card role="group" aria-label={`トラック ${index + 1}`}>
-      <CardContent className="space-y-0.5">
+    <Card role="group" aria-label={`トラック ${index + 1}`} className="py-3 gap-2">
+      <CardContent className="space-y-0.5 px-3">
         <div className="flex items-center gap-2">
           {dragHandle}
           <InlineInput
