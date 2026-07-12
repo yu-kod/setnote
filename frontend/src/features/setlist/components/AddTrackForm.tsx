@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { createTrack } from "../track";
+import { matchTracks } from "../trackMatch";
 import type { Track } from "../types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,11 +17,9 @@ export function AddTrackForm({
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
 
-  const query = title.trim().toLowerCase();
   // 入力途中に、過去入力から部分一致する曲を候補表示する。
-  const matches = query
-    ? suggestions.filter((s) => s.title.toLowerCase().includes(query)).slice(0, 8)
-    : [];
+  // かな・カナ・ローマ字・全半角の違いは matchTracks 側で正規化して吸収する。
+  const matches = matchTracks(suggestions, title);
 
   function close() {
     setTitle("");
