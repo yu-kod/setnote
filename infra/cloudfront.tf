@@ -21,11 +21,21 @@ resource "aws_cloudfront_function" "spa_rewrite" {
   name    = "${var.project_name}-spa-rewrite"
   runtime = "cloudfront-js-2.0"
   code    = <<-EOF
+    var defined_BOT_RE = /Twitterbot|facebookexternalhit|Slackbot|LinkedInBot|Discordbot|Googlebot|bingbot|LINE|WhatsApp/i;
     function handler(event) {
       var request = event.request;
       var uri = request.uri;
       if (uri.includes('.')) {
         return request;
+      }
+      var ua = (request.headers['user-agent'] && request.headers['user-agent'].value) || '';
+      if (uri.startsWith('/s/') && defined_BOT_RE.test(ua)) {
+        var id = uri.substring(3);
+        return {
+          statusCode: 302,
+          statusDescription: 'Found',
+          headers: { location: { value: '/api/ogp/' + id } }
+        };
       }
       request.uri = '/index.html';
       return request;
