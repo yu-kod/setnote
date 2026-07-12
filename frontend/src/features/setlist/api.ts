@@ -85,6 +85,15 @@ export async function fetchTrackSuggestions(): Promise<Track[]> {
   return collectTrackSuggestions(setlists);
 }
 
+// 公開ページ表示のPVビーコン。認証不要・fire-and-forget（失敗しても無視する）。
+export async function recordSetlistView(id: string): Promise<void> {
+  try {
+    await fetch(`/api/setlists/${id}/view`, { method: "POST" });
+  } catch {
+    // 計測失敗はページ表示に影響させない。
+  }
+}
+
 // 公開ページ用。認証不要で、公開中のセットリストのスナップショットを取得する。
 export async function fetchPublicSetlist(id: string): Promise<Setlist> {
   const res = await fetch(`/api/setlists/${id}`);

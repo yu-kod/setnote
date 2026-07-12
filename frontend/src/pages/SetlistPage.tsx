@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams } from "react-router-dom";
-import { fetchPublicSetlist } from "../features/setlist/api";
+import { fetchPublicSetlist, recordSetlistView } from "../features/setlist/api";
 import type { Setlist } from "../features/setlist/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -27,6 +27,8 @@ export default function SetlistPage() {
       .then(setSetlist)
       .catch(() => {})
       .finally(() => setLoading(false));
+    // 公開ページ表示のPVを計測（fire-and-forget）。
+    recordSetlistView(id!);
   }, [id]);
 
   if (loading) {

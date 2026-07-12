@@ -9,6 +9,7 @@ import {
   deleteSetlist,
   fetchPublicSetlist,
   fetchTrackSuggestions,
+  recordSetlistView,
 } from "./api";
 import { clearSession, redirectToLogin } from "../auth/session";
 
@@ -357,5 +358,21 @@ describe("error handling", () => {
     });
 
     await expect(fetchMySetlists()).rejects.toThrow("エラーが発生しました");
+  });
+});
+
+describe("recordSetlistView", () => {
+  it("posts a fire-and-forget view beacon without auth", async () => {
+    mockFetch.mockResolvedValue({ ok: true, status: 204 });
+
+    await recordSetlistView("abc");
+
+    expect(mockFetch).toHaveBeenCalledWith("/api/setlists/abc/view", { method: "POST" });
+  });
+
+  it("never rejects even if the request fails", async () => {
+    mockFetch.mockRejectedValue(new Error("offline"));
+
+    await expect(recordSetlistView("abc")).resolves.toBeUndefined();
   });
 });

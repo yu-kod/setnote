@@ -3,7 +3,7 @@ import { within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders, screen, waitFor } from "../test-utils";
 import SetlistPage from "./SetlistPage";
-import { fetchPublicSetlist } from "../features/setlist/api";
+import { fetchPublicSetlist, recordSetlistView } from "../features/setlist/api";
 import type { Setlist } from "../features/setlist/types";
 
 vi.mock("react-router-dom", async () => {
@@ -13,9 +13,11 @@ vi.mock("react-router-dom", async () => {
 
 vi.mock("../features/setlist/api", () => ({
   fetchPublicSetlist: vi.fn(),
+  recordSetlistView: vi.fn(),
 }));
 
 const mockFetch = vi.mocked(fetchPublicSetlist);
+const mockRecordView = vi.mocked(recordSetlistView);
 
 function buildPublicSetlist(overrides: Partial<Setlist> = {}): Setlist {
   return {
@@ -36,6 +38,7 @@ function buildPublicSetlist(overrides: Partial<Setlist> = {}): Setlist {
 
 beforeEach(() => {
   mockFetch.mockReset();
+  mockRecordView.mockReset();
   // jsdom は scrollIntoView 未実装のためモックする。
   Element.prototype.scrollIntoView = vi.fn();
 });
@@ -46,6 +49,13 @@ describe("SetlistPage", () => {
     renderWithProviders(<SetlistPage />);
 
     expect(screen.getByRole("status", { name: "読み込み中" })).toBeInTheDocument();
+  });
+
+  it("records a view beacon for the setlist on mount", () => {
+    mockFetch.mockReturnValue(new Promise(() => {}));
+    renderWithProviders(<SetlistPage />);
+
+    expect(mockRecordView).toHaveBeenCalledWith("abc123");
   });
 
   it("renders the not-found page when the setlist is not public", async () => {

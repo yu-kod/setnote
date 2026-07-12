@@ -102,3 +102,65 @@ describe("GET /api/analytics/track-usage", () => {
     expect(await res.json()).toEqual([]);
   });
 });
+
+describe("GET /api/analytics/views", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    mockSend.mockReset();
+    mockVerify.mockReset();
+  });
+
+  it("returns 401 without a valid token", async () => {
+    const { app } = await import("../app");
+    const res = await app.request("/api/analytics/views");
+
+    expect(res.status).toBe(401);
+    expect(mockSend).not.toHaveBeenCalled();
+  });
+
+  it("returns the user's setlists with view counts, sorted by views desc", async () => {
+    mockVerify.mockResolvedValue({ sub: "user1", email: "u@example.com" });
+    mockSend.mockResolvedValue({
+      Items: [
+        { id: "s1", userId: "user1", name: "Set A", viewCount: 2 },
+        { id: "s2", userId: "user1", name: "Set B", viewCount: 9 },
+        { id: "s3", userId: "user1", name: "Set C" },
+      ],
+    });
+
+    const { app } = await import("../app");
+    const res = await app.request("/api/analytics/views", { headers: authHeaders() });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual([
+      { id: "s2", name: "Set B", viewCount: 9 },
+      { id: "s1", name: "Set A", viewCount: 2 },
+      { id: "s3", name: "Set C", viewCount: 0 },
+    ]);
+  });
+
+  it("queries only the authenticated user's setlists via the userId index", async () => {
+    mockVerify.mockResolvedValue({ sub: "user1", email: "u@example.com" });
+    mockSend.mockResolvedValue({ Items: [] });
+
+    const { app } = await import("../app");
+    await app.request("/api/analytics/views", { headers: authHeaders() });
+
+    const command = mockSend.mock.calls[0][0] as { input: Record<string, unknown> };
+    expect(command.input).toMatchObject({
+      IndexName: "gsi-userId",
+      ExpressionAttributeValues: { ":uid": "user1" },
+    });
+  });
+
+  it("returns an empty array when the user has no setlists", async () => {
+    mockVerify.mockResolvedValue({ sub: "user1", email: "u@example.com" });
+    mockSend.mockResolvedValue({});
+
+    const { app } = await import("../app");
+    const res = await app.request("/api/analytics/views", { headers: authHeaders() });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual([]);
+  });
+});

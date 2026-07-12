@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { fetchTrackUsage, type TrackUsage } from "../features/analytics/api";
+import { fetchTrackUsage, fetchViews, type TrackUsage } from "../features/analytics/api";
 import { summarizeUsage, topBars } from "../features/analytics/summary";
-import { fetchMySetlists } from "../features/setlist/api";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -18,14 +17,16 @@ function StatTile({ label, value }: { label: string; value: number }) {
 export default function AnalyticsPage() {
   const [usage, setUsage] = useState<TrackUsage[]>([]);
   const [setlistCount, setSetlistCount] = useState(0);
+  const [totalViews, setTotalViews] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    Promise.all([fetchTrackUsage(), fetchMySetlists()])
-      .then(([u, setlists]) => {
+    Promise.all([fetchTrackUsage(), fetchViews()])
+      .then(([u, views]) => {
         setUsage(u);
-        setSetlistCount(setlists.length);
+        setSetlistCount(views.length);
+        setTotalViews(views.reduce((sum, v) => sum + v.viewCount, 0));
       })
       .catch((err) => setError(err instanceof Error ? err.message : "エラーが発生しました"))
       .finally(() => setLoading(false));
@@ -76,7 +77,8 @@ export default function AnalyticsPage() {
             </div>
           )}
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
+            <StatTile label="総表示回数" value={totalViews} />
             <StatTile label="セットリスト" value={setlistCount} />
             <StatTile label="ユニーク曲" value={summary.uniqueSongs} />
             <StatTile label="総演奏回数" value={summary.totalPlays} />
