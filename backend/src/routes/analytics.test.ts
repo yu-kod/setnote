@@ -164,3 +164,62 @@ describe("GET /api/analytics/views", () => {
     expect(await res.json()).toEqual([]);
   });
 });
+
+describe("GET /api/analytics/likes", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    mockSend.mockReset();
+    mockVerify.mockReset();
+  });
+
+  it("returns 401 without a valid token", async () => {
+    const { app } = await import("../app");
+    const res = await app.request("/api/analytics/likes");
+
+    expect(res.status).toBe(401);
+    expect(mockSend).not.toHaveBeenCalled();
+  });
+
+  it("aggregates the user's track likes across setlists", async () => {
+    mockVerify.mockResolvedValue({ sub: "user1", email: "u@example.com" });
+    mockSend.mockResolvedValue({
+      Items: [
+        {
+          id: "s1",
+          userId: "user1",
+          tracks: [
+            { id: "t1", title: "Song A", artist: "DJ X" },
+            { id: "t2", title: "Song B", artist: "" },
+          ],
+          likeCounts: { t1: 5, t2: 3 },
+        },
+        {
+          id: "s2",
+          userId: "user1",
+          tracks: [{ id: "t3", title: "Song A", artist: "DJ X" }],
+          likeCounts: { t3: 2 },
+        },
+      ],
+    });
+
+    const { app } = await import("../app");
+    const res = await app.request("/api/analytics/likes", { headers: authHeaders() });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual([
+      { title: "Song A", artist: "DJ X", likes: 7 },
+      { title: "Song B", artist: "", likes: 3 },
+    ]);
+  });
+
+  it("returns an empty array when the user has no setlists", async () => {
+    mockVerify.mockResolvedValue({ sub: "user1", email: "u@example.com" });
+    mockSend.mockResolvedValue({});
+
+    const { app } = await import("../app");
+    const res = await app.request("/api/analytics/likes", { headers: authHeaders() });
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual([]);
+  });
+});

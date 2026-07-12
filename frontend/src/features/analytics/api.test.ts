@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fetchTrackUsage, fetchViews } from "./api";
+import { fetchTrackUsage, fetchViews, fetchLikes } from "./api";
 import { clearSession, redirectToLogin } from "../auth/session";
 
 vi.mock("../auth/session", () => ({
@@ -81,5 +81,27 @@ describe("fetchViews", () => {
     await expect(fetchViews()).rejects.toThrow();
     expect(clearSession).toHaveBeenCalledTimes(1);
     expect(redirectToLogin).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("fetchLikes", () => {
+  it("calls GET /api/analytics/likes with auth header and returns the data", async () => {
+    localStorage.setItem("setnote_access_token", "test-token");
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve([{ title: "Song A", artist: "DJ X", likes: 5 }]),
+    });
+
+    const result = await fetchLikes();
+
+    expect(mockFetch).toHaveBeenCalledWith("/api/analytics/likes", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer test-token",
+      },
+    });
+    expect(result).toEqual([{ title: "Song A", artist: "DJ X", likes: 5 }]);
   });
 });

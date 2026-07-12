@@ -1,7 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { fetchTrackUsage, fetchViews, type TrackUsage } from "../features/analytics/api";
-import { summarizeUsage, topBars } from "../features/analytics/summary";
+import {
+  fetchTrackUsage,
+  fetchViews,
+  fetchLikes,
+  type TrackUsage,
+  type TrackLike,
+} from "../features/analytics/api";
+import { summarizeUsage, topBars, topLikeBars } from "../features/analytics/summary";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -16,15 +22,17 @@ function StatTile({ label, value }: { label: string; value: number }) {
 
 export default function AnalyticsPage() {
   const [usage, setUsage] = useState<TrackUsage[]>([]);
+  const [likes, setLikes] = useState<TrackLike[]>([]);
   const [setlistCount, setSetlistCount] = useState(0);
   const [totalViews, setTotalViews] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    Promise.all([fetchTrackUsage(), fetchViews()])
-      .then(([u, views]) => {
+    Promise.all([fetchTrackUsage(), fetchViews(), fetchLikes()])
+      .then(([u, views, l]) => {
         setUsage(u);
+        setLikes(l);
         setSetlistCount(views.length);
         setTotalViews(views.reduce((sum, v) => sum + v.viewCount, 0));
       })
@@ -48,6 +56,7 @@ export default function AnalyticsPage() {
 
   const summary = summarizeUsage(usage);
   const bars = topBars(usage, 8);
+  const likeBars = topLikeBars(likes, 8);
 
   return (
     <div>
@@ -111,6 +120,30 @@ export default function AnalyticsPage() {
               </ol>
             )}
           </section>
+
+          {likeBars.length > 0 && (
+            <section className="mt-6">
+              <h3 className="mb-3 text-sm font-semibold text-muted-foreground">
+                いいねが多い曲
+              </h3>
+              <ol className="space-y-3">
+                {likeBars.map((b) => (
+                  <li key={b.title}>
+                    <div className="mb-1 flex items-baseline justify-between gap-2 text-sm">
+                      <span className="truncate">{b.title}</span>
+                      <span className="shrink-0 font-bold tabular-nums">{b.likes}</span>
+                    </div>
+                    <div className="h-2.5 overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full bg-pink-500"
+                        style={{ width: `${b.ratio * 100}%` }}
+                      />
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
 
           <div className="mt-6">
             <Link

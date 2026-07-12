@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { summarizeUsage, topBars } from "./summary";
-import type { TrackUsage } from "./api";
+import { summarizeUsage, topBars, topLikeBars } from "./summary";
+import type { TrackUsage, TrackLike } from "./api";
 
 function usage(overrides: Partial<TrackUsage>): TrackUsage {
   return { title: "t", artist: "", count: 1, ...overrides };
@@ -61,6 +61,38 @@ describe("topBars", () => {
   it("uses a zero ratio when every count is zero", () => {
     expect(topBars([usage({ title: "Z", count: 0 })])).toEqual([
       { title: "Z", artist: "", count: 0, ratio: 0 },
+    ]);
+  });
+});
+
+function like(overrides: Partial<TrackLike>): TrackLike {
+  return { title: "t", artist: "", likes: 1, ...overrides };
+}
+
+describe("topLikeBars", () => {
+  it("returns an empty array for empty likes", () => {
+    expect(topLikeBars([])).toEqual([]);
+  });
+
+  it("sorts by likes desc and scales ratio against the max", () => {
+    const result = topLikeBars([
+      like({ title: "A", likes: 2 }),
+      like({ title: "B", likes: 10 }),
+      like({ title: "C", likes: 5 }),
+    ]);
+
+    expect(result.map((b) => b.title)).toEqual(["B", "C", "A"]);
+    expect(result.map((b) => b.ratio)).toEqual([1, 0.5, 0.2]);
+  });
+
+  it("limits the number of bars", () => {
+    const many = Array.from({ length: 12 }, (_, i) => like({ title: `S${i}`, likes: 12 - i }));
+    expect(topLikeBars(many, 5)).toHaveLength(5);
+  });
+
+  it("uses a zero ratio when every likes is zero", () => {
+    expect(topLikeBars([like({ title: "Z", likes: 0 })])).toEqual([
+      { title: "Z", artist: "", likes: 0, ratio: 0 },
     ]);
   });
 });
