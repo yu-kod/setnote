@@ -10,6 +10,7 @@ import {
   fetchPublicSetlist,
   fetchTrackSuggestions,
   recordSetlistView,
+  likeTrack,
 } from "./api";
 import { clearSession, redirectToLogin } from "../auth/session";
 
@@ -358,6 +359,27 @@ describe("error handling", () => {
     });
 
     await expect(fetchMySetlists()).rejects.toThrow("エラーが発生しました");
+  });
+});
+
+describe("likeTrack", () => {
+  it("posts a like and returns the new count", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ likeCount: 3 }),
+    });
+
+    const count = await likeTrack("s1", "t1");
+
+    expect(mockFetch).toHaveBeenCalledWith("/api/setlists/s1/tracks/t1/like", { method: "POST" });
+    expect(count).toBe(3);
+  });
+
+  it("throws when the request fails", async () => {
+    mockFetch.mockResolvedValue({ ok: false, status: 404, json: () => Promise.resolve({}) });
+
+    await expect(likeTrack("s1", "t1")).rejects.toThrow();
   });
 });
 

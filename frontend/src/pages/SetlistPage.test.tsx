@@ -3,7 +3,7 @@ import { within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders, screen, waitFor } from "../test-utils";
 import SetlistPage from "./SetlistPage";
-import { fetchPublicSetlist, recordSetlistView } from "../features/setlist/api";
+import { fetchPublicSetlist, recordSetlistView, likeTrack } from "../features/setlist/api";
 import type { Setlist } from "../features/setlist/types";
 
 vi.mock("react-router-dom", async () => {
@@ -14,10 +14,12 @@ vi.mock("react-router-dom", async () => {
 vi.mock("../features/setlist/api", () => ({
   fetchPublicSetlist: vi.fn(),
   recordSetlistView: vi.fn(),
+  likeTrack: vi.fn(),
 }));
 
 const mockFetch = vi.mocked(fetchPublicSetlist);
 const mockRecordView = vi.mocked(recordSetlistView);
+const mockLikeTrack = vi.mocked(likeTrack);
 
 function buildPublicSetlist(overrides: Partial<Setlist> = {}): Setlist {
   return {
@@ -39,9 +41,30 @@ function buildPublicSetlist(overrides: Partial<Setlist> = {}): Setlist {
 beforeEach(() => {
   mockFetch.mockReset();
   mockRecordView.mockReset();
+  mockLikeTrack.mockReset();
+  localStorage.clear();
   // jsdom は scrollIntoView 未実装のためモックする。
   Element.prototype.scrollIntoView = vi.fn();
 });
+
+function buildLikableSetlist() {
+  return buildPublicSetlist({
+    tracks: [{ id: "t1", title: "Song A", artist: "", songLink: "", source: "", customFields: [] }],
+    likeCounts: { t1: 2 },
+  });
+}
+
+// 目次の「選択」ボタン（いいねボタンと曲名が被るため「いいね」を除外して特定する）。
+function selectButton(title: string) {
+  return screen.getByRole("button", {
+    name: (name) => name.includes(title) && !name.includes("いいね"),
+  });
+}
+
+// 曲のいいねボタン。
+function likeButton(title: string) {
+  return screen.getByRole("button", { name: `${title}にいいね` });
+}
 
 describe("SetlistPage", () => {
   it("shows a loading skeleton while fetching", () => {
@@ -110,8 +133,8 @@ describe("SetlistPage", () => {
     );
 
     // 目次に全曲が並ぶ
-    expect(screen.getByRole("button", { name: /Song A/ })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Song B/ })).toBeInTheDocument();
+    expect(selectButton("Song A")).toBeInTheDocument();
+    expect(selectButton("Song B")).toBeInTheDocument();
 
     // 初期表示は先頭曲(t1)のプレイヤーが開いている（曲名・作者・埋め込み・詳細）
     const player = within(screen.getByRole("region", { name: "選択中の曲" }));
@@ -129,7 +152,7 @@ describe("SetlistPage", () => {
     expect(screen.queryByText("入手元: レコード店で購入")).not.toBeInTheDocument();
 
     // 2曲目を選ぶとプレイヤーが切り替わる
-    await user.click(screen.getByRole("button", { name: /Song B/ }));
+    await user.click(selectButton("Song B"));
 
     const player2 = within(screen.getByRole("region", { name: "選択中の曲" }));
     expect(player2.getByText("Song B")).toBeInTheDocument();
@@ -160,7 +183,7 @@ describe("SetlistPage", () => {
     await waitFor(() => {
       expect(screen.getByRole("heading", { name: "Bare" })).toBeInTheDocument();
     });
-    expect(screen.getByRole("button", { name: /Solo/ })).toBeInTheDocument();
+    expect(selectButton("Solo")).toBeInTheDocument();
     expect(screen.getByText("再生リンクはありません")).toBeInTheDocument();
   });
 
@@ -190,5 +213,35 @@ describe("SetlistPage", () => {
       expect(screen.getByRole("heading", { name: "Empty" })).toBeInTheDocument();
     });
     expect(screen.getByText("曲がまだありません")).toBeInTheDocument();
+  });
+
+  it("shows the like count and lets a viewer like a track", async () => {
+    mockFetch.mockResolvedValue(buildLikableSetlist());
+    mockLikeTrack.mockResolvedValue(3);
+    const user = userEvent.setup();
+    renderWithProviders(<SetlistPage />);
+
+    const button = await screen.findByRole("button", { name: "Song Aにいいね" });
+    expect(within(button).getByText("2")).toBeInTheDocument();
+
+    await user.click(button);
+
+    expect(mockLikeTrack).toHaveBeenCalledWith("abc123", "t1");
+    expect(within(likeButton("Song A")).getByText("3")).toBeInTheDocument();
+    // 押下後は無効化され、二重送信できない
+    expect(likeButton("Song A")).toBeDisabled();
+  });
+
+  it("keeps the like button disabled for an already-liked track", async () => {
+    localStorage.setItem("setnote_liked_abc123", JSON.stringify(["t1"]));
+    mockFetch.mockResolvedValue(buildLikableSetlist());
+    const user = userEvent.setup();
+    renderWithProviders(<SetlistPage />);
+
+    const button = await screen.findByRole("button", { name: "Song Aにいいね" });
+    expect(button).toBeDisabled();
+
+    await user.click(button);
+    expect(mockLikeTrack).not.toHaveBeenCalled();
   });
 });
