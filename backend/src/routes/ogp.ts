@@ -30,9 +30,7 @@ function buildDescription(item: {
 
 ogpRoute.get("/:id", async (c) => {
   const id = c.req.param("id");
-  const result = await docClient.send(
-    new GetCommand({ TableName: TABLES.setlists, Key: { id } }),
-  );
+  const result = await docClient.send(new GetCommand({ TableName: TABLES.setlists, Key: { id } }));
 
   if (!result.Item || result.Item.status !== "published") {
     return c.json({ error: "Not found" }, 404);

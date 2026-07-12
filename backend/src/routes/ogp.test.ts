@@ -75,10 +75,10 @@ describe("GET /api/ogp/:id", () => {
     const html = await res.text();
     expect(html).toContain('<meta property="og:title" content="Friday Night Set" />');
     expect(html).toContain(
-      '<meta property="og:description" content="DJ Star | Club Night | 3曲" />',
+      '<meta property="og:description" content="DJ Star | Club Night | 3曲" />'
     );
     expect(html).toContain(
-      '<meta property="og:url" content="https://setnote.yu-web.site/s/set1" />',
+      '<meta property="og:url" content="https://setnote.yu-web.site/s/set1" />'
     );
     expect(html).toContain('<meta property="og:image"');
     expect(html).toContain('<meta name="twitter:card" content="summary_large_image" />');
