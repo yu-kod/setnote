@@ -1,20 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderWithProviders, screen, within } from "../test-utils";
 import AnalyticsPage from "./AnalyticsPage";
-import { fetchTrackUsage, fetchViews } from "../features/analytics/api";
+import { fetchTrackUsage, fetchViews, fetchLikes } from "../features/analytics/api";
 
 vi.mock("../features/analytics/api", () => ({
   fetchTrackUsage: vi.fn(),
   fetchViews: vi.fn(),
+  fetchLikes: vi.fn(),
 }));
 
 const mockFetchTrackUsage = vi.mocked(fetchTrackUsage);
 const mockFetchViews = vi.mocked(fetchViews);
+const mockFetchLikes = vi.mocked(fetchLikes);
 
 beforeEach(() => {
   mockFetchTrackUsage.mockReset();
   mockFetchViews.mockReset();
+  mockFetchLikes.mockReset();
   mockFetchViews.mockResolvedValue([]);
+  mockFetchLikes.mockResolvedValue([]);
 });
 
 describe("AnalyticsPage (overview)", () => {
@@ -80,9 +84,34 @@ describe("AnalyticsPage (overview)", () => {
 
   it("shows a loading indicator before data arrives", () => {
     mockFetchTrackUsage.mockReturnValue(new Promise(() => {}));
+    mockFetchLikes.mockReturnValue(new Promise(() => {}));
 
     renderWithProviders(<AnalyticsPage />);
 
     expect(screen.getByRole("status", { name: "読み込み中" })).toBeInTheDocument();
+  });
+
+  it("shows a liked-tracks chart when there are likes", async () => {
+    mockFetchTrackUsage.mockResolvedValue([]);
+    mockFetchLikes.mockResolvedValue([
+      { title: "Liked Song", artist: "DJ Z", likes: 8 },
+      { title: "Another", artist: "", likes: 3 },
+    ]);
+
+    renderWithProviders(<AnalyticsPage />);
+
+    expect(await screen.findByText("いいねが多い曲")).toBeInTheDocument();
+    expect(screen.getByText("Liked Song")).toBeInTheDocument();
+    expect(screen.getByText("Another")).toBeInTheDocument();
+  });
+
+  it("hides the likes section when there are no likes", async () => {
+    mockFetchTrackUsage.mockResolvedValue([]);
+    mockFetchLikes.mockResolvedValue([]);
+
+    renderWithProviders(<AnalyticsPage />);
+
+    await screen.findByText(/すべての曲を見る/);
+    expect(screen.queryByText("いいねが多い曲")).not.toBeInTheDocument();
   });
 });

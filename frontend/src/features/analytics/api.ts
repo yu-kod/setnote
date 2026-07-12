@@ -46,3 +46,14 @@ export function fetchTrackUsage(): Promise<TrackUsage[]> {
 export function fetchViews(): Promise<ViewRow[]> {
   return authorizedGet<ViewRow[]>("/api/analytics/views");
 }
+
+export type TrackLike = {
+  title: string;
+  artist: string;
+  likes: number;
+};
+
+// 自分のセットリスト横断で、曲ごとのいいね数ランキングを取得する。
+export function fetchLikes(): Promise<TrackLike[]> {
+  return authorizedGet<TrackLike[]>("/api/analytics/likes");
+}

@@ -27,3 +27,14 @@ export function topBars(usage: TrackUsage[], limit = 8): UsageBar[] {
   const max = top.reduce((m, u) => Math.max(m, u.count), 0);
   return top.map((u) => ({ ...u, ratio: max > 0 ? u.count / max : 0 }));
 }
+
+import type { TrackLike } from "./api";
+
+export type LikeBar = TrackLike & { ratio: number };
+
+// Top いいね曲の横棒グラフ用データ。いいね数の降順で上位を取り、最大値で正規化する。
+export function topLikeBars(likes: TrackLike[], limit = 8): LikeBar[] {
+  const top = [...likes].sort((a, b) => b.likes - a.likes).slice(0, limit);
+  const max = top.reduce((m, l) => Math.max(m, l.likes), 0);
+  return top.map((l) => ({ ...l, ratio: max > 0 ? l.likes / max : 0 }));
+}
