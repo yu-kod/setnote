@@ -74,6 +74,15 @@ export default function App() {
         <Link to="/privacy" className="text-muted-foreground transition-colors hover:text-primary">
           プライバシーポリシー
         </Link>
+        <span className="mx-2 text-border">|</span>
+        <a
+          href="https://x.com/tkgmirusen"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-muted-foreground transition-colors hover:text-primary"
+        >
+          作者
+        </a>
       </footer>
       <Toaster />
     </div>
