@@ -6,7 +6,7 @@ export type UsageSummary = {
   topSong: TrackUsage | null;
 };
 
-// 概要KPI: ユニーク曲数・総演奏回数・最多演奏曲を算出する。
+// 概要KPI: ユニーク曲数・総使用回数・最多使用曲を算出する。
 export function summarizeUsage(usage: TrackUsage[]): UsageSummary {
   const totalPlays = usage.reduce((sum, u) => sum + u.count, 0);
   const topSong = usage.reduce<TrackUsage | null>(
@@ -17,11 +17,11 @@ export function summarizeUsage(usage: TrackUsage[]): UsageSummary {
 }
 
 export type UsageBar = TrackUsage & {
-  // 最多演奏曲を 1 とした相対比（棒の長さ）。
+  // 最多使用曲を 1 とした相対比（棒の長さ）。
   ratio: number;
 };
 
-// Top曲の横棒グラフ用データ。演奏回数の降順で上位を取り、最大値で正規化する。
+// Top曲の横棒グラフ用データ。使用回数の降順で上位を取り、最大値で正規化する。
 export function topBars(usage: TrackUsage[], limit = 8): UsageBar[] {
   const top = [...usage].sort((a, b) => b.count - a.count).slice(0, limit);
   const max = top.reduce((m, u) => Math.max(m, u.count), 0);

@@ -31,15 +31,15 @@ describe("AnalyticsPage (overview)", () => {
 
     renderWithProviders(<AnalyticsPage />);
 
-    // 最多演奏曲のヒーロー
-    const hero = (await screen.findByText("最多演奏曲")).parentElement as HTMLElement;
+    // 最多使用曲のヒーロー
+    const hero = (await screen.findByText("最多使用曲")).parentElement as HTMLElement;
     expect(within(hero).getByText("Song A")).toBeInTheDocument();
 
-    // KPI: 総表示回数 14, セットリスト数 3, ユニーク曲 2, 総演奏回数 7
+    // KPI: 総表示回数 14, セットリスト数 3, ユニーク曲 2, 総使用回数 7
     expect(screen.getByText("総表示回数").previousSibling).toHaveTextContent("14");
     expect(screen.getByText("セットリスト").previousSibling).toHaveTextContent("3");
     expect(screen.getByText("ユニーク曲").previousSibling).toHaveTextContent("2");
-    expect(screen.getByText("総演奏回数").previousSibling).toHaveTextContent("7");
+    expect(screen.getByText("総使用回数").previousSibling).toHaveTextContent("7");
 
     // Top曲チャートに曲名が並ぶ
     expect(screen.getByText("Song B")).toBeInTheDocument();

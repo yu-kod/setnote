@@ -63,7 +63,7 @@ export default function AnalyticsPage() {
         <>
           {summary.topSong && (
             <div className="mb-3 rounded-xl border border-border bg-card p-5">
-              <div className="text-xs text-muted-foreground">最多演奏曲</div>
+              <div className="text-xs text-muted-foreground">最多使用曲</div>
               <div className="mt-1 truncate text-2xl font-bold">{summary.topSong.title}</div>
               {summary.topSong.artist && (
                 <div className="truncate text-sm text-muted-foreground">
@@ -81,12 +81,12 @@ export default function AnalyticsPage() {
             <StatTile label="総表示回数" value={totalViews} />
             <StatTile label="セットリスト" value={setlistCount} />
             <StatTile label="ユニーク曲" value={summary.uniqueSongs} />
-            <StatTile label="総演奏回数" value={summary.totalPlays} />
+            <StatTile label="総使用回数" value={summary.totalPlays} />
           </div>
 
           <section className="mt-6">
             <h3 className="mb-3 text-sm font-semibold text-muted-foreground">
-              よく演奏する曲 TOP{bars.length || ""}
+              よく使う曲 TOP{bars.length || ""}
             </h3>
             {bars.length === 0 ? (
               <p className="text-muted-foreground">
