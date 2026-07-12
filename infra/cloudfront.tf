@@ -21,7 +21,7 @@ resource "aws_cloudfront_function" "spa_rewrite" {
   name    = "${var.project_name}-spa-rewrite"
   runtime = "cloudfront-js-2.0"
   code    = <<-EOF
-    var defined_BOT_RE = /Twitterbot|facebookexternalhit|Slackbot|LinkedInBot|Discordbot|Googlebot|bingbot|LINE|WhatsApp/i;
+    var defined_BOT_RE = /Twitterbot|facebookexternalhit|Slackbot|LinkedInBot|Discordbot|Googlebot|bingbot/i;
     function handler(event) {
       var request = event.request;
       var uri = request.uri;
