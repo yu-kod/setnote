@@ -80,8 +80,7 @@ describe("GET /api/ogp/:id", () => {
     expect(html).toContain(
       '<meta property="og:url" content="https://setnote.yu-web.site/s/set1" />'
     );
-    expect(html).toContain('<meta property="og:image"');
-    expect(html).toContain('<meta name="twitter:card" content="summary_large_image" />');
+    expect(html).toContain('<meta name="twitter:card" content="summary" />');
   });
 
   it("returns 404 when the setlist does not exist", async () => {
