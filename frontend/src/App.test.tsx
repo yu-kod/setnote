@@ -132,6 +132,12 @@ describe("App", () => {
     expect(await screen.findByRole("heading", { name: "いいねランキング" })).toBeInTheDocument();
   });
 
+  it("renders the views detail page at /analytics/views when authenticated", async () => {
+    mockUseAuth.mockReturnValue({ isAuthenticated: true, logout: mockLogout });
+    renderApp("/analytics/views");
+    expect(await screen.findByRole("heading", { name: "表示回数ランキング" })).toBeInTheDocument();
+  });
+
   it("calls logout when the logout button is clicked", async () => {
     mockUseAuth.mockReturnValue({ isAuthenticated: true, logout: mockLogout });
     const user = userEvent.setup();
