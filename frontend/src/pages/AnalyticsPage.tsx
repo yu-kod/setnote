@@ -134,7 +134,7 @@ export default function AnalyticsPage() {
           />
 
           <div className="grid grid-cols-2 gap-3">
-            <StatTile label="総表示回数" value={totalViews} />
+            <LinkedStatTile label="総表示回数" value={totalViews} to="/analytics/views" />
             <StatTile label="セットリスト" value={setlistCount} />
             <LinkedStatTile label="ユニーク曲" value={summary.uniqueSongs} to="/analytics/tracks" />
             <StatTile label="総使用回数" value={summary.totalPlays} />
