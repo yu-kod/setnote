@@ -32,9 +32,7 @@ export default function AnalyticsViewsPage() {
         ← 分析トップ
       </Link>
       <h2 className="mb-1 mt-2 text-xl font-bold">表示回数ランキング</h2>
-      <p className="mb-4 text-sm text-muted-foreground">
-        セットリスト別の表示回数
-      </p>
+      <p className="mb-4 text-sm text-muted-foreground">セットリスト別の表示回数</p>
 
       {error && (
         <Alert variant="destructive" className="mb-4">
