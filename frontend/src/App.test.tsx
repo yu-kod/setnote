@@ -37,9 +37,13 @@ describe("App", () => {
     mockUseAuth.mockReturnValue({ isAuthenticated: false, login: vi.fn(), logout: mockLogout });
   });
 
-  it("renders the site title", () => {
+  it("renders the site title with icon", () => {
     renderWithProviders(<App />);
     expect(screen.getByRole("heading", { name: "setnote" })).toBeInTheDocument();
+    const banner = screen.getByRole("banner");
+    const icon = within(banner).getByRole("img", { name: "setnote" });
+    expect(icon).toBeInTheDocument();
+    expect(icon).toHaveAttribute("src", "/icon-192.png");
   });
 
   it("renders the footer with terms, privacy, and author links", () => {

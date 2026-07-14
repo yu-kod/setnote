@@ -23,9 +23,12 @@ export default function App() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-2 md:px-6">
       <header className="flex items-center justify-between gap-2 py-6 pb-4">
-        <Link to="/" className="no-underline">
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">setnote</h1>
-          <p className="text-xs text-muted-foreground">DJセットリストを作成・共有</p>
+        <Link to="/" className="flex items-center gap-2 no-underline">
+          <img src="/icon-192.png" alt="setnote" className="h-10 w-10" />
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-foreground">setnote</h1>
+            <p className="text-xs text-muted-foreground">DJセットリストを作成・共有</p>
+          </div>
         </Link>
         <nav className="flex items-center gap-1">
           {isAuthenticated ? (
