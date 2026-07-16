@@ -26,4 +26,5 @@ variable "anthropic_api_key" {
   description = "Anthropic API key for Claude Vision image parsing"
   type        = string
   sensitive   = true
+  default     = ""
 }
