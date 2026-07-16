@@ -42,7 +42,7 @@ describe("parseTracksFromImage", () => {
     ]);
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({
-        model: "claude-sonnet-5-20250514",
+        model: "claude-sonnet-5",
         max_tokens: 4096,
       })
     );
