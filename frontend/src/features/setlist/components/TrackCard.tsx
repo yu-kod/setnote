@@ -41,14 +41,19 @@ type Props = {
   suggestions?: Track[];
 };
 
-export function TrackCard({ track, index, onChange, onDelete, dragHandle, suggestions = [] }: Props) {
+export function TrackCard({
+  track,
+  index,
+  onChange,
+  onDelete,
+  dragHandle,
+  suggestions = [],
+}: Props) {
   const [titleFocused, setTitleFocused] = useState(false);
 
   const set = (patch: Partial<Track>) => onChange({ ...track, ...patch });
 
-  const matches = titleFocused && track.title.trim()
-    ? matchTracks(suggestions, track.title)
-    : [];
+  const matches = titleFocused && track.title.trim() ? matchTracks(suggestions, track.title) : [];
 
   function selectSuggestion(s: Track) {
     onChange({
@@ -105,9 +110,7 @@ export function TrackCard({ track, index, onChange, onDelete, dragHandle, sugges
                       className="flex w-full items-baseline gap-2 px-3 py-1.5 text-left text-sm hover:bg-muted/50"
                     >
                       <span className="font-medium">{s.title}</span>
-                      {s.artist && (
-                        <span className="text-muted-foreground">— {s.artist}</span>
-                      )}
+                      {s.artist && <span className="text-muted-foreground">— {s.artist}</span>}
                     </button>
                   </li>
                 ))}

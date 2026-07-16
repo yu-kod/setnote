@@ -61,9 +61,7 @@ describe("matchImportedTracks", () => {
 
   it("matches ignoring parentheses", () => {
     const parsed: ParsedTrack[] = [{ title: "Song A (Live)", artist: "" }];
-    const suggestions = [
-      track({ title: "Song A (Studio)", songLink: "https://link" }),
-    ];
+    const suggestions = [track({ title: "Song A (Studio)", songLink: "https://link" })];
 
     const result = matchImportedTracks(parsed, suggestions);
 
@@ -103,9 +101,7 @@ describe("matchImportedTracks", () => {
       { title: "Song A", artist: "DJ1" },
       { title: "Song B", artist: "DJ2" },
     ];
-    const suggestions = [
-      track({ title: "Song A", songLink: "link-a" }),
-    ];
+    const suggestions = [track({ title: "Song A", songLink: "link-a" })];
 
     const result = matchImportedTracks(parsed, suggestions);
 

@@ -129,9 +129,7 @@ describe("TrackCard", () => {
   it("shows no suggestions when title is empty even if focused", async () => {
     const user = userEvent.setup();
     const suggestions = [buildTrack({ id: "s1", title: "Song" })];
-    renderWithProviders(
-      <Harness initial={buildTrack({ title: "" })} suggestions={suggestions} />
-    );
+    renderWithProviders(<Harness initial={buildTrack({ title: "" })} suggestions={suggestions} />);
 
     await user.click(screen.getByLabelText("曲名"));
 
@@ -144,9 +142,7 @@ describe("TrackCard", () => {
       buildTrack({ id: "s1", title: "Song A", artist: "DJ X" }),
       buildTrack({ id: "s2", title: "Other", artist: "" }),
     ];
-    renderWithProviders(
-      <Harness initial={buildTrack({ title: "" })} suggestions={suggestions} />
-    );
+    renderWithProviders(<Harness initial={buildTrack({ title: "" })} suggestions={suggestions} />);
 
     await user.click(screen.getByLabelText("曲名"));
     await user.type(screen.getByLabelText("曲名"), "Song");
@@ -158,9 +154,7 @@ describe("TrackCard", () => {
   it("hides suggestions when title input loses focus", async () => {
     const user = userEvent.setup();
     const suggestions = [buildTrack({ id: "s1", title: "Song A" })];
-    renderWithProviders(
-      <Harness initial={buildTrack({ title: "" })} suggestions={suggestions} />
-    );
+    renderWithProviders(<Harness initial={buildTrack({ title: "" })} suggestions={suggestions} />);
 
     await user.click(screen.getByLabelText("曲名"));
     await user.type(screen.getByLabelText("曲名"), "Song");
@@ -202,9 +196,7 @@ describe("TrackCard", () => {
   it("hides suggestions after selecting one", async () => {
     const user = userEvent.setup();
     const suggestions = [buildTrack({ id: "s1", title: "Song A" })];
-    renderWithProviders(
-      <Harness initial={buildTrack({ title: "" })} suggestions={suggestions} />
-    );
+    renderWithProviders(<Harness initial={buildTrack({ title: "" })} suggestions={suggestions} />);
 
     await user.click(screen.getByLabelText("曲名"));
     await user.type(screen.getByLabelText("曲名"), "Song");
@@ -215,12 +207,8 @@ describe("TrackCard", () => {
 
   it("shows artist alongside title in suggestion items", async () => {
     const user = userEvent.setup();
-    const suggestions = [
-      buildTrack({ id: "s1", title: "Song A", artist: "DJ X" }),
-    ];
-    renderWithProviders(
-      <Harness initial={buildTrack({ title: "" })} suggestions={suggestions} />
-    );
+    const suggestions = [buildTrack({ id: "s1", title: "Song A", artist: "DJ X" })];
+    renderWithProviders(<Harness initial={buildTrack({ title: "" })} suggestions={suggestions} />);
 
     await user.click(screen.getByLabelText("曲名"));
     await user.type(screen.getByLabelText("曲名"), "Song");

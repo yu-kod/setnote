@@ -3,10 +3,7 @@ import type { Track } from "./types";
 import { createTrack } from "./track";
 import { normalizeForMatch } from "./trackMatch";
 
-export function matchImportedTracks(
-  parsed: ParsedTrack[],
-  suggestions: Track[]
-): Track[] {
+export function matchImportedTracks(parsed: ParsedTrack[], suggestions: Track[]): Track[] {
   return parsed.map((p) => {
     const normalizedTitle = normalizeForMatch(p.title);
     const match = normalizedTitle
