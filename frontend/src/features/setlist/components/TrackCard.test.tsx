@@ -16,11 +16,25 @@ function buildTrack(overrides: Partial<Track> = {}): Track {
   };
 }
 
-function Harness({ initial, onDelete = () => {} }: { initial: Track; onDelete?: () => void }) {
+function Harness({
+  initial,
+  onDelete = () => {},
+  suggestions = [],
+}: {
+  initial: Track;
+  onDelete?: () => void;
+  suggestions?: Track[];
+}) {
   const [track, setTrack] = useState(initial);
   return (
     <>
-      <TrackCard track={track} index={0} onChange={setTrack} onDelete={onDelete} />
+      <TrackCard
+        track={track}
+        index={0}
+        onChange={setTrack}
+        onDelete={onDelete}
+        suggestions={suggestions}
+      />
       <output data-testid="snapshot">{JSON.stringify(track)}</output>
     </>
   );
@@ -101,6 +115,107 @@ describe("TrackCard", () => {
     const fields = snapshot().customFields;
     expect(fields).toHaveLength(1);
     expect(fields[0].id).toBe("c2");
+  });
+
+  it("shows no suggestions when title input is not focused", () => {
+    const suggestions = [buildTrack({ id: "s1", title: "Song" })];
+    renderWithProviders(
+      <Harness initial={buildTrack({ title: "Song" })} suggestions={suggestions} />
+    );
+
+    expect(screen.queryByRole("option")).not.toBeInTheDocument();
+  });
+
+  it("shows no suggestions when title is empty even if focused", async () => {
+    const user = userEvent.setup();
+    const suggestions = [buildTrack({ id: "s1", title: "Song" })];
+    renderWithProviders(<Harness initial={buildTrack({ title: "" })} suggestions={suggestions} />);
+
+    await user.click(screen.getByLabelText("曲名"));
+
+    expect(screen.queryByRole("option")).not.toBeInTheDocument();
+  });
+
+  it("shows matching suggestions when title input is focused and has text", async () => {
+    const user = userEvent.setup();
+    const suggestions = [
+      buildTrack({ id: "s1", title: "Song A", artist: "DJ X" }),
+      buildTrack({ id: "s2", title: "Other", artist: "" }),
+    ];
+    renderWithProviders(<Harness initial={buildTrack({ title: "" })} suggestions={suggestions} />);
+
+    await user.click(screen.getByLabelText("曲名"));
+    await user.type(screen.getByLabelText("曲名"), "Song");
+
+    expect(screen.getByRole("option", { name: /Song A/ })).toBeInTheDocument();
+    expect(screen.queryByRole("option", { name: /Other/ })).not.toBeInTheDocument();
+  });
+
+  it("hides suggestions when title input loses focus", async () => {
+    const user = userEvent.setup();
+    const suggestions = [buildTrack({ id: "s1", title: "Song A" })];
+    renderWithProviders(<Harness initial={buildTrack({ title: "" })} suggestions={suggestions} />);
+
+    await user.click(screen.getByLabelText("曲名"));
+    await user.type(screen.getByLabelText("曲名"), "Song");
+    expect(screen.getByRole("option")).toBeInTheDocument();
+
+    await user.click(screen.getByLabelText("アーティスト"));
+    expect(screen.queryByRole("option")).not.toBeInTheDocument();
+  });
+
+  it("selects a suggestion and merges fields while preserving track id", async () => {
+    const user = userEvent.setup();
+    const suggestions = [
+      buildTrack({
+        id: "s1",
+        title: "Song A",
+        artist: "DJ X",
+        songLink: "https://link",
+        source: "Beatport",
+        customFields: [{ id: "c1", label: "BPM", value: "128" }],
+      }),
+    ];
+    renderWithProviders(
+      <Harness initial={buildTrack({ id: "original-id", title: "" })} suggestions={suggestions} />
+    );
+
+    await user.click(screen.getByLabelText("曲名"));
+    await user.type(screen.getByLabelText("曲名"), "Song");
+    await user.click(screen.getByRole("option", { name: /Song A/ }));
+
+    const result = snapshot();
+    expect(result.id).toBe("original-id");
+    expect(result.title).toBe("Song A");
+    expect(result.artist).toBe("DJ X");
+    expect(result.songLink).toBe("https://link");
+    expect(result.source).toBe("Beatport");
+    expect(result.customFields).toEqual([{ id: "c1", label: "BPM", value: "128" }]);
+  });
+
+  it("hides suggestions after selecting one", async () => {
+    const user = userEvent.setup();
+    const suggestions = [buildTrack({ id: "s1", title: "Song A" })];
+    renderWithProviders(<Harness initial={buildTrack({ title: "" })} suggestions={suggestions} />);
+
+    await user.click(screen.getByLabelText("曲名"));
+    await user.type(screen.getByLabelText("曲名"), "Song");
+    await user.click(screen.getByRole("option", { name: /Song A/ }));
+
+    expect(screen.queryByRole("option")).not.toBeInTheDocument();
+  });
+
+  it("shows artist alongside title in suggestion items", async () => {
+    const user = userEvent.setup();
+    const suggestions = [buildTrack({ id: "s1", title: "Song A", artist: "DJ X" })];
+    renderWithProviders(<Harness initial={buildTrack({ title: "" })} suggestions={suggestions} />);
+
+    await user.click(screen.getByLabelText("曲名"));
+    await user.type(screen.getByLabelText("曲名"), "Song");
+
+    const option = screen.getByRole("option");
+    expect(option).toHaveTextContent("Song A");
+    expect(option).toHaveTextContent("DJ X");
   });
 
   it("deletes the track after confirming", async () => {

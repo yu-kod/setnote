@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { matchTracks } from "./trackMatch";
+import { matchTracks, normalizeForMatch } from "./trackMatch";
 import type { Track } from "./types";
 
 function track(overrides: Partial<Track>): Track {
@@ -60,5 +60,51 @@ describe("matchTracks", () => {
   it("defaults the limit to 8", () => {
     const tracks = Array.from({ length: 12 }, (_, i) => track({ id: `t${i}`, title: `Song ${i}` }));
     expect(matchTracks(tracks, "song")).toHaveLength(8);
+  });
+
+  it("matches ignoring content in parentheses", () => {
+    const tracks = [track({ id: "a", title: "Song A (feat. B)" })];
+    expect(matchTracks(tracks, "Song A")).toHaveLength(1);
+  });
+
+  it("matches both paren-variants for the same base title", () => {
+    const tracks = [
+      track({ id: "a", title: "Song A (feat. B)" }),
+      track({ id: "b", title: "Song A (feat. C)" }),
+    ];
+    const result = matchTracks(tracks, "Song A");
+    expect(result).toHaveLength(2);
+  });
+
+  it("matches ignoring spaces", () => {
+    const tracks = [track({ id: "a", title: "Song A" })];
+    expect(matchTracks(tracks, "SongA")).toHaveLength(1);
+  });
+
+  it("matches ignoring full-width parentheses", () => {
+    const tracks = [track({ id: "a", title: "Song A（ライブ）" })];
+    expect(matchTracks(tracks, "Song A")).toHaveLength(1);
+  });
+});
+
+describe("normalizeForMatch", () => {
+  it("strips parentheses and their content", () => {
+    expect(normalizeForMatch("Song A (feat. B)")).not.toContain("feat");
+  });
+
+  it("strips spaces", () => {
+    expect(normalizeForMatch("Song A")).not.toContain(" ");
+  });
+
+  it("lowercases", () => {
+    expect(normalizeForMatch("ABC")).toBe(normalizeForMatch("abc"));
+  });
+
+  it("normalizes full-width to half-width", () => {
+    expect(normalizeForMatch("ＡＢＣ")).toBe(normalizeForMatch("ABC"));
+  });
+
+  it("returns empty string for empty input", () => {
+    expect(normalizeForMatch("")).toBe("");
   });
 });
