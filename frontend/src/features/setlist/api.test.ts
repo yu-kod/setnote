@@ -12,6 +12,7 @@ import {
   recordSetlistView,
   likeTrack,
   unlikeTrack,
+  parseImageTracks,
 } from "./api";
 import { clearSession, redirectToLogin } from "../auth/session";
 
@@ -402,6 +403,52 @@ describe("unlikeTrack", () => {
     mockFetch.mockResolvedValue({ ok: false, status: 500, json: () => Promise.resolve({}) });
 
     await expect(unlikeTrack("s1", "t1")).rejects.toThrow();
+  });
+});
+
+describe("parseImageTracks", () => {
+  it("sends base64 image to /api/image-parse and returns tracks", async () => {
+    localStorage.setItem("setnote_access_token", "test-token");
+    const tracks = [{ title: "Who?", artist: "Azari" }];
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ tracks }),
+    });
+
+    const result = await parseImageTracks("base64data", "image/png");
+
+    expect(mockFetch).toHaveBeenCalledWith("/api/image-parse", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer test-token",
+      },
+      body: JSON.stringify({ image: "base64data", mediaType: "image/png" }),
+    });
+    expect(result).toEqual(tracks);
+  });
+
+  it("throws when the response is not ok", async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: () => Promise.resolve({}),
+    });
+
+    await expect(parseImageTracks("data", "image/png")).rejects.toThrow("画像の解析に失敗しました");
+  });
+
+  it("clears session and redirects on 401", async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 401,
+      json: () => Promise.resolve({}),
+    });
+
+    await expect(parseImageTracks("data", "image/png")).rejects.toThrow();
+    expect(clearSession).toHaveBeenCalledOnce();
+    expect(redirectToLogin).toHaveBeenCalledOnce();
   });
 });
 

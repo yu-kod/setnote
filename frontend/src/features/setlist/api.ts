@@ -116,6 +116,36 @@ export async function recordSetlistView(id: string): Promise<void> {
   }
 }
 
+export type ParsedTrack = {
+  title: string;
+  artist: string;
+};
+
+export async function parseImageTracks(
+  imageBase64: string,
+  mediaType: string
+): Promise<ParsedTrack[]> {
+  const res = await fetch("/api/image-parse", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${getToken()}`,
+    },
+    body: JSON.stringify({ image: imageBase64, mediaType }),
+  });
+
+  if (!res.ok) {
+    if (res.status === 401) {
+      clearSession();
+      redirectToLogin();
+    }
+    throw new Error("画像の解析に失敗しました");
+  }
+
+  const data = (await res.json()) as { tracks: ParsedTrack[] };
+  return data.tracks;
+}
+
 // 公開ページ用。認証不要で、公開中のセットリストのスナップショットを取得する。
 export async function fetchPublicSetlist(id: string): Promise<Setlist> {
   const res = await fetch(`/api/setlists/${id}`);

@@ -11,6 +11,8 @@ import {
   type UpdateSetlistInput,
 } from "../api";
 import type { Setlist, Track } from "../types";
+import type { ParsedTrack } from "../api";
+import { createTrack } from "../track";
 import { GripVertical } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +34,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import NotFoundPage from "@/pages/NotFoundPage";
 import { AddTrackForm } from "./AddTrackForm";
+import { ImageTrackImport } from "./ImageTrackImport";
 import { TrackCard } from "./TrackCard";
 
 type FormState = {
@@ -107,6 +110,11 @@ export function SetlistEditor({ id }: { id: string }) {
 
   function removeTrack(trackId: string) {
     setTracks((prev) => prev.filter((t) => t.id !== trackId));
+  }
+
+  function importTracks(parsed: ParsedTrack[]) {
+    const newTracks = parsed.map((p) => createTrack({ title: p.title, artist: p.artist }));
+    setTracks((prev) => [...prev, ...newTracks]);
   }
 
   function currentInput(): UpdateSetlistInput {
@@ -308,6 +316,7 @@ export function SetlistEditor({ id }: { id: string }) {
           ))}
         </Sortable>
         <AddTrackForm onAdd={addTrack} suggestions={suggestions} />
+        <ImageTrackImport onImport={importTracks} />
       </div>
 
       <div className="flex justify-end">
