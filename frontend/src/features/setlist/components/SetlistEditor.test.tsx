@@ -8,6 +8,7 @@ import {
   unpublishSetlist,
   deleteSetlist,
   fetchTrackSuggestions,
+  parseImageTracks,
 } from "../api";
 import { toast } from "sonner";
 import type { Setlist } from "../types";
@@ -25,6 +26,7 @@ vi.mock("../api", () => ({
   unpublishSetlist: vi.fn(),
   deleteSetlist: vi.fn(),
   fetchTrackSuggestions: vi.fn(),
+  parseImageTracks: vi.fn(),
 }));
 
 vi.mock("sonner", () => ({
@@ -37,6 +39,7 @@ const mockPublishSetlist = vi.mocked(publishSetlist);
 const mockUnpublishSetlist = vi.mocked(unpublishSetlist);
 const mockDeleteSetlist = vi.mocked(deleteSetlist);
 const mockFetchTrackSuggestions = vi.mocked(fetchTrackSuggestions);
+const mockParseImageTracks = vi.mocked(parseImageTracks);
 
 function buildSetlist(overrides: Partial<Setlist> = {}): Setlist {
   return {
@@ -63,6 +66,7 @@ beforeEach(() => {
   mockDeleteSetlist.mockReset();
   mockFetchTrackSuggestions.mockReset();
   mockFetchTrackSuggestions.mockResolvedValue([]);
+  mockParseImageTracks.mockReset();
   mockNavigate.mockReset();
   vi.mocked(toast.success).mockReset();
   vi.mocked(toast.error).mockReset();
@@ -435,5 +439,35 @@ describe("SetlistEditor", () => {
     renderWithProviders(<SetlistEditor id="s1" />);
 
     expect(await screen.findByLabelText("セットリスト名")).toBeInTheDocument();
+  });
+
+  it("renders the image import button", async () => {
+    mockFetchSetlist.mockResolvedValue(buildSetlist());
+    renderWithProviders(<SetlistEditor id="s1" />);
+    await screen.findByLabelText("セットリスト名");
+
+    expect(screen.getByRole("button", { name: "画像から追加" })).toBeInTheDocument();
+  });
+
+  it("adds tracks from image import", async () => {
+    mockFetchSetlist.mockResolvedValue(buildSetlist({ tracks: [] }));
+    mockParseImageTracks.mockResolvedValue([
+      { title: "Track A", artist: "Artist A" },
+      { title: "Track B", artist: "Artist B" },
+    ]);
+    const user = userEvent.setup();
+    renderWithProviders(<SetlistEditor id="s1" />);
+    await screen.findByLabelText("セットリスト名");
+
+    await user.click(screen.getByRole("button", { name: "画像から追加" }));
+    const input = screen.getByLabelText("プレイリスト画像");
+    const file = new File([new Uint8Array(10)], "test.png", { type: "image/png" });
+    await user.upload(input, file);
+
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith("2曲を読み取りました");
+    });
+    expect(screen.getByDisplayValue("Track A")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Track B")).toBeInTheDocument();
   });
 });
