@@ -220,7 +220,6 @@ describe("SetlistEditor", () => {
     await screen.findByLabelText("セットリスト名");
     await user.click(screen.getByRole("button", { name: "トラックを追加" }));
     await user.type(screen.getByLabelText("曲名"), "Opening Track");
-    await user.click(screen.getByRole("button", { name: "追加" }));
     await user.click(screen.getByRole("button", { name: "保存" }));
 
     await waitFor(() => {
@@ -418,7 +417,7 @@ describe("SetlistEditor", () => {
     expect(screen.getByRole("button", { name: "セットリストを削除" })).toBeEnabled();
   });
 
-  it("suggests past tracks in the add-track form", async () => {
+  it("shows suggestions in the track card title input", async () => {
     mockFetchSetlist.mockResolvedValue(buildSetlist({ name: "Set", tracks: [] }));
     mockFetchTrackSuggestions.mockResolvedValue([
       { id: "p1", title: "Past Song", artist: "DJ P", songLink: "", source: "", customFields: [] },
@@ -469,5 +468,73 @@ describe("SetlistEditor", () => {
     });
     expect(screen.getByDisplayValue("Track A")).toBeInTheDocument();
     expect(screen.getByDisplayValue("Track B")).toBeInTheDocument();
+  });
+
+  it("inherits suggestion data when importing tracks that match", async () => {
+    mockFetchSetlist.mockResolvedValue(buildSetlist({ tracks: [] }));
+    mockFetchTrackSuggestions.mockResolvedValue([
+      {
+        id: "p1",
+        title: "Track A",
+        artist: "Original Artist",
+        songLink: "https://link",
+        source: "Beatport",
+        customFields: [{ id: "c1", label: "BPM", value: "128" }],
+      },
+    ]);
+    mockParseImageTracks.mockResolvedValue([{ title: "Track A", artist: "Artist A" }]);
+    mockUpdateSetlist.mockResolvedValue(buildSetlist());
+    const user = userEvent.setup();
+    renderWithProviders(<SetlistEditor id="s1" />);
+    await screen.findByLabelText("セットリスト名");
+
+    await user.click(screen.getByRole("button", { name: "画像から追加" }));
+    const input = screen.getByLabelText("プレイリスト画像");
+    const file = new File([new Uint8Array(10)], "test.png", { type: "image/png" });
+    await user.upload(input, file);
+
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith("1曲を読み取りました");
+    });
+
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    await waitFor(() => {
+      expect(mockUpdateSetlist).toHaveBeenCalled();
+    });
+    const payload = mockUpdateSetlist.mock.calls[0][1];
+    const track = payload.tracks[0] as Record<string, unknown>;
+    expect(track).toMatchObject({
+      songLink: "https://link",
+      source: "Beatport",
+    });
+    expect(track.customFields).toEqual([{ id: "c1", label: "BPM", value: "128" }]);
+  });
+
+  it("shows an error toast when saving with empty-title tracks", async () => {
+    mockFetchSetlist.mockResolvedValue(buildSetlist({ name: "Set", tracks: [] }));
+    const user = userEvent.setup();
+    renderWithProviders(<SetlistEditor id="s1" />);
+    await screen.findByLabelText("セットリスト名");
+
+    await user.click(screen.getByRole("button", { name: "トラックを追加" }));
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    expect(toast.error).toHaveBeenCalledWith("曲名が入力されていないトラックがあります");
+    expect(mockUpdateSetlist).not.toHaveBeenCalled();
+  });
+
+  it("shows an error toast when publishing with empty-title tracks", async () => {
+    mockFetchSetlist.mockResolvedValue(buildSetlist({ name: "Set", status: "draft", tracks: [] }));
+    const user = userEvent.setup();
+    renderWithProviders(<SetlistEditor id="s1" />);
+    await screen.findByLabelText("セットリスト名");
+
+    await user.click(screen.getByRole("button", { name: "トラックを追加" }));
+    await user.click(screen.getByRole("button", { name: "公開する" }));
+
+    expect(toast.error).toHaveBeenCalledWith("曲名が入力されていないトラックがあります");
+    expect(mockUpdateSetlist).not.toHaveBeenCalled();
+    expect(mockPublishSetlist).not.toHaveBeenCalled();
   });
 });

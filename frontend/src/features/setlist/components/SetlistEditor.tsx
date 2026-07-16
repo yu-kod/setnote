@@ -12,7 +12,8 @@ import {
 } from "../api";
 import type { Setlist, Track } from "../types";
 import type { ParsedTrack } from "../api";
-import { createTrack } from "../track";
+import { matchImportedTracks } from "../importMatch";
+import { hasEmptyTitleTracks } from "../trackValidation";
 import { GripVertical } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -113,7 +114,7 @@ export function SetlistEditor({ id }: { id: string }) {
   }
 
   function importTracks(parsed: ParsedTrack[]) {
-    const newTracks = parsed.map((p) => createTrack({ title: p.title, artist: p.artist }));
+    const newTracks = matchImportedTracks(parsed, suggestions);
     setTracks((prev) => [...prev, ...newTracks]);
   }
 
@@ -129,6 +130,10 @@ export function SetlistEditor({ id }: { id: string }) {
   }
 
   async function handleSave() {
+    if (hasEmptyTitleTracks(tracks)) {
+      toast.error("曲名が入力されていないトラックがあります");
+      return;
+    }
     setSaving(true);
     try {
       await updateSetlist(id, currentInput());
@@ -141,9 +146,12 @@ export function SetlistEditor({ id }: { id: string }) {
   }
 
   async function handlePublish() {
+    if (hasEmptyTitleTracks(tracks)) {
+      toast.error("曲名が入力されていないトラックがあります");
+      return;
+    }
     setPublishing(true);
     try {
-      // 公開は下書きのスナップショット化なので、直前の編集を保存してから公開する。
       await updateSetlist(id, currentInput());
       const updated = await publishSetlist(id);
       setStatus(updated.status);
@@ -298,6 +306,7 @@ export function SetlistEditor({ id }: { id: string }) {
                 index={i}
                 onChange={(updated) => updateTrack(track.id, updated)}
                 onDelete={() => removeTrack(track.id)}
+                suggestions={suggestions}
                 dragHandle={
                   <SortableItemHandle asChild>
                     <Button
@@ -315,7 +324,7 @@ export function SetlistEditor({ id }: { id: string }) {
             </SortableItem>
           ))}
         </Sortable>
-        <AddTrackForm onAdd={addTrack} suggestions={suggestions} />
+        <AddTrackForm onAdd={addTrack} />
         <ImageTrackImport onImport={importTracks} />
       </div>
 

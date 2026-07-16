@@ -1,7 +1,9 @@
 import * as React from "react";
+import { useState } from "react";
 import { Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createCustomField } from "../track";
+import { matchTracks } from "../trackMatch";
 import type { Track, CustomField } from "../types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,7 +20,6 @@ import {
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
 
-// 枠のない、テキスト（出力）に見える入力欄。クリックしてそのまま編集できる。
 function InlineInput({ className, ...props }: React.ComponentProps<typeof Input>) {
   return (
     <Input
@@ -37,10 +38,29 @@ type Props = {
   onChange: (track: Track) => void;
   onDelete: () => void;
   dragHandle?: React.ReactNode;
+  suggestions?: Track[];
 };
 
-export function TrackCard({ track, index, onChange, onDelete, dragHandle }: Props) {
+export function TrackCard({ track, index, onChange, onDelete, dragHandle, suggestions = [] }: Props) {
+  const [titleFocused, setTitleFocused] = useState(false);
+
   const set = (patch: Partial<Track>) => onChange({ ...track, ...patch });
+
+  const matches = titleFocused && track.title.trim()
+    ? matchTracks(suggestions, track.title)
+    : [];
+
+  function selectSuggestion(s: Track) {
+    onChange({
+      ...track,
+      title: s.title,
+      artist: s.artist,
+      songLink: s.songLink,
+      source: s.source,
+      customFields: s.customFields,
+    });
+    setTitleFocused(false);
+  }
 
   const setField = (id: string, patch: Partial<CustomField>) =>
     onChange({
@@ -59,13 +79,41 @@ export function TrackCard({ track, index, onChange, onDelete, dragHandle }: Prop
       <CardContent className="space-y-0.5 px-3">
         <div className="flex items-center gap-2">
           {dragHandle}
-          <InlineInput
-            aria-label="曲名"
-            value={track.title}
-            onChange={(e) => set({ title: e.target.value })}
-            placeholder="曲名（必須）"
-            className="min-w-0 flex-1 text-base font-semibold"
-          />
+          <div className="relative min-w-0 flex-1">
+            <InlineInput
+              aria-label="曲名"
+              value={track.title}
+              onChange={(e) => set({ title: e.target.value })}
+              onFocus={() => setTitleFocused(true)}
+              onBlur={() => setTitleFocused(false)}
+              placeholder="曲名（必須）"
+              className="text-base font-semibold"
+            />
+            {matches.length > 0 && (
+              <ul
+                role="listbox"
+                className="absolute left-0 right-0 top-full z-10 mt-1 overflow-hidden rounded-md border bg-popover shadow-md"
+              >
+                {matches.map((s) => (
+                  <li key={s.id}>
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={false}
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => selectSuggestion(s)}
+                      className="flex w-full items-baseline gap-2 px-3 py-1.5 text-left text-sm hover:bg-muted/50"
+                    >
+                      <span className="font-medium">{s.title}</span>
+                      {s.artist && (
+                        <span className="text-muted-foreground">— {s.artist}</span>
+                      )}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
           <AlertDialog>
             <AlertDialogTrigger asChild>
               <Button

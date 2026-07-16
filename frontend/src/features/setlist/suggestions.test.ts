@@ -43,6 +43,21 @@ describe("collectTrackSuggestions", () => {
     expect(result[0]).toMatchObject({ title: "Song A" });
   });
 
+  it("keeps both paren-variants as separate suggestions", () => {
+    const result = collectTrackSuggestions([
+      setlist({
+        tracks: [
+          track({ id: "a", title: "Song A (feat. B)" }),
+          track({ id: "b", title: "Song A (feat. C)" }),
+        ],
+      }),
+    ]);
+
+    expect(result).toHaveLength(2);
+    expect(result.map((t) => t.title)).toContain("Song A (feat. B)");
+    expect(result.map((t) => t.title)).toContain("Song A (feat. C)");
+  });
+
   it("keeps the representative from the most recently updated setlist for a duplicate title", () => {
     const older = setlist({
       id: "old",
