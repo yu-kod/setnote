@@ -53,10 +53,44 @@ function createMockCanvas() {
 }
 
 describe("calculateLayout", () => {
-  it("returns items and height", () => {
+  it("returns items, width, and height", () => {
     const result: LayoutResult = calculateLayout(buildInput());
     expect(result.items).toBeInstanceOf(Array);
+    expect(result.width).toBeGreaterThan(0);
     expect(result.height).toBeGreaterThanOrEqual(675);
+  });
+
+  it("adjusts canvas width to fit content", () => {
+    const short = calculateLayout(
+      buildInput({ name: "A", tracks: [{ title: "B", artist: "" }], thumbnailCount: 2 })
+    );
+    expect(short.width).toBeLessThan(1200);
+  });
+
+  it("adjusts width for a single thumbnail column", () => {
+    const result = calculateLayout(
+      buildInput({ name: "A", tracks: [{ title: "B", artist: "" }], thumbnailCount: 1 })
+    );
+    const twoCol = calculateLayout(
+      buildInput({ name: "A", tracks: [{ title: "B", artist: "" }], thumbnailCount: 2 })
+    );
+    expect(result.width).toBeLessThan(twoCol.width);
+  });
+
+  it("uses narrower width when there are no thumbnails", () => {
+    const noThumbs = calculateLayout(
+      buildInput({ name: "Short", tracks: [{ title: "Track", artist: "" }], thumbnailCount: 0 })
+    );
+    const withThumbs = calculateLayout(
+      buildInput({ name: "Short", tracks: [{ title: "Track", artist: "" }], thumbnailCount: 2 })
+    );
+    expect(noThumbs.width).toBeLessThan(withThumbs.width);
+  });
+
+  it("caps canvas width at 1200", () => {
+    const veryLong = "あ".repeat(100);
+    const { width } = calculateLayout(buildInput({ name: veryLong, thumbnailCount: 2 }));
+    expect(width).toBeLessThanOrEqual(1200);
   });
 
   it("places the setlist name at the top", () => {
@@ -163,11 +197,11 @@ describe("calculateLayout", () => {
   });
 
   it("places thumbnails within canvas bounds", () => {
-    const { items, height } = calculateLayout(buildInput({ thumbnailCount: 3 }));
+    const { items, width, height } = calculateLayout(buildInput({ thumbnailCount: 3 }));
     const thumbnails = items.filter((item) => item.type === "thumbnail");
     expect(thumbnails.length).toBe(3);
     for (const thumb of thumbnails) {
-      expect(thumb.x + thumb.width).toBeLessThanOrEqual(1200);
+      expect(thumb.x + thumb.width).toBeLessThanOrEqual(width);
       expect(thumb.y).toBeGreaterThanOrEqual(0);
       expect(thumb.y + thumb.height).toBeLessThanOrEqual(height);
     }
@@ -186,13 +220,13 @@ describe("calculateLayout", () => {
 
   it("caps text area width so thumbnails always fit", () => {
     const veryLong = "あ".repeat(100);
-    const { items } = calculateLayout(
+    const { items, width } = calculateLayout(
       buildInput({ name: veryLong, tracks: [], thumbnailCount: 2 })
     );
     const thumbnails = items.filter((i) => i.type === "thumbnail");
     expect(thumbnails).toHaveLength(2);
     for (const thumb of thumbnails) {
-      expect(thumb.x + thumb.width).toBeLessThanOrEqual(1200);
+      expect(thumb.x + thumb.width).toBeLessThanOrEqual(width);
     }
   });
 
