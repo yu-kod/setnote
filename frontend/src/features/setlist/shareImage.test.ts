@@ -4,6 +4,7 @@ import {
   renderShareImage,
   downloadBlob,
   type ShareImageInput,
+  type LayoutResult,
 } from "./shareImage";
 
 function buildInput(overrides: Partial<ShareImageInput> = {}): ShareImageInput {
@@ -52,31 +53,37 @@ function createMockCanvas() {
 }
 
 describe("calculateLayout", () => {
+  it("returns items and height", () => {
+    const result: LayoutResult = calculateLayout(buildInput());
+    expect(result.items).toBeInstanceOf(Array);
+    expect(result.height).toBeGreaterThanOrEqual(675);
+  });
+
   it("places the setlist name at the top", () => {
-    const layout = calculateLayout(buildInput());
-    const title = layout.find((item) => item.type === "title");
+    const { items } = calculateLayout(buildInput());
+    const title = items.find((item) => item.type === "title");
     expect(title).toBeDefined();
     expect(title!.text).toBe("Summer Vibes");
     expect(title!.y).toBeLessThan(100);
   });
 
   it("places the event name below the title", () => {
-    const layout = calculateLayout(buildInput());
-    const title = layout.find((item) => item.type === "title")!;
-    const event = layout.find((item) => item.type === "event")!;
+    const { items } = calculateLayout(buildInput());
+    const title = items.find((item) => item.type === "title")!;
+    const event = items.find((item) => item.type === "event")!;
     expect(event.text).toBe("Summer Festival 2026");
     expect(event.y).toBeGreaterThan(title.y);
   });
 
   it("omits the event item when eventName is null", () => {
-    const layout = calculateLayout(buildInput({ eventName: null }));
-    expect(layout.find((item) => item.type === "event")).toBeUndefined();
+    const { items } = calculateLayout(buildInput({ eventName: null }));
+    expect(items.find((item) => item.type === "event")).toBeUndefined();
   });
 
   it("places tracks below the header", () => {
-    const layout = calculateLayout(buildInput());
-    const header = layout.filter((item) => item.type === "title" || item.type === "event");
-    const tracks = layout.filter((item) => item.type === "trackTitle");
+    const { items } = calculateLayout(buildInput());
+    const header = items.filter((item) => item.type === "title" || item.type === "event");
+    const tracks = items.filter((item) => item.type === "trackTitle");
     const lowestHeader = Math.max(...header.map((h) => h.y));
     expect(tracks.length).toBe(2);
     expect(tracks[0].y).toBeGreaterThan(lowestHeader);
@@ -84,9 +91,9 @@ describe("calculateLayout", () => {
   });
 
   it("places artist names below their track titles with a smaller font", () => {
-    const layout = calculateLayout(buildInput());
-    const trackTitles = layout.filter((item) => item.type === "trackTitle");
-    const artists = layout.filter((item) => item.type === "trackArtist");
+    const { items } = calculateLayout(buildInput());
+    const trackTitles = items.filter((item) => item.type === "trackTitle");
+    const artists = items.filter((item) => item.type === "trackArtist");
     expect(artists.length).toBe(2);
     expect(artists[0].y).toBeGreaterThan(trackTitles[0].y);
     expect(artists[0].fontSize!).toBeLessThan(trackTitles[0].fontSize!);
@@ -94,35 +101,61 @@ describe("calculateLayout", () => {
   });
 
   it("skips artist items when artist is empty", () => {
-    const layout = calculateLayout(
+    const { items } = calculateLayout(
       buildInput({
         tracks: [{ title: "Instrumental", artist: "" }],
         thumbnailCount: 0,
       })
     );
-    expect(layout.filter((item) => item.type === "trackArtist")).toHaveLength(0);
+    expect(items.filter((item) => item.type === "trackArtist")).toHaveLength(0);
+  });
+
+  it("includes all tracks even when there are many", () => {
+    const manyTracks = Array.from({ length: 30 }, (_, i) => ({
+      title: `Track ${i + 1}`,
+      artist: `Artist ${i + 1}`,
+    }));
+    const { items } = calculateLayout(buildInput({ tracks: manyTracks, thumbnailCount: 0 }));
+    const trackTitles = items.filter((item) => item.type === "trackTitle");
+    expect(trackTitles).toHaveLength(30);
+  });
+
+  it("expands height to fit all tracks", () => {
+    const manyTracks = Array.from({ length: 30 }, (_, i) => ({
+      title: `Track ${i + 1}`,
+      artist: `Artist ${i + 1}`,
+    }));
+    const { height } = calculateLayout(buildInput({ tracks: manyTracks, thumbnailCount: 0 }));
+    expect(height).toBeGreaterThan(675);
+  });
+
+  it("maintains minimum height of 675 for few tracks", () => {
+    const { height } = calculateLayout(
+      buildInput({ tracks: [{ title: "Solo", artist: "" }], thumbnailCount: 0 })
+    );
+    expect(height).toBe(675);
   });
 
   it("places thumbnails in the right region", () => {
-    const layout = calculateLayout(buildInput({ thumbnailCount: 3 }));
-    const thumbnails = layout.filter((item) => item.type === "thumbnail");
+    const { items, height } = calculateLayout(buildInput({ thumbnailCount: 3 }));
+    const thumbnails = items.filter((item) => item.type === "thumbnail");
     expect(thumbnails.length).toBe(3);
     for (const thumb of thumbnails) {
       expect(thumb.x).toBeGreaterThanOrEqual(500);
       expect(thumb.x + thumb.width).toBeLessThanOrEqual(1200);
       expect(thumb.y).toBeGreaterThanOrEqual(0);
-      expect(thumb.y + thumb.height).toBeLessThanOrEqual(675);
+      expect(thumb.y + thumb.height).toBeLessThanOrEqual(height);
     }
   });
 
   it("produces no thumbnail items when thumbnailCount is 0", () => {
-    const layout = calculateLayout(buildInput({ thumbnailCount: 0 }));
-    expect(layout.filter((item) => item.type === "thumbnail")).toHaveLength(0);
+    const { items } = calculateLayout(buildInput({ thumbnailCount: 0 }));
+    expect(items.filter((item) => item.type === "thumbnail")).toHaveLength(0);
   });
 
   it("does not produce overlapping thumbnails", () => {
-    const layout = calculateLayout(buildInput({ thumbnailCount: 4 }));
-    const thumbnails = layout.filter((item) => item.type === "thumbnail");
+    const { items } = calculateLayout(buildInput({ thumbnailCount: 4 }));
+    const thumbnails = items.filter((item) => item.type === "thumbnail");
     for (let i = 0; i < thumbnails.length; i++) {
       for (let j = i + 1; j < thumbnails.length; j++) {
         const a = thumbnails[i];
@@ -137,11 +170,15 @@ describe("calculateLayout", () => {
     }
   });
 
-  it("caps thumbnails at the number of available slots", () => {
-    const layout = calculateLayout(buildInput({ thumbnailCount: 100 }));
-    const thumbnails = layout.filter((item) => item.type === "thumbnail");
-    expect(thumbnails.length).toBeLessThanOrEqual(8);
-    expect(thumbnails.length).toBeGreaterThan(0);
+  it("places all thumbnails without a fixed slot cap", () => {
+    const { items } = calculateLayout(buildInput({ thumbnailCount: 12 }));
+    const thumbnails = items.filter((item) => item.type === "thumbnail");
+    expect(thumbnails).toHaveLength(12);
+  });
+
+  it("expands height to fit many thumbnails", () => {
+    const { height } = calculateLayout(buildInput({ thumbnailCount: 12 }));
+    expect(height).toBeGreaterThan(675);
   });
 
   it("skips thumbnails that would overlap with already placed ones", () => {
@@ -149,8 +186,8 @@ describe("calculateLayout", () => {
       [530, 100],
       [530, 100],
     ];
-    const layout = calculateLayout(buildInput({ thumbnailCount: 2 }), overlappingSlots);
-    const thumbnails = layout.filter((item) => item.type === "thumbnail");
+    const { items } = calculateLayout(buildInput({ thumbnailCount: 2 }), overlappingSlots);
+    const thumbnails = items.filter((item) => item.type === "thumbnail");
     expect(thumbnails).toHaveLength(1);
   });
 });
