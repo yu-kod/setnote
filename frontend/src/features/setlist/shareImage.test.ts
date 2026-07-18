@@ -141,17 +141,32 @@ describe("calculateLayout", () => {
     const title = items.find((item) => item.type === "title")!;
     const trackTitle = items.find((item) => item.type === "trackTitle")!;
     const artist = items.find((item) => item.type === "trackArtist")!;
-    expect(title.fontSize!).toBeGreaterThanOrEqual(42);
-    expect(trackTitle.fontSize!).toBeGreaterThanOrEqual(22);
-    expect(artist.fontSize!).toBeGreaterThanOrEqual(16);
+    expect(title.fontSize!).toBeGreaterThanOrEqual(46);
+    expect(trackTitle.fontSize!).toBeGreaterThanOrEqual(26);
+    expect(artist.fontSize!).toBeGreaterThanOrEqual(18);
   });
 
-  it("places thumbnails in the right region without overlapping text", () => {
+  it("positions thumbnails right after the longest text", () => {
+    const short = calculateLayout(
+      buildInput({ name: "A", tracks: [{ title: "B", artist: "" }], thumbnailCount: 2 })
+    );
+    const long = calculateLayout(
+      buildInput({
+        name: "吉原ラメント(あんたれすP Remix)",
+        tracks: [{ title: "アニマリズムと25人の子供たち", artist: "" }],
+        thumbnailCount: 2,
+      })
+    );
+    const shortThumb = short.items.find((i) => i.type === "thumbnail")!;
+    const longThumb = long.items.find((i) => i.type === "thumbnail")!;
+    expect(longThumb.x).toBeGreaterThan(shortThumb.x);
+  });
+
+  it("places thumbnails within canvas bounds", () => {
     const { items, height } = calculateLayout(buildInput({ thumbnailCount: 3 }));
     const thumbnails = items.filter((item) => item.type === "thumbnail");
     expect(thumbnails.length).toBe(3);
     for (const thumb of thumbnails) {
-      expect(thumb.x).toBeGreaterThanOrEqual(600);
       expect(thumb.x + thumb.width).toBeLessThanOrEqual(1200);
       expect(thumb.y).toBeGreaterThanOrEqual(0);
       expect(thumb.y + thumb.height).toBeLessThanOrEqual(height);
@@ -167,6 +182,18 @@ describe("calculateLayout", () => {
     const col2Xs = new Set(col2Thumbs.map((t) => t.x));
     expect(col1Xs.size).toBe(1);
     expect(col2Xs.size).toBe(1);
+  });
+
+  it("caps text area width so thumbnails always fit", () => {
+    const veryLong = "あ".repeat(100);
+    const { items } = calculateLayout(
+      buildInput({ name: veryLong, tracks: [], thumbnailCount: 2 })
+    );
+    const thumbnails = items.filter((i) => i.type === "thumbnail");
+    expect(thumbnails).toHaveLength(2);
+    for (const thumb of thumbnails) {
+      expect(thumb.x + thumb.width).toBeLessThanOrEqual(1200);
+    }
   });
 
   it("produces no thumbnail items when thumbnailCount is 0", () => {
