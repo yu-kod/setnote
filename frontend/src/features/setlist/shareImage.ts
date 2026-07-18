@@ -20,10 +20,11 @@ export type LayoutItem = {
 
 export type LayoutResult = {
   items: LayoutItem[];
+  width: number;
   height: number;
 };
 
-const W = 1200;
+const MAX_W = 1200;
 const MIN_H = 675;
 const PAD = 48;
 const THUMB_W = 240;
@@ -33,7 +34,6 @@ const THUMB_ROW_GAP = 16;
 const RIGHT_PAD = 20;
 const TEXT_THUMB_GAP = 30;
 const THUMB_START_Y = 50;
-const THUMB_AREA_MIN = 2 * THUMB_W + THUMB_COL_GAP + RIGHT_PAD;
 
 function generateSlots(count: number, col1X: number, col2X: number): [number, number][] {
   const rowHeight = THUMB_H + THUMB_ROW_GAP;
@@ -71,8 +71,23 @@ export function calculateLayout(input: ShareImageInput, slots?: [number, number]
     if (track.artist) textWidths.push(estimateTextWidth(track.artist, trackArtistSize));
   }
 
-  const maxAllowed = W - THUMB_AREA_MIN - TEXT_THUMB_GAP - PAD;
+  const thumbCols = input.thumbnailCount >= 2 ? 2 : input.thumbnailCount;
+  const thumbAreaWidth =
+    thumbCols === 2
+      ? 2 * THUMB_W + THUMB_COL_GAP + RIGHT_PAD
+      : thumbCols === 1
+        ? THUMB_W + RIGHT_PAD
+        : 0;
+
+  const maxAllowed =
+    thumbCols > 0 ? MAX_W - thumbAreaWidth - TEXT_THUMB_GAP - PAD : MAX_W - 2 * PAD;
   const textAreaWidth = Math.min(Math.max(0, ...textWidths), maxAllowed);
+
+  const canvasWidth =
+    thumbCols > 0
+      ? PAD + textAreaWidth + TEXT_THUMB_GAP + thumbAreaWidth
+      : PAD + textAreaWidth + PAD;
+
   const col1X = PAD + textAreaWidth + TEXT_THUMB_GAP;
   const col2X = col1X + THUMB_W + THUMB_COL_GAP;
 
@@ -169,22 +184,22 @@ export function calculateLayout(input: ShareImageInput, slots?: [number, number]
   const contentBottom = Math.max(trackBottom, thumbBottom);
   const height = Math.max(MIN_H, contentBottom + PAD);
 
-  return { items, height };
+  return { items, width: canvasWidth, height };
 }
 
 export async function renderShareImage(
   input: ShareImageInput,
   thumbnails: HTMLImageElement[]
 ): Promise<Blob> {
-  const { items: layout, height } = calculateLayout(input);
+  const { items: layout, width, height } = calculateLayout(input);
 
   const canvas = document.createElement("canvas");
-  canvas.width = W;
+  canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext("2d")!;
 
   ctx.fillStyle = "#1a1a1a";
-  ctx.fillRect(0, 0, W, height);
+  ctx.fillRect(0, 0, width, height);
 
   for (const item of layout) {
     if (item.type === "thumbnail") {
@@ -208,7 +223,7 @@ export async function renderShareImage(
   ctx.fillStyle = "#525252";
   ctx.font = '14px "Noto Sans JP", sans-serif';
   ctx.textBaseline = "bottom";
-  ctx.fillText("setnote", W - PAD - ctx.measureText("setnote").width, height - 16);
+  ctx.fillText("setnote", width - PAD - ctx.measureText("setnote").width, height - 16);
 
   return new Promise((resolve, reject) => {
     canvas.toBlob(
