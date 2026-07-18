@@ -31,58 +31,79 @@ const THUMB_H = 135;
 const THUMB_COL_GAP = 12;
 const THUMB_ROW_GAP = 16;
 const RIGHT_PAD = 20;
-const COL2_X = W - RIGHT_PAD - THUMB_W;
-const COL1_X = COL2_X - THUMB_COL_GAP - THUMB_W;
+const TEXT_THUMB_GAP = 30;
 const THUMB_START_Y = 50;
+const THUMB_AREA_MIN = 2 * THUMB_W + THUMB_COL_GAP + RIGHT_PAD;
 
-function generateSlots(count: number): [number, number][] {
+function generateSlots(count: number, col1X: number, col2X: number): [number, number][] {
   const rowHeight = THUMB_H + THUMB_ROW_GAP;
   const slots: [number, number][] = [];
   for (let i = 0; i < count; i++) {
     const col = i % 2;
     const row = Math.floor(i / 2);
-    slots.push([col === 0 ? COL1_X : COL2_X, THUMB_START_Y + row * rowHeight]);
+    slots.push([col === 0 ? col1X : col2X, THUMB_START_Y + row * rowHeight]);
   }
   return slots;
+}
+
+function estimateTextWidth(text: string, fontSize: number): number {
+  let width = 0;
+  for (const char of text) {
+    const code = char.codePointAt(0)!;
+    width += code > 0x2e80 ? fontSize : fontSize * 0.55;
+  }
+  return width;
 }
 
 export function calculateLayout(input: ShareImageInput, slots?: [number, number][]): LayoutResult {
   const items: LayoutItem[] = [];
 
-  const textWidth = COL1_X - PAD - 40;
+  const titleFontSize = 48;
+  const eventFontSize = 30;
+  const trackTitleSize = 28;
+  const trackArtistSize = 20;
+  const trackGap = 10;
+
+  const textWidths = [estimateTextWidth(input.name, titleFontSize)];
+  if (input.eventName) textWidths.push(estimateTextWidth(input.eventName, eventFontSize));
+  for (const track of input.tracks) {
+    textWidths.push(estimateTextWidth(track.title, trackTitleSize));
+    if (track.artist) textWidths.push(estimateTextWidth(track.artist, trackArtistSize));
+  }
+
+  const maxAllowed = W - THUMB_AREA_MIN - TEXT_THUMB_GAP - PAD;
+  const textAreaWidth = Math.min(Math.max(0, ...textWidths), maxAllowed);
+  const col1X = PAD + textAreaWidth + TEXT_THUMB_GAP;
+  const col2X = col1X + THUMB_W + THUMB_COL_GAP;
 
   items.push({
     type: "title",
     x: PAD,
     y: 50,
-    width: textWidth,
-    height: 48,
+    width: textAreaWidth,
+    height: 52,
     text: input.name,
-    fontSize: 42,
+    fontSize: titleFontSize,
     fontWeight: "bold",
     color: "#f5f5f5",
   });
 
-  let trackStartY = 110;
+  let trackStartY = 115;
 
   if (input.eventName) {
     items.push({
       type: "event",
       x: PAD,
-      y: 100,
-      width: textWidth,
-      height: 32,
+      y: 105,
+      width: textAreaWidth,
+      height: 34,
       text: input.eventName,
-      fontSize: 26,
+      fontSize: eventFontSize,
       fontWeight: "normal",
       color: "#a3a3a3",
     });
-    trackStartY = 145;
+    trackStartY = 150;
   }
-
-  const trackTitleSize = 22;
-  const trackArtistSize = 16;
-  const trackGap = 10;
 
   let y = trackStartY;
   for (const track of input.tracks) {
@@ -90,7 +111,7 @@ export function calculateLayout(input: ShareImageInput, slots?: [number, number]
       type: "trackTitle",
       x: PAD,
       y,
-      width: textWidth,
+      width: textAreaWidth,
       height: trackTitleSize + 4,
       text: track.title,
       fontSize: trackTitleSize,
@@ -104,7 +125,7 @@ export function calculateLayout(input: ShareImageInput, slots?: [number, number]
         type: "trackArtist",
         x: PAD,
         y,
-        width: textWidth,
+        width: textAreaWidth,
         height: trackArtistSize + 2,
         text: track.artist,
         fontSize: trackArtistSize,
@@ -119,7 +140,7 @@ export function calculateLayout(input: ShareImageInput, slots?: [number, number]
 
   const trackBottom = y;
 
-  const activeSlots = slots ?? generateSlots(input.thumbnailCount);
+  const activeSlots = slots ?? generateSlots(input.thumbnailCount, col1X, col2X);
   const count = Math.min(input.thumbnailCount, activeSlots.length);
   const placed: { x: number; y: number; w: number; h: number }[] = [];
   let thumbBottom = 0;
