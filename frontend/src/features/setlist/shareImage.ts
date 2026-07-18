@@ -18,28 +18,45 @@ export type LayoutItem = {
   imageIndex?: number;
 };
 
+export type LayoutResult = {
+  items: LayoutItem[];
+  height: number;
+};
+
 const W = 1200;
-const H = 675;
+const MIN_H = 675;
 const PAD = 40;
 const THUMB_W = 192;
 const THUMB_H = 108;
+const THUMB_GAP = 42;
 
-const THUMBNAIL_SLOTS: [number, number][] = [
-  [530, 15],
-  [790, 35],
-  [580, 165],
-  [830, 155],
-  [520, 310],
-  [770, 325],
-  [560, 460],
-  [810, 450],
-];
+const COL1_X_OFFSETS = [0, 50, -10, 40, -20, 30, 10, -5];
+const COL2_X_OFFSETS = [0, 40, -20, 30, 10, -10, 50, 20];
+const Y_OFFSETS = [0, 20, 0, -10, 5, 15, -5, 10];
+
+function generateSlots(count: number): [number, number][] {
+  const slots: [number, number][] = [];
+  const col1Base = 530;
+  const col2Base = 790;
+  const rowHeight = THUMB_H + THUMB_GAP;
+
+  for (let i = 0; i < count; i++) {
+    const col = i % 2;
+    const row = Math.floor(i / 2);
+    const baseX = col === 0 ? col1Base : col2Base;
+    const idx = i % 8;
+    const xOffset = col === 0 ? COL1_X_OFFSETS[idx] : COL2_X_OFFSETS[idx];
+    const yOffset = Y_OFFSETS[idx];
+    slots.push([baseX + xOffset, 15 + row * rowHeight + yOffset]);
+  }
+  return slots;
+}
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
-export function calculateLayout(input: ShareImageInput, slots?: [number, number][]): LayoutItem[] {
+export function calculateLayout(input: ShareImageInput, slots?: [number, number][]): LayoutResult {
   const items: LayoutItem[] = [];
 
   items.push({
@@ -74,13 +91,9 @@ export function calculateLayout(input: ShareImageInput, slots?: [number, number]
   const trackTitleSize = 18;
   const trackArtistSize = 14;
   const trackGap = 8;
-  const maxTracks = Math.floor(
-    (H - trackStartY - PAD) / (trackTitleSize + trackArtistSize + trackGap + 4)
-  );
-  const visibleTracks = input.tracks.slice(0, maxTracks);
 
   let y = trackStartY;
-  for (const track of visibleTracks) {
+  for (const track of input.tracks) {
     items.push({
       type: "trackTitle",
       x: PAD,
@@ -112,14 +125,17 @@ export function calculateLayout(input: ShareImageInput, slots?: [number, number]
     y += trackGap;
   }
 
-  const activeSlots = slots ?? THUMBNAIL_SLOTS;
+  const trackBottom = y;
+
+  const activeSlots = slots ?? generateSlots(input.thumbnailCount);
   const count = Math.min(input.thumbnailCount, activeSlots.length);
   const placed: { x: number; y: number; w: number; h: number }[] = [];
+  let thumbBottom = 0;
 
   for (let i = 0; i < count; i++) {
     const [baseX, baseY] = activeSlots[i];
     const x = clamp(baseX, 500, W - THUMB_W - 10);
-    const thumbY = clamp(baseY, 10, H - THUMB_H - 10);
+    const thumbY = Math.max(baseY, 10);
 
     const overlaps = placed.some(
       (p) => x < p.x + p.w && x + THUMB_W > p.x && thumbY < p.y + p.h && thumbY + THUMB_H > p.y
@@ -135,25 +151,29 @@ export function calculateLayout(input: ShareImageInput, slots?: [number, number]
         imageIndex: i,
       });
       placed.push({ x, y: thumbY, w: THUMB_W, h: THUMB_H });
+      thumbBottom = Math.max(thumbBottom, thumbY + THUMB_H);
     }
   }
 
-  return items;
+  const contentBottom = Math.max(trackBottom, thumbBottom);
+  const height = Math.max(MIN_H, contentBottom + PAD);
+
+  return { items, height };
 }
 
 export async function renderShareImage(
   input: ShareImageInput,
   thumbnails: HTMLImageElement[]
 ): Promise<Blob> {
+  const { items: layout, height } = calculateLayout(input);
+
   const canvas = document.createElement("canvas");
   canvas.width = W;
-  canvas.height = H;
+  canvas.height = height;
   const ctx = canvas.getContext("2d")!;
 
   ctx.fillStyle = "#1a1a1a";
-  ctx.fillRect(0, 0, W, H);
-
-  const layout = calculateLayout(input);
+  ctx.fillRect(0, 0, W, height);
 
   for (const item of layout) {
     if (item.type === "thumbnail") {
@@ -177,7 +197,7 @@ export async function renderShareImage(
   ctx.fillStyle = "#525252";
   ctx.font = '14px "Noto Sans JP", sans-serif';
   ctx.textBaseline = "bottom";
-  ctx.fillText("setnote", W - PAD - ctx.measureText("setnote").width, H - 16);
+  ctx.fillText("setnote", W - PAD - ctx.measureText("setnote").width, height - 16);
 
   return new Promise((resolve, reject) => {
     canvas.toBlob(
