@@ -25,48 +25,40 @@ export type LayoutResult = {
 
 const W = 1200;
 const MIN_H = 675;
-const PAD = 40;
-const THUMB_W = 192;
-const THUMB_H = 108;
-const THUMB_GAP = 42;
-
-const COL1_X_OFFSETS = [0, 50, -10, 40, -20, 30, 10, -5];
-const COL2_X_OFFSETS = [0, 40, -20, 30, 10, -10, 50, 20];
-const Y_OFFSETS = [0, 20, 0, -10, 5, 15, -5, 10];
+const PAD = 48;
+const THUMB_W = 240;
+const THUMB_H = 135;
+const THUMB_COL_GAP = 12;
+const THUMB_ROW_GAP = 16;
+const RIGHT_PAD = 20;
+const COL2_X = W - RIGHT_PAD - THUMB_W;
+const COL1_X = COL2_X - THUMB_COL_GAP - THUMB_W;
+const THUMB_START_Y = 50;
 
 function generateSlots(count: number): [number, number][] {
+  const rowHeight = THUMB_H + THUMB_ROW_GAP;
   const slots: [number, number][] = [];
-  const col1Base = 530;
-  const col2Base = 790;
-  const rowHeight = THUMB_H + THUMB_GAP;
-
   for (let i = 0; i < count; i++) {
     const col = i % 2;
     const row = Math.floor(i / 2);
-    const baseX = col === 0 ? col1Base : col2Base;
-    const idx = i % 8;
-    const xOffset = col === 0 ? COL1_X_OFFSETS[idx] : COL2_X_OFFSETS[idx];
-    const yOffset = Y_OFFSETS[idx];
-    slots.push([baseX + xOffset, 15 + row * rowHeight + yOffset]);
+    slots.push([col === 0 ? COL1_X : COL2_X, THUMB_START_Y + row * rowHeight]);
   }
   return slots;
-}
-
-function clamp(value: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, value));
 }
 
 export function calculateLayout(input: ShareImageInput, slots?: [number, number][]): LayoutResult {
   const items: LayoutItem[] = [];
 
+  const textWidth = COL1_X - PAD - 40;
+
   items.push({
     type: "title",
     x: PAD,
     y: 50,
-    width: 500,
-    height: 40,
+    width: textWidth,
+    height: 48,
     text: input.name,
-    fontSize: 36,
+    fontSize: 42,
     fontWeight: "bold",
     color: "#f5f5f5",
   });
@@ -77,20 +69,20 @@ export function calculateLayout(input: ShareImageInput, slots?: [number, number]
     items.push({
       type: "event",
       x: PAD,
-      y: 90,
-      width: 500,
-      height: 30,
+      y: 100,
+      width: textWidth,
+      height: 32,
       text: input.eventName,
-      fontSize: 22,
+      fontSize: 26,
       fontWeight: "normal",
       color: "#a3a3a3",
     });
-    trackStartY = 140;
+    trackStartY = 145;
   }
 
-  const trackTitleSize = 18;
-  const trackArtistSize = 14;
-  const trackGap = 8;
+  const trackTitleSize = 22;
+  const trackArtistSize = 16;
+  const trackGap = 10;
 
   let y = trackStartY;
   for (const track of input.tracks) {
@@ -98,7 +90,7 @@ export function calculateLayout(input: ShareImageInput, slots?: [number, number]
       type: "trackTitle",
       x: PAD,
       y,
-      width: 480,
+      width: textWidth,
       height: trackTitleSize + 4,
       text: track.title,
       fontSize: trackTitleSize,
@@ -112,7 +104,7 @@ export function calculateLayout(input: ShareImageInput, slots?: [number, number]
         type: "trackArtist",
         x: PAD,
         y,
-        width: 480,
+        width: textWidth,
         height: trackArtistSize + 2,
         text: track.artist,
         fontSize: trackArtistSize,
@@ -133,9 +125,7 @@ export function calculateLayout(input: ShareImageInput, slots?: [number, number]
   let thumbBottom = 0;
 
   for (let i = 0; i < count; i++) {
-    const [baseX, baseY] = activeSlots[i];
-    const x = clamp(baseX, 500, W - THUMB_W - 10);
-    const thumbY = Math.max(baseY, 10);
+    const [x, thumbY] = activeSlots[i];
 
     const overlaps = placed.some(
       (p) => x < p.x + p.w && x + THUMB_W > p.x && thumbY < p.y + p.h && thumbY + THUMB_H > p.y
