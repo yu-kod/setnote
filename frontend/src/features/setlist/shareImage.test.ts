@@ -136,16 +136,37 @@ describe("calculateLayout", () => {
     expect(height).toBe(675);
   });
 
-  it("places thumbnails in the right region", () => {
+  it("uses larger font sizes for readability", () => {
+    const { items } = calculateLayout(buildInput());
+    const title = items.find((item) => item.type === "title")!;
+    const trackTitle = items.find((item) => item.type === "trackTitle")!;
+    const artist = items.find((item) => item.type === "trackArtist")!;
+    expect(title.fontSize!).toBeGreaterThanOrEqual(42);
+    expect(trackTitle.fontSize!).toBeGreaterThanOrEqual(22);
+    expect(artist.fontSize!).toBeGreaterThanOrEqual(16);
+  });
+
+  it("places thumbnails in the right region without overlapping text", () => {
     const { items, height } = calculateLayout(buildInput({ thumbnailCount: 3 }));
     const thumbnails = items.filter((item) => item.type === "thumbnail");
     expect(thumbnails.length).toBe(3);
     for (const thumb of thumbnails) {
-      expect(thumb.x).toBeGreaterThanOrEqual(500);
+      expect(thumb.x).toBeGreaterThanOrEqual(600);
       expect(thumb.x + thumb.width).toBeLessThanOrEqual(1200);
       expect(thumb.y).toBeGreaterThanOrEqual(0);
       expect(thumb.y + thumb.height).toBeLessThanOrEqual(height);
     }
+  });
+
+  it("aligns thumbnails in a clean grid without jitter", () => {
+    const { items } = calculateLayout(buildInput({ thumbnailCount: 6 }));
+    const thumbnails = items.filter((item) => item.type === "thumbnail");
+    const col1Thumbs = thumbnails.filter((_, i) => i % 2 === 0);
+    const col2Thumbs = thumbnails.filter((_, i) => i % 2 === 1);
+    const col1Xs = new Set(col1Thumbs.map((t) => t.x));
+    const col2Xs = new Set(col2Thumbs.map((t) => t.x));
+    expect(col1Xs.size).toBe(1);
+    expect(col2Xs.size).toBe(1);
   });
 
   it("produces no thumbnail items when thumbnailCount is 0", () => {
