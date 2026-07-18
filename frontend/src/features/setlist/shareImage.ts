@@ -170,7 +170,7 @@ export async function renderShareImage(
       ctx.fillStyle = item.color!;
       ctx.font = `${item.fontWeight} ${item.fontSize}px "Noto Sans JP", sans-serif`;
       ctx.textBaseline = "top";
-      ctx.fillText(item.text, item.x, item.y, item.width);
+      ctx.fillText(item.text!, item.x, item.y, item.width);
     }
   }
 
