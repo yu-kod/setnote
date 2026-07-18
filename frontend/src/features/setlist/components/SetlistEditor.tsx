@@ -14,7 +14,7 @@ import type { Setlist, Track } from "../types";
 import type { ParsedTrack } from "../api";
 import { matchImportedTracks } from "../importMatch";
 import { hasEmptyTitleTracks } from "../trackValidation";
-import { GripVertical } from "lucide-react";
+import { GripVertical, ImageDown } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,6 +37,8 @@ import NotFoundPage from "@/pages/NotFoundPage";
 import { AddTrackForm } from "./AddTrackForm";
 import { ImageTrackImport } from "./ImageTrackImport";
 import { TrackCard } from "./TrackCard";
+import { getThumbnailProxyUrl } from "../thumbnail";
+import { renderShareImage, downloadBlob } from "../shareImage";
 
 type FormState = {
   name: string;
@@ -67,6 +69,7 @@ export function SetlistEditor({ id }: { id: string }) {
   const [publishing, setPublishing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [suggestions, setSuggestions] = useState<Track[]>([]);
+  const [generatingImage, setGeneratingImage] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -195,6 +198,39 @@ export function SetlistEditor({ id }: { id: string }) {
     toast.success("コピーしました");
   }
 
+  async function handleShareImage() {
+    setGeneratingImage(true);
+    try {
+      const urls = tracks.map((t) => getThumbnailProxyUrl(t.songLink)).filter(Boolean) as string[];
+      const images = await Promise.all(
+        urls.map(
+          (url) =>
+            new Promise<HTMLImageElement>((resolve, reject) => {
+              const img = new Image();
+              img.onload = () => resolve(img);
+              img.onerror = reject;
+              img.src = url;
+            })
+        )
+      );
+      const blob = await renderShareImage(
+        {
+          name: form.name,
+          eventName: toNullable(form.eventName),
+          tracks: tracks.map((t) => ({ title: t.title, artist: t.artist })),
+          thumbnailCount: images.length,
+        },
+        images
+      );
+      const slug = form.name.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+      downloadBlob(blob, `${slug || "setlist"}-share.png`);
+    } catch {
+      toast.error("画像の生成に失敗しました");
+    } finally {
+      setGeneratingImage(false);
+    }
+  }
+
   if (loading) {
     return (
       <div role="status" aria-label="読み込み中" className="space-y-4">
@@ -230,6 +266,16 @@ export function SetlistEditor({ id }: { id: string }) {
           <Input readOnly aria-label="公開URL" value={publicUrl} className="text-xs" />
           <Button type="button" variant="outline" size="sm" onClick={handleCopy}>
             コピー
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleShareImage}
+            disabled={generatingImage}
+          >
+            <ImageDown className="size-4" aria-hidden="true" />
+            {generatingImage ? "生成中..." : "シェア画像"}
           </Button>
         </div>
       )}

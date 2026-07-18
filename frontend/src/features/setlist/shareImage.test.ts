@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { calculateLayout, type ShareImageInput } from "./shareImage";
+import { calculateLayout, renderShareImage, downloadBlob, type ShareImageInput } from "./shareImage";
 
 function buildInput(overrides: Partial<ShareImageInput> = {}): ShareImageInput {
   return {
@@ -12,6 +12,38 @@ function buildInput(overrides: Partial<ShareImageInput> = {}): ShareImageInput {
     thumbnailCount: 1,
     ...overrides,
   };
+}
+
+function createMockCanvas() {
+  const ctx = {
+    fillStyle: "",
+    font: "",
+    textBaseline: "",
+    globalAlpha: 1,
+    fillRect: vi.fn(),
+    fillText: vi.fn(),
+    drawImage: vi.fn(),
+    save: vi.fn(),
+    restore: vi.fn(),
+    clip: vi.fn(),
+    beginPath: vi.fn(),
+    moveTo: vi.fn(),
+    lineTo: vi.fn(),
+    quadraticCurveTo: vi.fn(),
+    closePath: vi.fn(),
+    measureText: vi.fn().mockReturnValue({ width: 50 }),
+  };
+
+  const canvas = {
+    width: 0,
+    height: 0,
+    getContext: vi.fn().mockReturnValue(ctx),
+    toBlob: vi.fn((cb: (blob: Blob | null) => void) => {
+      cb(new Blob(["fake"], { type: "image/png" }));
+    }),
+  };
+
+  return { canvas, ctx };
 }
 
 describe("calculateLayout", () => {
@@ -59,9 +91,7 @@ describe("calculateLayout", () => {
   it("skips artist items when artist is empty", () => {
     const layout = calculateLayout(
       buildInput({
-        tracks: [
-          { title: "Instrumental", artist: "" },
-        ],
+        tracks: [{ title: "Instrumental", artist: "" }],
         thumbnailCount: 0,
       })
     );
@@ -100,5 +130,111 @@ describe("calculateLayout", () => {
         expect(overlaps, `thumbnails ${i} and ${j} overlap`).toBe(false);
       }
     }
+  });
+
+  it("caps thumbnails at the number of available slots", () => {
+    const layout = calculateLayout(buildInput({ thumbnailCount: 100 }));
+    const thumbnails = layout.filter((item) => item.type === "thumbnail");
+    expect(thumbnails.length).toBeLessThanOrEqual(8);
+    expect(thumbnails.length).toBeGreaterThan(0);
+  });
+
+  it("skips thumbnails that would overlap with already placed ones", () => {
+    const overlappingSlots: [number, number][] = [
+      [530, 100],
+      [530, 100],
+    ];
+    const layout = calculateLayout(buildInput({ thumbnailCount: 2 }), overlappingSlots);
+    const thumbnails = layout.filter((item) => item.type === "thumbnail");
+    expect(thumbnails).toHaveLength(1);
+  });
+});
+
+describe("renderShareImage", () => {
+  const origCreateElement = document.createElement.bind(document);
+
+  beforeEach(() => {
+    const { canvas } = createMockCanvas();
+    vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
+      if (tag === "canvas") return canvas as unknown as HTMLCanvasElement;
+      return origCreateElement(tag);
+    });
+  });
+
+  it("returns a Blob", async () => {
+    const blob = await renderShareImage(buildInput({ thumbnailCount: 0 }), []);
+    expect(blob).toBeInstanceOf(Blob);
+  });
+
+  it("draws thumbnails from provided images", async () => {
+    const img = new Image();
+    img.width = 480;
+    img.height = 360;
+    const blob = await renderShareImage(buildInput({ thumbnailCount: 1 }), [img]);
+    expect(blob).toBeInstanceOf(Blob);
+  });
+
+  it("skips drawing when thumbnail image is missing", async () => {
+    const blob = await renderShareImage(buildInput({ thumbnailCount: 1 }), []);
+    expect(blob).toBeInstanceOf(Blob);
+  });
+
+  it("renders text items with fallback color and fontWeight", async () => {
+    const { canvas, ctx } = createMockCanvas();
+    const origCreateElement = document.createElement.bind(document);
+    vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
+      if (tag === "canvas") return canvas as unknown as HTMLCanvasElement;
+      return origCreateElement(tag);
+    });
+
+    const blob = await renderShareImage(
+      buildInput({ eventName: null, tracks: [{ title: "Test", artist: "" }] }),
+      []
+    );
+    expect(blob).toBeInstanceOf(Blob);
+    expect(ctx.fillText).toHaveBeenCalled();
+  });
+
+  it("rejects when toBlob returns null", async () => {
+    const { canvas } = createMockCanvas();
+    canvas.toBlob = vi.fn((cb: (blob: Blob | null) => void) => {
+      cb(null);
+    });
+    const origCreateElement = document.createElement.bind(document);
+    vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
+      if (tag === "canvas") return canvas as unknown as HTMLCanvasElement;
+      return origCreateElement(tag);
+    });
+
+    await expect(renderShareImage(buildInput({ thumbnailCount: 0 }), [])).rejects.toThrow(
+      "toBlob failed"
+    );
+  });
+});
+
+describe("downloadBlob", () => {
+  it("creates and clicks a download link then revokes the URL", () => {
+    const revokeObjectURL = vi.fn();
+    const createObjectURL = vi.fn().mockReturnValue("blob:test");
+    vi.stubGlobal("URL", { createObjectURL, revokeObjectURL });
+
+    const clicked: boolean[] = [];
+    const origCreate = document.createElement.bind(document);
+    vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
+      const el = origCreate(tag);
+      if (tag === "a") {
+        vi.spyOn(el as HTMLAnchorElement, "click").mockImplementation(() => {
+          clicked.push(true);
+        });
+      }
+      return el;
+    });
+
+    const blob = new Blob(["test"], { type: "image/png" });
+    downloadBlob(blob, "share.png");
+
+    expect(createObjectURL).toHaveBeenCalledWith(blob);
+    expect(clicked).toHaveLength(1);
+    expect(revokeObjectURL).toHaveBeenCalledWith("blob:test");
   });
 });

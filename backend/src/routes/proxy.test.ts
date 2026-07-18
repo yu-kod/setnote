@@ -74,6 +74,17 @@ describe("GET /api/proxy/thumbnail", () => {
     );
   });
 
+  it("defaults Content-Type to image/jpeg when upstream omits it", async () => {
+    const imageData = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
+    mockFetch.mockResolvedValue(new Response(imageData, { status: 200 }));
+
+    const { app } = await import("../app");
+    const res = await app.request("/api/proxy/thumbnail?videoId=dQw4w9WgXcQ");
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toBe("image/jpeg");
+  });
+
   it("returns 502 when the upstream fetch fails", async () => {
     mockFetch.mockRejectedValue(new Error("network error"));
 
