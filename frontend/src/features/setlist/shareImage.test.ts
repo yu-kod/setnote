@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { calculateLayout, renderShareImage, downloadBlob, type ShareImageInput } from "./shareImage";
+import {
+  calculateLayout,
+  renderShareImage,
+  downloadBlob,
+  type ShareImageInput,
+} from "./shareImage";
 
 function buildInput(overrides: Partial<ShareImageInput> = {}): ShareImageInput {
   return {

@@ -74,7 +74,9 @@ export function calculateLayout(input: ShareImageInput, slots?: [number, number]
   const trackTitleSize = 18;
   const trackArtistSize = 14;
   const trackGap = 8;
-  const maxTracks = Math.floor((H - trackStartY - PAD) / (trackTitleSize + trackArtistSize + trackGap + 4));
+  const maxTracks = Math.floor(
+    (H - trackStartY - PAD) / (trackTitleSize + trackArtistSize + trackGap + 4)
+  );
   const visibleTracks = input.tracks.slice(0, maxTracks);
 
   let y = trackStartY;
@@ -120,8 +122,7 @@ export function calculateLayout(input: ShareImageInput, slots?: [number, number]
     const thumbY = clamp(baseY, 10, H - THUMB_H - 10);
 
     const overlaps = placed.some(
-      (p) =>
-        x < p.x + p.w && x + THUMB_W > p.x && thumbY < p.y + p.h && thumbY + THUMB_H > p.y
+      (p) => x < p.x + p.w && x + THUMB_W > p.x && thumbY < p.y + p.h && thumbY + THUMB_H > p.y
     );
 
     if (!overlaps) {
@@ -179,7 +180,10 @@ export async function renderShareImage(
   ctx.fillText("setnote", W - PAD - ctx.measureText("setnote").width, H - 16);
 
   return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("toBlob failed"))), "image/png");
+    canvas.toBlob(
+      (blob) => (blob ? resolve(blob) : reject(new Error("toBlob failed"))),
+      "image/png"
+    );
   });
 }
 

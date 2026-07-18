@@ -222,7 +222,11 @@ export function SetlistEditor({ id }: { id: string }) {
         },
         images
       );
-      const slug = form.name.trim().toLowerCase().replace(/\s+/g, "-").replace(/[^\w-]/g, "");
+      const slug = form.name
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, "-")
+        .replace(/[^\w-]/g, "");
       downloadBlob(blob, `${slug || "setlist"}-share.png`);
     } catch {
       toast.error("画像の生成に失敗しました");

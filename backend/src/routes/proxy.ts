@@ -20,7 +20,10 @@ proxyRoute.get("/thumbnail", async (c) => {
   }
 
   if (!upstream.ok) {
-    return c.json({ error: { code: "UPSTREAM_ERROR", message: "Upstream returned an error" } }, 502);
+    return c.json(
+      { error: { code: "UPSTREAM_ERROR", message: "Upstream returned an error" } },
+      502
+    );
   }
 
   const body = await upstream.arrayBuffer();

@@ -69,9 +69,7 @@ describe("GET /api/proxy/thumbnail", () => {
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toBe("image/jpeg");
     expect(res.headers.get("Cache-Control")).toContain("max-age");
-    expect(mockFetch).toHaveBeenCalledWith(
-      "https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg"
-    );
+    expect(mockFetch).toHaveBeenCalledWith("https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg");
   });
 
   it("defaults Content-Type to image/jpeg when upstream omits it", async () => {
