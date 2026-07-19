@@ -1,4 +1,9 @@
-import { type ColorPreset, type DecorationMotif, getColorPreset } from "./theme";
+import {
+  type ColorPreset,
+  type DecorationPreset,
+  getColorPreset,
+  getDecorationPreset,
+} from "./theme";
 
 export type ShareImageInput = {
   name: string;
@@ -9,7 +14,7 @@ export type ShareImageInput = {
 
 export type ThemeOptions = {
   colors?: ColorPreset;
-  decorations?: DecorationMotif[];
+  decoration?: DecorationPreset;
 };
 
 export type LayoutItem = {
@@ -22,7 +27,6 @@ export type LayoutItem = {
   fontSize?: number;
   fontWeight?: string;
   color?: string;
-
   imageIndex?: number;
 };
 
@@ -32,20 +36,43 @@ export type LayoutResult = {
   height: number;
 };
 
-const CANVAS_W = 900;
-const CANVAS_H = 1200;
-const PAD = 90;
-const THUMB_W = 200;
-const THUMB_H = 112;
+const MAX_W = 1200;
+const MIN_H = 675;
+const PAD = 48;
+const THUMB_W = 240;
+const THUMB_H = 135;
 const THUMB_COL_GAP = 12;
 const THUMB_ROW_GAP = 16;
+const RIGHT_PAD = 20;
+const TEXT_THUMB_GAP = 30;
+const THUMB_START_Y = 50;
 
-const CARD_MARGIN = 60;
-const CARD_RADIUS = 24;
+const CARD_MARGIN = 32;
+const CARD_RADIUS = 20;
+
+function generateSlots(count: number, col1X: number, col2X: number): [number, number][] {
+  const rowHeight = THUMB_H + THUMB_ROW_GAP;
+  const slots: [number, number][] = [];
+  for (let i = 0; i < count; i++) {
+    const col = i % 2;
+    const row = Math.floor(i / 2);
+    slots.push([col === 0 ? col1X : col2X, THUMB_START_Y + row * rowHeight]);
+  }
+  return slots;
+}
+
+function estimateTextWidth(text: string, fontSize: number): number {
+  let width = 0;
+  for (const char of text) {
+    const code = char.codePointAt(0)!;
+    width += code > 0x2e80 ? fontSize : fontSize * 0.55;
+  }
+  return width;
+}
 
 export function calculateLayout(
   input: ShareImageInput,
-  _slots?: [number, number][],
+  slots?: [number, number][],
   colors?: ColorPreset
 ): LayoutResult {
   const items: LayoutItem[] = [];
@@ -55,15 +82,39 @@ export function calculateLayout(
   const eventFontSize = 30;
   const trackTitleSize = 28;
   const trackArtistSize = 20;
-
   const trackGap = 10;
 
-  const textAreaWidth = CANVAS_W - 2 * PAD;
+  const textWidths = [estimateTextWidth(input.name, titleFontSize)];
+  if (input.eventName) textWidths.push(estimateTextWidth(input.eventName, eventFontSize));
+  for (const track of input.tracks) {
+    textWidths.push(estimateTextWidth(track.title, trackTitleSize));
+    if (track.artist) textWidths.push(estimateTextWidth(track.artist, trackArtistSize));
+  }
+
+  const thumbCols = input.thumbnailCount >= 2 ? 2 : input.thumbnailCount;
+  const thumbAreaWidth =
+    thumbCols === 2
+      ? 2 * THUMB_W + THUMB_COL_GAP + RIGHT_PAD
+      : thumbCols === 1
+        ? THUMB_W + RIGHT_PAD
+        : 0;
+
+  const maxAllowed =
+    thumbCols > 0 ? MAX_W - thumbAreaWidth - TEXT_THUMB_GAP - PAD : MAX_W - 2 * PAD;
+  const textAreaWidth = Math.min(Math.max(0, ...textWidths), maxAllowed);
+
+  const canvasWidth =
+    thumbCols > 0
+      ? PAD + textAreaWidth + TEXT_THUMB_GAP + thumbAreaWidth
+      : PAD + textAreaWidth + PAD;
+
+  const col1X = PAD + textAreaWidth + TEXT_THUMB_GAP;
+  const col2X = col1X + THUMB_W + THUMB_COL_GAP;
 
   items.push({
     type: "title",
     x: PAD,
-    y: 80,
+    y: 50,
     width: textAreaWidth,
     height: 52,
     text: input.name,
@@ -72,13 +123,13 @@ export function calculateLayout(
     color: c.title,
   });
 
-  let trackStartY = 150;
+  let trackStartY = 115;
 
   if (input.eventName) {
     items.push({
       type: "event",
       x: PAD,
-      y: 135,
+      y: 105,
       width: textAreaWidth,
       height: 34,
       text: input.eventName,
@@ -86,13 +137,11 @@ export function calculateLayout(
       fontWeight: "normal",
       color: c.event,
     });
-    trackStartY = 185;
+    trackStartY = 150;
   }
 
   let y = trackStartY;
-  for (let idx = 0; idx < input.tracks.length; idx++) {
-    const track = input.tracks[idx];
-
+  for (const track of input.tracks) {
     items.push({
       type: "trackTitle",
       x: PAD,
@@ -126,25 +175,36 @@ export function calculateLayout(
 
   const trackBottom = y;
 
-  const thumbStartY = trackBottom + 30;
-  const thumbCols = Math.max(1, Math.min(input.thumbnailCount, 3));
-  const totalThumbW = thumbCols * THUMB_W + (thumbCols - 1) * THUMB_COL_GAP;
-  const thumbStartX = (CANVAS_W - totalThumbW) / 2;
+  const activeSlots = slots ?? generateSlots(input.thumbnailCount, col1X, col2X);
+  const count = Math.min(input.thumbnailCount, activeSlots.length);
+  const placed: { x: number; y: number; w: number; h: number }[] = [];
+  let thumbBottom = 0;
 
-  for (let i = 0; i < input.thumbnailCount; i++) {
-    const colIdx = i % thumbCols;
-    const row = Math.floor(i / thumbCols);
-    items.push({
-      type: "thumbnail",
-      x: thumbStartX + colIdx * (THUMB_W + THUMB_COL_GAP),
-      y: thumbStartY + row * (THUMB_H + THUMB_ROW_GAP),
-      width: THUMB_W,
-      height: THUMB_H,
-      imageIndex: i,
-    });
+  for (let i = 0; i < count; i++) {
+    const [x, thumbY] = activeSlots[i];
+
+    const overlaps = placed.some(
+      (p) => x < p.x + p.w && x + THUMB_W > p.x && thumbY < p.y + p.h && thumbY + THUMB_H > p.y
+    );
+
+    if (!overlaps) {
+      items.push({
+        type: "thumbnail",
+        x,
+        y: thumbY,
+        width: THUMB_W,
+        height: THUMB_H,
+        imageIndex: i,
+      });
+      placed.push({ x, y: thumbY, w: THUMB_W, h: THUMB_H });
+      thumbBottom = Math.max(thumbBottom, thumbY + THUMB_H);
+    }
   }
 
-  return { items, width: CANVAS_W, height: CANVAS_H };
+  const contentBottom = Math.max(trackBottom, thumbBottom);
+  const height = Math.max(MIN_H, contentBottom + PAD);
+
+  return { items, width: canvasWidth, height };
 }
 
 export async function renderShareImage(
@@ -153,7 +213,7 @@ export async function renderShareImage(
   theme?: ThemeOptions
 ): Promise<Blob> {
   const colors = theme?.colors ?? getColorPreset("dark");
-  const decorations = theme?.decorations ?? [];
+  const decoration = theme?.decoration ?? getDecorationPreset("none");
   const { items: layout, width, height } = calculateLayout(input, undefined, colors);
 
   const canvas = document.createElement("canvas");
@@ -164,7 +224,7 @@ export async function renderShareImage(
   ctx.fillStyle = colors.background;
   ctx.fillRect(0, 0, width, height);
 
-  drawAllMotifs(ctx, width, height, decorations, colors.decorationColor);
+  drawMotifs(ctx, width, height, decoration);
 
   drawCard(ctx, width, height, colors.card);
 
@@ -208,78 +268,53 @@ function drawCard(ctx: CanvasRenderingContext2D, w: number, h: number, cardColor
   ctx.restore();
 }
 
-function seededPositions(
-  w: number,
-  h: number,
-  count: number,
-  seed: number
-): { x: number; y: number }[] {
+function seededPositions(w: number, h: number, count: number): { x: number; y: number }[] {
   const positions: { x: number; y: number }[] = [];
-  const band = CARD_MARGIN + 10;
+  const margin = CARD_MARGIN;
+  const edgeThickness = margin * 0.8;
 
   const perSide = Math.ceil(count / 4);
   for (let i = 0; i < perSide; i++) {
     const t = (i + 0.5) / perSide;
-    const offset = 4 + (((i + seed) * 17 + 7) % (band - 4));
-    positions.push({ x: t * w, y: offset });
-    positions.push({ x: t * w, y: h - offset });
-    positions.push({ x: offset, y: t * h });
-    positions.push({ x: w - offset, y: t * h });
+    positions.push({ x: t * w, y: edgeThickness * (i % 3) * 0.3 });
+    positions.push({ x: t * w, y: h - edgeThickness * (i % 3) * 0.3 });
+    positions.push({ x: edgeThickness * (i % 3) * 0.3, y: t * h });
+    positions.push({ x: w - edgeThickness * (i % 3) * 0.3, y: t * h });
   }
 
   return positions.slice(0, count);
 }
 
-function drawAllMotifs(
+function drawMotifs(
   ctx: CanvasRenderingContext2D,
   w: number,
   h: number,
-  motifs: DecorationMotif[],
-  decorationColor: string
+  decoration: DecorationPreset
 ) {
-  for (let mi = 0; mi < motifs.length; mi++) {
-    drawMotif(ctx, w, h, motifs[mi], decorationColor, mi * 37);
-  }
-}
+  if (decoration.motif === "none") return;
 
-function drawMotif(
-  ctx: CanvasRenderingContext2D,
-  w: number,
-  h: number,
-  motif: DecorationMotif,
-  decorationColor: string,
-  seed: number
-) {
   ctx.save();
-  ctx.fillStyle = decorationColor;
-  ctx.strokeStyle = decorationColor;
-  ctx.globalAlpha = 0.65;
+  ctx.fillStyle = decoration.color;
+  ctx.strokeStyle = decoration.color;
+  ctx.globalAlpha = 0.15;
 
-  const positions = seededPositions(w, h, 24, seed);
+  const positions = seededPositions(w, h, 20);
 
-  switch (motif) {
+  switch (decoration.motif) {
     case "sparkle":
-      for (let i = 0; i < positions.length; i++) {
-        const pos = positions[i];
-        const size = 20 + (((i + seed) * 7 + 3) % 30);
-        drawSparkle(ctx, pos.x, pos.y, size);
+      for (const pos of positions) {
+        drawSparkle(ctx, pos.x, pos.y, 8 + (pos.x % 7));
       }
       break;
     case "bars":
-      for (let i = 0; i < positions.length; i++) {
-        const pos = positions[i];
-        const len = 35 + (((i + seed) * 11 + 5) % 30);
-        const bw = 8 + (((i + seed) * 3 + 1) % 4);
-        const angle = (((i + seed) * 37 + 13) % 60) * 0.05;
-        drawBar(ctx, pos.x, pos.y, len, bw, angle);
+      for (const pos of positions) {
+        drawBar(ctx, pos.x, pos.y, 20 + (pos.x % 10), 6, pos.y * 0.01);
       }
       break;
     case "dots":
-      for (let i = 0; i < positions.length; i++) {
-        const pos = positions[i];
-        const r = 6 + (((i + seed) * 5 + 2) % 10);
+      for (const pos of positions) {
         ctx.beginPath();
-        ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2);
+        ctx.arc(pos.x, pos.y, 3 + (pos.x % 4), 0, Math.PI * 2);
         ctx.fill();
       }
       break;
