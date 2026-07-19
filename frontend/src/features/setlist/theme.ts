@@ -2,6 +2,7 @@ export type ColorPreset = {
   id: string;
   label: string;
   background: string;
+  card: string;
   title: string;
   event: string;
   trackTitle: string;
@@ -9,12 +10,12 @@ export type ColorPreset = {
   watermark: string;
 };
 
-export type DecorationPattern = "none" | "dots" | "grid" | "diagonal" | "border";
+export type DecorationMotif = "none" | "sparkle" | "bars" | "dots";
 
 export type DecorationPreset = {
   id: string;
   label: string;
-  pattern: DecorationPattern;
+  motif: DecorationMotif;
   color: string;
 };
 
@@ -23,6 +24,7 @@ export const COLOR_PRESETS: ColorPreset[] = [
     id: "dark",
     label: "ダーク",
     background: "#1a1a1a",
+    card: "#262626",
     title: "#f5f5f5",
     event: "#a3a3a3",
     trackTitle: "#e5e5e5",
@@ -33,6 +35,7 @@ export const COLOR_PRESETS: ColorPreset[] = [
     id: "midnight",
     label: "ミッドナイト",
     background: "#0f172a",
+    card: "#1e293b",
     title: "#e2e8f0",
     event: "#94a3b8",
     trackTitle: "#cbd5e1",
@@ -43,6 +46,7 @@ export const COLOR_PRESETS: ColorPreset[] = [
     id: "forest",
     label: "フォレスト",
     background: "#052e16",
+    card: "#14532d",
     title: "#dcfce7",
     event: "#86efac",
     trackTitle: "#bbf7d0",
@@ -53,6 +57,7 @@ export const COLOR_PRESETS: ColorPreset[] = [
     id: "sunset",
     label: "サンセット",
     background: "#1c1917",
+    card: "#292524",
     title: "#fef3c7",
     event: "#fbbf24",
     trackTitle: "#fde68a",
@@ -62,7 +67,8 @@ export const COLOR_PRESETS: ColorPreset[] = [
   {
     id: "light",
     label: "ライト",
-    background: "#ffffff",
+    background: "#e5e7eb",
+    card: "#ffffff",
     title: "#171717",
     event: "#525252",
     trackTitle: "#262626",
@@ -72,11 +78,10 @@ export const COLOR_PRESETS: ColorPreset[] = [
 ];
 
 export const DECORATION_PRESETS: DecorationPreset[] = [
-  { id: "none", label: "なし", pattern: "none", color: "#ffffff" },
-  { id: "dots-subtle", label: "ドット", pattern: "dots", color: "#ffffff" },
-  { id: "grid-subtle", label: "グリッド", pattern: "grid", color: "#ffffff" },
-  { id: "diagonal-subtle", label: "斜線", pattern: "diagonal", color: "#ffffff" },
-  { id: "border-simple", label: "枠線", pattern: "border", color: "#ffffff" },
+  { id: "none", label: "なし", motif: "none", color: "#ffffff" },
+  { id: "sparkle", label: "キラキラ", motif: "sparkle", color: "#ffffff" },
+  { id: "bars", label: "バー", motif: "bars", color: "#ffffff" },
+  { id: "dots-scatter", label: "ドット", motif: "dots", color: "#ffffff" },
 ];
 
 export function getColorPreset(id: string): ColorPreset {

@@ -43,6 +43,8 @@ function createMockCanvas() {
     arc: vi.fn(),
     fill: vi.fn(),
     stroke: vi.fn(),
+    rotate: vi.fn(),
+    translate: vi.fn(),
     measureText: vi.fn().mockReturnValue({ width: 50 }),
   };
 
@@ -104,6 +106,7 @@ describe("calculateLayout", () => {
       id: "test",
       label: "Test",
       background: "#000000",
+      card: "#111111",
       title: "#ff0000",
       event: "#00ff00",
       trackTitle: "#0000ff",
@@ -334,7 +337,6 @@ describe("renderShareImage", () => {
 
   it("renders text items with fallback color and fontWeight", async () => {
     const { canvas, ctx } = createMockCanvas();
-    const origCreateElement = document.createElement.bind(document);
     vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
       if (tag === "canvas") return canvas as unknown as HTMLCanvasElement;
       return origCreateElement(tag);
@@ -350,7 +352,6 @@ describe("renderShareImage", () => {
 
   it("applies color preset background", async () => {
     const { canvas, ctx } = createMockCanvas();
-    const origCreateElement = document.createElement.bind(document);
     vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
       if (tag === "canvas") return canvas as unknown as HTMLCanvasElement;
       return origCreateElement(tag);
@@ -360,6 +361,7 @@ describe("renderShareImage", () => {
       id: "test",
       label: "Test",
       background: "#ff0000",
+      card: "#ffffff",
       title: "#ffffff",
       event: "#cccccc",
       trackTitle: "#eeeeee",
@@ -371,60 +373,71 @@ describe("renderShareImage", () => {
     expect(fillRectCalls.length).toBeGreaterThan(0);
   });
 
-  it("draws dots decoration pattern", async () => {
+  it("draws a card background with rounded corners", async () => {
     const { canvas, ctx } = createMockCanvas();
-    const origCreateElement = document.createElement.bind(document);
+    vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
+      if (tag === "canvas") return canvas as unknown as HTMLCanvasElement;
+      return origCreateElement(tag);
+    });
+
+    await renderShareImage(buildInput({ thumbnailCount: 0 }), []);
+    expect(ctx.quadraticCurveTo.mock.calls.length).toBeGreaterThan(0);
+    expect(ctx.fill.mock.calls.length).toBeGreaterThan(0);
+  });
+
+  it("draws sparkle motifs on the background", async () => {
+    const { canvas, ctx } = createMockCanvas();
     vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
       if (tag === "canvas") return canvas as unknown as HTMLCanvasElement;
       return origCreateElement(tag);
     });
 
     await renderShareImage(buildInput({ thumbnailCount: 0 }), [], {
-      decoration: { id: "d", label: "D", pattern: "dots", color: "#fff" },
+      decoration: { id: "s", label: "S", motif: "sparkle", color: "#fff" },
+    });
+    expect(ctx.moveTo.mock.calls.length).toBeGreaterThan(0);
+    expect(ctx.lineTo.mock.calls.length).toBeGreaterThan(0);
+  });
+
+  it("draws bar motifs on the background", async () => {
+    const { canvas, ctx } = createMockCanvas();
+    vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
+      if (tag === "canvas") return canvas as unknown as HTMLCanvasElement;
+      return origCreateElement(tag);
+    });
+
+    await renderShareImage(buildInput({ thumbnailCount: 0 }), [], {
+      decoration: { id: "b", label: "B", motif: "bars", color: "#fff" },
+    });
+    expect(ctx.rotate.mock.calls.length).toBeGreaterThan(0);
+    expect(ctx.fill.mock.calls.length).toBeGreaterThan(0);
+  });
+
+  it("draws dot motifs on the background", async () => {
+    const { canvas, ctx } = createMockCanvas();
+    vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
+      if (tag === "canvas") return canvas as unknown as HTMLCanvasElement;
+      return origCreateElement(tag);
+    });
+
+    await renderShareImage(buildInput({ thumbnailCount: 0 }), [], {
+      decoration: { id: "d", label: "D", motif: "dots", color: "#fff" },
     });
     expect(ctx.arc.mock.calls.length).toBeGreaterThan(0);
   });
 
-  it("draws grid decoration pattern", async () => {
+  it("does not draw motifs when decoration is none", async () => {
     const { canvas, ctx } = createMockCanvas();
-    const origCreateElement = document.createElement.bind(document);
     vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
       if (tag === "canvas") return canvas as unknown as HTMLCanvasElement;
       return origCreateElement(tag);
     });
 
     await renderShareImage(buildInput({ thumbnailCount: 0 }), [], {
-      decoration: { id: "g", label: "G", pattern: "grid", color: "#fff" },
+      decoration: { id: "n", label: "N", motif: "none", color: "#fff" },
     });
-    expect(ctx.stroke.mock.calls.length).toBeGreaterThan(0);
-  });
-
-  it("draws diagonal decoration pattern", async () => {
-    const { canvas, ctx } = createMockCanvas();
-    const origCreateElement = document.createElement.bind(document);
-    vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
-      if (tag === "canvas") return canvas as unknown as HTMLCanvasElement;
-      return origCreateElement(tag);
-    });
-
-    await renderShareImage(buildInput({ thumbnailCount: 0 }), [], {
-      decoration: { id: "dg", label: "DG", pattern: "diagonal", color: "#fff" },
-    });
-    expect(ctx.stroke.mock.calls.length).toBeGreaterThan(0);
-  });
-
-  it("draws border decoration pattern", async () => {
-    const { canvas, ctx } = createMockCanvas();
-    const origCreateElement = document.createElement.bind(document);
-    vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
-      if (tag === "canvas") return canvas as unknown as HTMLCanvasElement;
-      return origCreateElement(tag);
-    });
-
-    await renderShareImage(buildInput({ thumbnailCount: 0 }), [], {
-      decoration: { id: "b", label: "B", pattern: "border", color: "#fff" },
-    });
-    expect(ctx.stroke.mock.calls.length).toBeGreaterThan(0);
+    expect(ctx.arc.mock.calls.length).toBe(0);
+    expect(ctx.rotate.mock.calls.length).toBe(0);
   });
 
   it("rejects when toBlob returns null", async () => {
@@ -432,7 +445,6 @@ describe("renderShareImage", () => {
     canvas.toBlob = vi.fn((cb: (blob: Blob | null) => void) => {
       cb(null);
     });
-    const origCreateElement = document.createElement.bind(document);
     vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
       if (tag === "canvas") return canvas as unknown as HTMLCanvasElement;
       return origCreateElement(tag);

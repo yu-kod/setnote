@@ -119,13 +119,13 @@ describe("SetlistDesigner", () => {
       expect(screen.getByRole("radiogroup", { name: "装飾" })).toBeInTheDocument();
     });
 
-    const dotsRadio = screen.getByRole("radio", { name: "ドット" });
-    await user.click(dotsRadio);
+    const sparkleRadio = screen.getByRole("radio", { name: "キラキラ" });
+    await user.click(sparkleRadio);
 
     await waitFor(() => {
       const calls = mockRenderShareImage.mock.calls;
       const lastCall = calls[calls.length - 1];
-      expect(lastCall[2]?.decoration?.id).toBe("dots-subtle");
+      expect(lastCall[2]?.decoration?.id).toBe("sparkle");
     });
   });
 
