@@ -119,13 +119,18 @@ export function SetlistDesigner({ id }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-2">
-        <Link
-          to={`/setlists/${id}/edit`}
-          className="text-sm text-muted-foreground hover:text-primary"
-        >
-          &larr; 編集に戻る
-        </Link>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Link
+            to={`/setlists/${id}/edit`}
+            className="text-sm text-muted-foreground hover:text-primary"
+          >
+            &larr; 編集に戻る
+          </Link>
+        </div>
+        <Button onClick={handleDownload} disabled={generating}>
+          ダウンロード
+        </Button>
       </div>
 
       <h2 className="text-xl font-bold">シェア画像デザイン</h2>
@@ -199,10 +204,6 @@ export function SetlistDesigner({ id }: Props) {
           </div>
         )}
       </div>
-
-      <Button onClick={handleDownload} disabled={generating}>
-        ダウンロード
-      </Button>
     </div>
   );
 }

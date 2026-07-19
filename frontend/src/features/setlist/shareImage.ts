@@ -34,7 +34,7 @@ export type LayoutResult = {
 
 const CANVAS_W = 900;
 const CANVAS_H = 1200;
-const PAD = 60;
+const PAD = 90;
 const THUMB_W = 200;
 const THUMB_H = 112;
 const THUMB_COL_GAP = 12;
