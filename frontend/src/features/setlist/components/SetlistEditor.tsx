@@ -37,7 +37,6 @@ import NotFoundPage from "@/pages/NotFoundPage";
 import { AddTrackForm } from "./AddTrackForm";
 import { ImageTrackImport } from "./ImageTrackImport";
 import { TrackCard } from "./TrackCard";
-import { getThumbnailProxyUrl } from "../thumbnail";
 import { renderShareImage, downloadBlob } from "../shareImage";
 
 type FormState = {
@@ -201,26 +200,14 @@ export function SetlistEditor({ id }: { id: string }) {
   async function handleShareImage() {
     setGeneratingImage(true);
     try {
-      const urls = tracks.map((t) => getThumbnailProxyUrl(t.songLink)).filter(Boolean) as string[];
-      const images = await Promise.all(
-        urls.map(
-          (url) =>
-            new Promise<HTMLImageElement>((resolve, reject) => {
-              const img = new Image();
-              img.onload = () => resolve(img);
-              img.onerror = reject;
-              img.src = url;
-            })
-        )
-      );
       const blob = await renderShareImage(
         {
           name: form.name,
           eventName: toNullable(form.eventName),
           tracks: tracks.map((t) => ({ title: t.title, artist: t.artist })),
-          thumbnailCount: images.length,
+          thumbnailCount: 0,
         },
-        images
+        []
       );
       const slug = form.name
         .trim()

@@ -595,7 +595,7 @@ describe("SetlistEditor", () => {
     });
   });
 
-  it("loads thumbnail images before generating a share image", async () => {
+  it("generates share image without thumbnails even when tracks have songLinks", async () => {
     mockFetchSetlist.mockResolvedValue(
       buildSetlist({
         name: "With Thumb",
@@ -616,22 +616,6 @@ describe("SetlistEditor", () => {
     vi.spyOn(shareImageModule, "renderShareImage").mockResolvedValue(fakeBlob);
     vi.spyOn(shareImageModule, "downloadBlob").mockImplementation(() => {});
 
-    const OrigImage = globalThis.Image;
-    globalThis.Image = class MockImage {
-      onload: (() => void) | null = null;
-      onerror: ((e: unknown) => void) | null = null;
-      width = 480;
-      height = 360;
-      _src = "";
-      get src() {
-        return this._src;
-      }
-      set src(v: string) {
-        this._src = v;
-        queueMicrotask(() => this.onload?.());
-      }
-    } as unknown as typeof Image;
-
     const user = userEvent.setup();
     renderWithProviders(<SetlistEditor id="s1" />);
     await screen.findByLabelText("セットリスト名");
@@ -640,10 +624,9 @@ describe("SetlistEditor", () => {
     await waitFor(() => {
       expect(shareImageModule.renderShareImage).toHaveBeenCalled();
     });
-    const [, thumbs] = vi.mocked(shareImageModule.renderShareImage).mock.calls[0];
-    expect(thumbs).toHaveLength(1);
-
-    globalThis.Image = OrigImage;
+    const [input, thumbs] = vi.mocked(shareImageModule.renderShareImage).mock.calls[0];
+    expect(input.thumbnailCount).toBe(0);
+    expect(thumbs).toHaveLength(0);
   });
 
   it("uses 'setlist' as the fallback filename when name has no alphanumeric chars", async () => {
@@ -666,53 +649,5 @@ describe("SetlistEditor", () => {
     await waitFor(() => {
       expect(shareImageModule.downloadBlob).toHaveBeenCalledWith(fakeBlob, "setlist-share.png");
     });
-  });
-
-  it("shows an error toast when thumbnail loading fails", async () => {
-    mockFetchSetlist.mockResolvedValue(
-      buildSetlist({
-        name: "Broken",
-        status: "published",
-        tracks: [
-          {
-            id: "t1",
-            title: "Song",
-            artist: "Artist",
-            songLink: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-            source: "",
-            customFields: [],
-          },
-        ],
-      })
-    );
-    vi.spyOn(shareImageModule, "renderShareImage").mockResolvedValue(
-      new Blob(["img"], { type: "image/png" })
-    );
-    vi.spyOn(shareImageModule, "downloadBlob").mockImplementation(() => {});
-
-    const OrigImage = globalThis.Image;
-    globalThis.Image = class MockImage {
-      onload: (() => void) | null = null;
-      onerror: ((e: unknown) => void) | null = null;
-      _src = "";
-      get src() {
-        return this._src;
-      }
-      set src(v: string) {
-        this._src = v;
-        queueMicrotask(() => this.onerror?.(new Error("load failed")));
-      }
-    } as unknown as typeof Image;
-
-    const user = userEvent.setup();
-    renderWithProviders(<SetlistEditor id="s1" />);
-    await screen.findByLabelText("セットリスト名");
-    await user.click(screen.getByRole("button", { name: "シェア画像" }));
-
-    await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("画像の生成に失敗しました");
-    });
-
-    globalThis.Image = OrigImage;
   });
 });
