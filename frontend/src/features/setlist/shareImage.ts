@@ -47,6 +47,9 @@ const RIGHT_PAD = 20;
 const TEXT_THUMB_GAP = 30;
 const THUMB_START_Y = 50;
 
+const CARD_MARGIN = 32;
+const CARD_RADIUS = 20;
+
 function generateSlots(count: number, col1X: number, col2X: number): [number, number][] {
   const rowHeight = THUMB_H + THUMB_ROW_GAP;
   const slots: [number, number][] = [];
@@ -221,7 +224,9 @@ export async function renderShareImage(
   ctx.fillStyle = colors.background;
   ctx.fillRect(0, 0, width, height);
 
-  drawDecoration(ctx, width, height, decoration);
+  drawMotifs(ctx, width, height, decoration);
+
+  drawCard(ctx, width, height, colors.card);
 
   for (const item of layout) {
     if (item.type === "thumbnail") {
@@ -255,65 +260,96 @@ export async function renderShareImage(
   });
 }
 
-function drawDecoration(
+function drawCard(ctx: CanvasRenderingContext2D, w: number, h: number, cardColor: string) {
+  ctx.save();
+  ctx.fillStyle = cardColor;
+  roundRect(ctx, CARD_MARGIN, CARD_MARGIN, w - 2 * CARD_MARGIN, h - 2 * CARD_MARGIN, CARD_RADIUS);
+  ctx.fill();
+  ctx.restore();
+}
+
+function seededPositions(w: number, h: number, count: number): { x: number; y: number }[] {
+  const positions: { x: number; y: number }[] = [];
+  const margin = CARD_MARGIN;
+  const edgeThickness = margin * 0.8;
+
+  const perSide = Math.ceil(count / 4);
+  for (let i = 0; i < perSide; i++) {
+    const t = (i + 0.5) / perSide;
+    positions.push({ x: t * w, y: edgeThickness * (i % 3) * 0.3 });
+    positions.push({ x: t * w, y: h - edgeThickness * (i % 3) * 0.3 });
+    positions.push({ x: edgeThickness * (i % 3) * 0.3, y: t * h });
+    positions.push({ x: w - edgeThickness * (i % 3) * 0.3, y: t * h });
+  }
+
+  return positions.slice(0, count);
+}
+
+function drawMotifs(
   ctx: CanvasRenderingContext2D,
   w: number,
   h: number,
   decoration: DecorationPreset
 ) {
-  ctx.save();
-  ctx.globalAlpha = 0.06;
-  ctx.fillStyle = decoration.color;
+  if (decoration.motif === "none") return;
 
-  switch (decoration.pattern) {
+  ctx.save();
+  ctx.fillStyle = decoration.color;
+  ctx.strokeStyle = decoration.color;
+  ctx.globalAlpha = 0.15;
+
+  const positions = seededPositions(w, h, 20);
+
+  switch (decoration.motif) {
+    case "sparkle":
+      for (const pos of positions) {
+        drawSparkle(ctx, pos.x, pos.y, 8 + (pos.x % 7));
+      }
+      break;
+    case "bars":
+      for (const pos of positions) {
+        drawBar(ctx, pos.x, pos.y, 20 + (pos.x % 10), 6, pos.y * 0.01);
+      }
+      break;
     case "dots":
-      for (let x = 20; x < w; x += 40) {
-        for (let y = 20; y < h; y += 40) {
-          ctx.beginPath();
-          ctx.arc(x, y, 2, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
-      break;
-    case "grid":
-      ctx.lineWidth = 1;
-      ctx.strokeStyle = decoration.color;
-      ctx.globalAlpha = 0.04;
-      for (let x = 0; x < w; x += 40) {
+      for (const pos of positions) {
         ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, h);
-        ctx.stroke();
-      }
-      for (let y = 0; y < h; y += 40) {
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(w, y);
-        ctx.stroke();
+        ctx.arc(pos.x, pos.y, 3 + (pos.x % 4), 0, Math.PI * 2);
+        ctx.fill();
       }
       break;
-    case "diagonal":
-      ctx.lineWidth = 1;
-      ctx.strokeStyle = decoration.color;
-      ctx.globalAlpha = 0.05;
-      for (let i = -h; i < w; i += 30) {
-        ctx.beginPath();
-        ctx.moveTo(i, 0);
-        ctx.lineTo(i + h, h);
-        ctx.stroke();
-      }
-      break;
-    case "border": {
-      ctx.globalAlpha = 0.15;
-      ctx.strokeStyle = decoration.color;
-      ctx.lineWidth = 3;
-      const m = 16;
-      roundRect(ctx, m, m, w - 2 * m, h - 2 * m, 12);
-      ctx.stroke();
-      break;
-    }
   }
 
+  ctx.restore();
+}
+
+function drawSparkle(ctx: CanvasRenderingContext2D, cx: number, cy: number, size: number) {
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - size);
+  ctx.lineTo(cx + size * 0.2, cy - size * 0.2);
+  ctx.lineTo(cx + size, cy);
+  ctx.lineTo(cx + size * 0.2, cy + size * 0.2);
+  ctx.lineTo(cx, cy + size);
+  ctx.lineTo(cx - size * 0.2, cy + size * 0.2);
+  ctx.lineTo(cx - size, cy);
+  ctx.lineTo(cx - size * 0.2, cy - size * 0.2);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawBar(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  length: number,
+  width: number,
+  angle: number
+) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(angle);
+  roundRect(ctx, -length / 2, -width / 2, length, width, width / 2);
+  ctx.fill();
   ctx.restore();
 }
 
