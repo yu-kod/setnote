@@ -94,6 +94,7 @@ describe("calculateLayout", () => {
       trackTitle: "#0000ff",
       trackArtist: "#ffff00",
       watermark: "#cccccc",
+      decorationColor: "#ff00ff",
     };
     const { items } = calculateLayout(buildInput(), undefined, colors);
     expect(items.find((i) => i.type === "title")!.color).toBe("#ff0000");
@@ -290,6 +291,7 @@ describe("renderShareImage", () => {
       trackTitle: "#eeeeee",
       trackArtist: "#aaaaaa",
       watermark: "#888888",
+      decorationColor: "#ff00ff",
     };
     await renderShareImage(buildInput({ thumbnailCount: 0 }), [], { colors });
     const fillRectCalls = ctx.fillRect.mock.calls;
@@ -316,7 +318,7 @@ describe("renderShareImage", () => {
     });
 
     await renderShareImage(buildInput({ thumbnailCount: 0 }), [], {
-      decoration: { id: "s", label: "S", motif: "sparkle", color: "#fff" },
+      decoration: { id: "s", label: "S", motif: "sparkle" },
     });
     expect(ctx.moveTo.mock.calls.length).toBeGreaterThan(0);
     expect(ctx.lineTo.mock.calls.length).toBeGreaterThan(0);
@@ -330,7 +332,7 @@ describe("renderShareImage", () => {
     });
 
     await renderShareImage(buildInput({ thumbnailCount: 0 }), [], {
-      decoration: { id: "b", label: "B", motif: "bars", color: "#fff" },
+      decoration: { id: "b", label: "B", motif: "bars" },
     });
     expect(ctx.rotate.mock.calls.length).toBeGreaterThan(0);
     expect(ctx.fill.mock.calls.length).toBeGreaterThan(0);
@@ -344,7 +346,7 @@ describe("renderShareImage", () => {
     });
 
     await renderShareImage(buildInput({ thumbnailCount: 0 }), [], {
-      decoration: { id: "d", label: "D", motif: "dots", color: "#fff" },
+      decoration: { id: "d", label: "D", motif: "dots" },
     });
     expect(ctx.arc.mock.calls.length).toBeGreaterThan(0);
   });
@@ -357,7 +359,7 @@ describe("renderShareImage", () => {
     });
 
     await renderShareImage(buildInput({ thumbnailCount: 0 }), [], {
-      decoration: { id: "n", label: "N", motif: "none", color: "#fff" },
+      decoration: { id: "n", label: "N", motif: "none" },
     });
     expect(ctx.arc.mock.calls.length).toBe(0);
     expect(ctx.rotate.mock.calls.length).toBe(0);

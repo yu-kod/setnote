@@ -12,7 +12,7 @@ describe("COLOR_PRESETS", () => {
     expect(dark!.background).toBe("#1a1a1a");
   });
 
-  it("each preset has all required color fields including card", () => {
+  it("each preset has all required color fields including card and decorationColor", () => {
     for (const preset of COLOR_PRESETS) {
       expect(preset.id).toBeTruthy();
       expect(preset.label).toBeTruthy();
@@ -23,6 +23,7 @@ describe("COLOR_PRESETS", () => {
       expect(preset.trackTitle).toMatch(/^#[0-9a-fA-F]{6}$/);
       expect(preset.trackArtist).toMatch(/^#[0-9a-fA-F]{6}$/);
       expect(preset.watermark).toMatch(/^#[0-9a-fA-F]{6}$/);
+      expect(preset.decorationColor).toMatch(/^#[0-9a-fA-F]{6}$/);
     }
   });
 });
@@ -38,11 +39,12 @@ describe("DECORATION_PRESETS", () => {
     expect(none!.motif).toBe("none");
   });
 
-  it("each preset has required fields with valid motif", () => {
+  it("each preset has required fields with valid motif and no color field", () => {
     for (const preset of DECORATION_PRESETS) {
       expect(preset.id).toBeTruthy();
       expect(preset.label).toBeTruthy();
       expect(["none", "sparkle", "bars", "dots"].includes(preset.motif)).toBe(true);
+      expect(preset).not.toHaveProperty("color");
     }
   });
 });
