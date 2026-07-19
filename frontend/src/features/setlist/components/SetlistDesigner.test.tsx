@@ -156,6 +156,24 @@ describe("SetlistDesigner", () => {
     });
   });
 
+  it("does not update state after unmount during preview generation", async () => {
+    let resolveRender!: (v: Blob) => void;
+    mockRenderShareImage.mockReturnValue(
+      new Promise<Blob>((res) => {
+        resolveRender = res;
+      })
+    );
+    mockFetchSetlist.mockResolvedValue(buildSetlist());
+    const { unmount } = renderWithProviders(<SetlistDesigner id="s1" />);
+
+    await waitFor(() => {
+      expect(mockRenderShareImage).toHaveBeenCalled();
+    });
+
+    unmount();
+    resolveRender(new Blob(["img"], { type: "image/png" }));
+  });
+
   it("uses 'setlist' as fallback filename when name has no alphanumeric chars", async () => {
     mockFetchSetlist.mockResolvedValue(buildSetlist({ name: "＊＊＊" }));
     const mockDownloadBlob = vi.fn();

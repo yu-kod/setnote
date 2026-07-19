@@ -1,12 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  COLOR_PRESETS,
-  DECORATION_PRESETS,
-  getColorPreset,
-  getDecorationPreset,
-  type ColorPreset,
-  type DecorationPreset,
-} from "./theme";
+import { COLOR_PRESETS, DECORATION_PRESETS, getColorPreset, getDecorationPreset } from "./theme";
 
 describe("COLOR_PRESETS", () => {
   it("contains at least 3 presets", () => {

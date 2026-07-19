@@ -1,16 +1,19 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { fetchSetlist } from "../api";
 import { renderShareImage, downloadBlob, type ThemeOptions } from "../shareImage";
-import { COLOR_PRESETS, DECORATION_PRESETS, type ColorPreset, type DecorationPreset } from "../theme";
+import {
+  COLOR_PRESETS,
+  DECORATION_PRESETS,
+  type ColorPreset,
+  type DecorationPreset,
+} from "../theme";
 import { Button } from "../../../components/ui/button";
 import type { Setlist } from "../types";
 
 type Props = { id: string };
 type LoadState =
-  | { status: "loading" }
-  | { status: "not-found" }
-  | { status: "loaded"; setlist: Setlist };
+  { status: "loading" } | { status: "not-found" } | { status: "loaded"; setlist: Setlist };
 
 export function SetlistDesigner({ id }: Props) {
   const [state, setState] = useState<LoadState>({ status: "loading" });
@@ -27,11 +30,14 @@ export function SetlistDesigner({ id }: Props) {
     );
   }, [id]);
 
-  const generatePreview = useCallback(
-    async (setlist: Setlist, colors: ColorPreset, decoration: DecorationPreset) => {
+  useEffect(() => {
+    if (state.status !== "loaded") return;
+    let cancelled = false;
+    const { setlist } = state;
+    const theme: ThemeOptions = { colors: colorPreset, decoration: decorationPreset };
+    const run = async () => {
       setGenerating(true);
       try {
-        const theme: ThemeOptions = { colors, decoration };
         const blob = await renderShareImage(
           {
             name: setlist.name,
@@ -42,22 +48,20 @@ export function SetlistDesigner({ id }: Props) {
           [],
           theme
         );
+        if (cancelled) return;
         if (prevUrlRef.current) URL.revokeObjectURL(prevUrlRef.current);
         const url = URL.createObjectURL(blob);
         prevUrlRef.current = url;
         setPreviewUrl(url);
       } finally {
-        setGenerating(false);
+        if (!cancelled) setGenerating(false);
       }
-    },
-    []
-  );
-
-  useEffect(() => {
-    if (state.status === "loaded") {
-      generatePreview(state.setlist, colorPreset, decorationPreset);
-    }
-  }, [state, colorPreset, decorationPreset, generatePreview]);
+    };
+    void run();
+    return () => {
+      cancelled = true;
+    };
+  }, [state, colorPreset, decorationPreset]);
 
   useEffect(() => {
     return () => {
@@ -67,7 +71,11 @@ export function SetlistDesigner({ id }: Props) {
 
   if (state.status === "loading") {
     return (
-      <div role="status" aria-label="読み込み中" className="py-12 text-center text-muted-foreground">
+      <div
+        role="status"
+        aria-label="読み込み中"
+        className="py-12 text-center text-muted-foreground"
+      >
         読み込み中...
       </div>
     );
@@ -180,12 +188,7 @@ export function SetlistDesigner({ id }: Props) {
 
       <div className="overflow-x-auto rounded-lg border border-border p-2">
         {previewUrl ? (
-          <img
-            src={previewUrl}
-            alt="プレビュー"
-            role="img"
-            className="mx-auto max-w-full"
-          />
+          <img src={previewUrl} alt="プレビュー" role="img" className="mx-auto max-w-full" />
         ) : (
           <div className="flex h-48 items-center justify-center text-muted-foreground">
             {generating ? "生成中..." : "プレビュー"}

@@ -6,7 +6,7 @@ import {
   type ShareImageInput,
   type LayoutResult,
 } from "./shareImage";
-import type { ColorPreset, DecorationPreset } from "./theme";
+import type { ColorPreset } from "./theme";
 
 function buildInput(overrides: Partial<ShareImageInput> = {}): ShareImageInput {
   return {
