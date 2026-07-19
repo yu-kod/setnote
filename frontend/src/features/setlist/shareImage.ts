@@ -43,7 +43,6 @@ const THUMB_ROW_GAP = 16;
 const CARD_MARGIN = 60;
 const CARD_RADIUS = 24;
 
-
 export function calculateLayout(
   input: ShareImageInput,
   _slots?: [number, number][],
