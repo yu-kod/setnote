@@ -128,33 +128,21 @@ export function calculateLayout(
   const trackBottom = y;
 
   const thumbStartY = trackBottom + 30;
-  const thumbCols = Math.min(input.thumbnailCount, 3);
+  const thumbCols = Math.max(1, Math.min(input.thumbnailCount, 3));
   const totalThumbW = thumbCols * THUMB_W + (thumbCols - 1) * THUMB_COL_GAP;
   const thumbStartX = (CANVAS_W - totalThumbW) / 2;
 
-  const placed: { x: number; y: number; w: number; h: number }[] = [];
-
   for (let i = 0; i < input.thumbnailCount; i++) {
-    const colIdx = i % (thumbCols || 1);
-    const row = Math.floor(i / (thumbCols || 1));
-    const tx = thumbStartX + colIdx * (THUMB_W + THUMB_COL_GAP);
-    const ty = thumbStartY + row * (THUMB_H + THUMB_ROW_GAP);
-
-    const overlaps = placed.some(
-      (p) => tx < p.x + p.w && tx + THUMB_W > p.x && ty < p.y + p.h && ty + THUMB_H > p.y
-    );
-
-    if (!overlaps) {
-      items.push({
-        type: "thumbnail",
-        x: tx,
-        y: ty,
-        width: THUMB_W,
-        height: THUMB_H,
-        imageIndex: i,
-      });
-      placed.push({ x: tx, y: ty, w: THUMB_W, h: THUMB_H });
-    }
+    const colIdx = i % thumbCols;
+    const row = Math.floor(i / thumbCols);
+    items.push({
+      type: "thumbnail",
+      x: thumbStartX + colIdx * (THUMB_W + THUMB_COL_GAP),
+      y: thumbStartY + row * (THUMB_H + THUMB_ROW_GAP),
+      width: THUMB_W,
+      height: THUMB_H,
+      imageIndex: i,
+    });
   }
 
   return { items, width: CANVAS_W, height: CANVAS_H };
