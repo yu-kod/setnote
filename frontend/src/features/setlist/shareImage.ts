@@ -1,9 +1,4 @@
-import {
-  type ColorPreset,
-  type DecorationPreset,
-  getColorPreset,
-  getDecorationPreset,
-} from "./theme";
+import { type ColorPreset, type DecorationMotif, getColorPreset } from "./theme";
 
 export type ShareImageInput = {
   name: string;
@@ -14,11 +9,11 @@ export type ShareImageInput = {
 
 export type ThemeOptions = {
   colors?: ColorPreset;
-  decoration?: DecorationPreset;
+  decorations?: DecorationMotif[];
 };
 
 export type LayoutItem = {
-  type: "title" | "event" | "trackTitle" | "trackArtist" | "thumbnail";
+  type: "title" | "event" | "trackNumber" | "trackTitle" | "trackArtist" | "thumbnail";
   x: number;
   y: number;
   width: number;
@@ -48,6 +43,8 @@ const THUMB_ROW_GAP = 16;
 const CARD_MARGIN = 60;
 const CARD_RADIUS = 24;
 
+const NUM_COL_W = 36;
+
 export function calculateLayout(
   input: ShareImageInput,
   _slots?: [number, number][],
@@ -56,11 +53,12 @@ export function calculateLayout(
   const items: LayoutItem[] = [];
   const c = colors ?? getColorPreset("dark");
 
-  const titleFontSize = 48;
-  const eventFontSize = 30;
-  const trackTitleSize = 28;
-  const trackArtistSize = 22;
-  const trackLineHeight = 42;
+  const titleFontSize = 44;
+  const eventFontSize = 26;
+  const trackTitleSize = 24;
+  const trackArtistSize = 20;
+  const trackNumberSize = 20;
+  const trackLineHeight = 36;
 
   const textAreaWidth = CANVAS_W - 2 * PAD;
 
@@ -69,37 +67,53 @@ export function calculateLayout(
     x: PAD,
     y: 80,
     width: textAreaWidth,
-    height: 52,
+    height: 48,
     text: input.name,
     fontSize: titleFontSize,
     fontWeight: "bold",
     color: c.title,
   });
 
-  let trackStartY = 160;
+  let trackStartY = 150;
 
   if (input.eventName) {
     items.push({
       type: "event",
       x: PAD,
-      y: 140,
+      y: 132,
       width: textAreaWidth,
-      height: 34,
+      height: 30,
       text: input.eventName,
       fontSize: eventFontSize,
       fontWeight: "normal",
       color: c.event,
     });
-    trackStartY = 200;
+    trackStartY = 180;
   }
 
   let y = trackStartY;
-  for (const track of input.tracks) {
+  for (let idx = 0; idx < input.tracks.length; idx++) {
+    const track = input.tracks[idx];
+    const num = String(idx + 1);
+
     items.push({
-      type: "trackTitle",
+      type: "trackNumber",
       x: PAD,
       y,
-      width: textAreaWidth,
+      width: NUM_COL_W,
+      height: trackNumberSize + 2,
+      text: num,
+      fontSize: trackNumberSize,
+      fontWeight: "normal",
+      color: c.trackNumber,
+      textAlign: "right",
+    });
+
+    items.push({
+      type: "trackTitle",
+      x: PAD + NUM_COL_W + 8,
+      y,
+      width: textAreaWidth - NUM_COL_W - 8,
       height: trackTitleSize + 4,
       text: track.title,
       fontSize: trackTitleSize,
@@ -154,7 +168,7 @@ export async function renderShareImage(
   theme?: ThemeOptions
 ): Promise<Blob> {
   const colors = theme?.colors ?? getColorPreset("dark");
-  const decoration = theme?.decoration ?? getDecorationPreset("none");
+  const decorations = theme?.decorations ?? [];
   const { items: layout, width, height } = calculateLayout(input, undefined, colors);
 
   const canvas = document.createElement("canvas");
@@ -165,7 +179,7 @@ export async function renderShareImage(
   ctx.fillStyle = colors.background;
   ctx.fillRect(0, 0, width, height);
 
-  drawMotifs(ctx, width, height, decoration, colors.decorationColor);
+  drawAllMotifs(ctx, width, height, decorations, colors.decorationColor);
 
   drawCard(ctx, width, height, colors.card);
 
@@ -215,14 +229,19 @@ function drawCard(ctx: CanvasRenderingContext2D, w: number, h: number, cardColor
   ctx.restore();
 }
 
-function seededPositions(w: number, h: number, count: number): { x: number; y: number }[] {
+function seededPositions(
+  w: number,
+  h: number,
+  count: number,
+  seed: number
+): { x: number; y: number }[] {
   const positions: { x: number; y: number }[] = [];
   const band = CARD_MARGIN + 10;
 
   const perSide = Math.ceil(count / 4);
   for (let i = 0; i < perSide; i++) {
     const t = (i + 0.5) / perSide;
-    const offset = 4 + ((i * 17 + 7) % (band - 4));
+    const offset = 4 + (((i + seed) * 17 + 7) % (band - 4));
     positions.push({ x: t * w, y: offset });
     positions.push({ x: t * w, y: h - offset });
     positions.push({ x: offset, y: t * h });
@@ -232,42 +251,54 @@ function seededPositions(w: number, h: number, count: number): { x: number; y: n
   return positions.slice(0, count);
 }
 
-function drawMotifs(
+function drawAllMotifs(
   ctx: CanvasRenderingContext2D,
   w: number,
   h: number,
-  decoration: DecorationPreset,
+  motifs: DecorationMotif[],
   decorationColor: string
 ) {
-  if (decoration.motif === "none") return;
+  for (let mi = 0; mi < motifs.length; mi++) {
+    drawMotif(ctx, w, h, motifs[mi], decorationColor, mi * 37);
+  }
+}
 
+function drawMotif(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  motif: DecorationMotif,
+  decorationColor: string,
+  seed: number
+) {
   ctx.save();
   ctx.fillStyle = decorationColor;
   ctx.strokeStyle = decorationColor;
   ctx.globalAlpha = 0.65;
 
-  const positions = seededPositions(w, h, 24);
+  const positions = seededPositions(w, h, 24, seed);
 
-  switch (decoration.motif) {
+  switch (motif) {
     case "sparkle":
       for (let i = 0; i < positions.length; i++) {
         const pos = positions[i];
-        const size = 10 + ((i * 7 + 3) % 14);
+        const size = 20 + (((i + seed) * 7 + 3) % 30);
         drawSparkle(ctx, pos.x, pos.y, size);
       }
       break;
     case "bars":
       for (let i = 0; i < positions.length; i++) {
         const pos = positions[i];
-        const len = 25 + ((i * 11 + 5) % 20);
-        const angle = ((i * 37 + 13) % 60) * 0.05;
-        drawBar(ctx, pos.x, pos.y, len, 7, angle);
+        const len = 35 + (((i + seed) * 11 + 5) % 30);
+        const bw = 8 + (((i + seed) * 3 + 1) % 4);
+        const angle = (((i + seed) * 37 + 13) % 60) * 0.05;
+        drawBar(ctx, pos.x, pos.y, len, bw, angle);
       }
       break;
     case "dots":
       for (let i = 0; i < positions.length; i++) {
         const pos = positions[i];
-        const r = 4 + ((i * 5 + 2) % 6);
+        const r = 6 + (((i + seed) * 5 + 2) % 10);
         ctx.beginPath();
         ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2);
         ctx.fill();
