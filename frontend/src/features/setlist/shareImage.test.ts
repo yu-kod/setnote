@@ -73,7 +73,11 @@ describe("calculateLayout", () => {
       buildInput({ name: "A", tracks: [{ title: "B", artist: "" }], thumbnailCount: 0 })
     );
     const long = calculateLayout(
-      buildInput({ name: "あ".repeat(100), tracks: [{ title: "B", artist: "" }], thumbnailCount: 0 })
+      buildInput({
+        name: "あ".repeat(100),
+        tracks: [{ title: "B", artist: "" }],
+        thumbnailCount: 0,
+      })
     );
     expect(short.width).toBe(900);
     expect(long.width).toBe(900);
