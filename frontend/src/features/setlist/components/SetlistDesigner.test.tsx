@@ -129,6 +129,14 @@ describe("SetlistDesigner", () => {
       const lastCall = calls[calls.length - 1];
       expect(lastCall[2]?.decorations).toContain("sparkle");
     });
+
+    await user.click(sparkleCheckbox);
+
+    await waitFor(() => {
+      const calls = mockRenderShareImage.mock.calls;
+      const lastCall = calls[calls.length - 1];
+      expect(lastCall[2]?.decorations).not.toContain("sparkle");
+    });
   });
 
   it("renders not-found when fetch rejects", async () => {
