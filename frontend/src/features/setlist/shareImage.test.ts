@@ -61,44 +61,26 @@ function createMockCanvas() {
 }
 
 describe("calculateLayout", () => {
-  it("returns items, width, and height", () => {
+  it("returns fixed 900x1200 canvas for Twitter vertical image", () => {
     const result: LayoutResult = calculateLayout(buildInput());
     expect(result.items).toBeInstanceOf(Array);
-    expect(result.width).toBeGreaterThan(0);
-    expect(result.height).toBeGreaterThanOrEqual(675);
+    expect(result.width).toBe(900);
+    expect(result.height).toBe(1200);
   });
 
-  it("adjusts canvas width to fit content", () => {
+  it("always uses fixed 900 width regardless of content", () => {
     const short = calculateLayout(
-      buildInput({ name: "A", tracks: [{ title: "B", artist: "" }], thumbnailCount: 2 })
+      buildInput({ name: "A", tracks: [{ title: "B", artist: "" }], thumbnailCount: 0 })
     );
-    expect(short.width).toBeLessThan(1200);
-  });
-
-  it("adjusts width for a single thumbnail column", () => {
-    const result = calculateLayout(
-      buildInput({ name: "A", tracks: [{ title: "B", artist: "" }], thumbnailCount: 1 })
+    const long = calculateLayout(
+      buildInput({
+        name: "あ".repeat(100),
+        tracks: [{ title: "B", artist: "" }],
+        thumbnailCount: 0,
+      })
     );
-    const twoCol = calculateLayout(
-      buildInput({ name: "A", tracks: [{ title: "B", artist: "" }], thumbnailCount: 2 })
-    );
-    expect(result.width).toBeLessThan(twoCol.width);
-  });
-
-  it("uses narrower width when there are no thumbnails", () => {
-    const noThumbs = calculateLayout(
-      buildInput({ name: "Short", tracks: [{ title: "Track", artist: "" }], thumbnailCount: 0 })
-    );
-    const withThumbs = calculateLayout(
-      buildInput({ name: "Short", tracks: [{ title: "Track", artist: "" }], thumbnailCount: 2 })
-    );
-    expect(noThumbs.width).toBeLessThan(withThumbs.width);
-  });
-
-  it("caps canvas width at 1200", () => {
-    const veryLong = "あ".repeat(100);
-    const { width } = calculateLayout(buildInput({ name: veryLong, thumbnailCount: 2 }));
-    expect(width).toBeLessThanOrEqual(1200);
+    expect(short.width).toBe(900);
+    expect(long.width).toBe(900);
   });
 
   it("applies color preset to layout items", () => {
@@ -156,14 +138,15 @@ describe("calculateLayout", () => {
     expect(tracks[0].text).toBe("Opening");
   });
 
-  it("places artist names below their track titles with a smaller font", () => {
+  it("places artist names on same line as track title, right-aligned", () => {
     const { items } = calculateLayout(buildInput());
     const trackTitles = items.filter((item) => item.type === "trackTitle");
     const artists = items.filter((item) => item.type === "trackArtist");
     expect(artists.length).toBe(2);
-    expect(artists[0].y).toBeGreaterThan(trackTitles[0].y);
-    expect(artists[0].fontSize!).toBeLessThan(trackTitles[0].fontSize!);
+    expect(artists[0].y).toBe(trackTitles[0].y);
     expect(artists[0].text).toBe("DJ Test");
+    expect(artists[0].x).toBeGreaterThan(trackTitles[0].x);
+    expect(artists[0].textAlign).toBe("right");
   });
 
   it("skips artist items when artist is empty", () => {
@@ -186,20 +169,20 @@ describe("calculateLayout", () => {
     expect(trackTitles).toHaveLength(30);
   });
 
-  it("expands height to fit all tracks", () => {
+  it("keeps fixed height of 1200 even with many tracks", () => {
     const manyTracks = Array.from({ length: 30 }, (_, i) => ({
       title: `Track ${i + 1}`,
       artist: `Artist ${i + 1}`,
     }));
     const { height } = calculateLayout(buildInput({ tracks: manyTracks, thumbnailCount: 0 }));
-    expect(height).toBeGreaterThan(675);
+    expect(height).toBe(1200);
   });
 
-  it("maintains minimum height of 675 for few tracks", () => {
+  it("maintains fixed height of 1200 for few tracks", () => {
     const { height } = calculateLayout(
       buildInput({ tracks: [{ title: "Solo", artist: "" }], thumbnailCount: 0 })
     );
-    expect(height).toBe(675);
+    expect(height).toBe(1200);
   });
 
   it("uses larger font sizes for readability", () => {
@@ -212,22 +195,6 @@ describe("calculateLayout", () => {
     expect(artist.fontSize!).toBeGreaterThanOrEqual(18);
   });
 
-  it("positions thumbnails right after the longest text", () => {
-    const short = calculateLayout(
-      buildInput({ name: "A", tracks: [{ title: "B", artist: "" }], thumbnailCount: 2 })
-    );
-    const long = calculateLayout(
-      buildInput({
-        name: "吉原ラメント(あんたれすP Remix)",
-        tracks: [{ title: "アニマリズムと25人の子供たち", artist: "" }],
-        thumbnailCount: 2,
-      })
-    );
-    const shortThumb = short.items.find((i) => i.type === "thumbnail")!;
-    const longThumb = long.items.find((i) => i.type === "thumbnail")!;
-    expect(longThumb.x).toBeGreaterThan(shortThumb.x);
-  });
-
   it("places thumbnails within canvas bounds", () => {
     const { items, width, height } = calculateLayout(buildInput({ thumbnailCount: 3 }));
     const thumbnails = items.filter((item) => item.type === "thumbnail");
@@ -236,29 +203,6 @@ describe("calculateLayout", () => {
       expect(thumb.x + thumb.width).toBeLessThanOrEqual(width);
       expect(thumb.y).toBeGreaterThanOrEqual(0);
       expect(thumb.y + thumb.height).toBeLessThanOrEqual(height);
-    }
-  });
-
-  it("aligns thumbnails in a clean grid without jitter", () => {
-    const { items } = calculateLayout(buildInput({ thumbnailCount: 6 }));
-    const thumbnails = items.filter((item) => item.type === "thumbnail");
-    const col1Thumbs = thumbnails.filter((_, i) => i % 2 === 0);
-    const col2Thumbs = thumbnails.filter((_, i) => i % 2 === 1);
-    const col1Xs = new Set(col1Thumbs.map((t) => t.x));
-    const col2Xs = new Set(col2Thumbs.map((t) => t.x));
-    expect(col1Xs.size).toBe(1);
-    expect(col2Xs.size).toBe(1);
-  });
-
-  it("caps text area width so thumbnails always fit", () => {
-    const veryLong = "あ".repeat(100);
-    const { items, width } = calculateLayout(
-      buildInput({ name: veryLong, tracks: [], thumbnailCount: 2 })
-    );
-    const thumbnails = items.filter((i) => i.type === "thumbnail");
-    expect(thumbnails).toHaveLength(2);
-    for (const thumb of thumbnails) {
-      expect(thumb.x + thumb.width).toBeLessThanOrEqual(width);
     }
   });
 
@@ -282,27 +226,6 @@ describe("calculateLayout", () => {
         expect(overlaps, `thumbnails ${i} and ${j} overlap`).toBe(false);
       }
     }
-  });
-
-  it("places all thumbnails without a fixed slot cap", () => {
-    const { items } = calculateLayout(buildInput({ thumbnailCount: 12 }));
-    const thumbnails = items.filter((item) => item.type === "thumbnail");
-    expect(thumbnails).toHaveLength(12);
-  });
-
-  it("expands height to fit many thumbnails", () => {
-    const { height } = calculateLayout(buildInput({ thumbnailCount: 12 }));
-    expect(height).toBeGreaterThan(675);
-  });
-
-  it("skips thumbnails that would overlap with already placed ones", () => {
-    const overlappingSlots: [number, number][] = [
-      [530, 100],
-      [530, 100],
-    ];
-    const { items } = calculateLayout(buildInput({ thumbnailCount: 2 }), overlappingSlots);
-    const thumbnails = items.filter((item) => item.type === "thumbnail");
-    expect(thumbnails).toHaveLength(1);
   });
 });
 
@@ -385,7 +308,7 @@ describe("renderShareImage", () => {
     expect(ctx.fill.mock.calls.length).toBeGreaterThan(0);
   });
 
-  it("draws sparkle motifs on the background", async () => {
+  it("draws sparkle motifs with strong opacity", async () => {
     const { canvas, ctx } = createMockCanvas();
     vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
       if (tag === "canvas") return canvas as unknown as HTMLCanvasElement;
