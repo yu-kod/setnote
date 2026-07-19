@@ -13,7 +13,7 @@ export type ThemeOptions = {
 };
 
 export type LayoutItem = {
-  type: "title" | "event" | "trackNumber" | "trackTitle" | "trackArtist" | "thumbnail";
+  type: "title" | "event" | "trackTitle" | "trackArtist" | "thumbnail";
   x: number;
   y: number;
   width: number;
@@ -22,7 +22,7 @@ export type LayoutItem = {
   fontSize?: number;
   fontWeight?: string;
   color?: string;
-  textAlign?: "left" | "right";
+
   imageIndex?: number;
 };
 
@@ -43,8 +43,6 @@ const THUMB_ROW_GAP = 16;
 const CARD_MARGIN = 60;
 const CARD_RADIUS = 24;
 
-const NUM_COL_W = 36;
-
 export function calculateLayout(
   input: ShareImageInput,
   _slots?: [number, number][],
@@ -53,12 +51,12 @@ export function calculateLayout(
   const items: LayoutItem[] = [];
   const c = colors ?? getColorPreset("dark");
 
-  const titleFontSize = 44;
-  const eventFontSize = 26;
-  const trackTitleSize = 24;
+  const titleFontSize = 48;
+  const eventFontSize = 30;
+  const trackTitleSize = 28;
   const trackArtistSize = 20;
-  const trackNumberSize = 20;
-  const trackLineHeight = 36;
+
+  const trackGap = 10;
 
   const textAreaWidth = CANVAS_W - 2 * PAD;
 
@@ -67,7 +65,7 @@ export function calculateLayout(
     x: PAD,
     y: 80,
     width: textAreaWidth,
-    height: 48,
+    height: 52,
     text: input.name,
     fontSize: titleFontSize,
     fontWeight: "bold",
@@ -80,51 +78,38 @@ export function calculateLayout(
     items.push({
       type: "event",
       x: PAD,
-      y: 132,
+      y: 135,
       width: textAreaWidth,
-      height: 30,
+      height: 34,
       text: input.eventName,
       fontSize: eventFontSize,
       fontWeight: "normal",
       color: c.event,
     });
-    trackStartY = 180;
+    trackStartY = 185;
   }
 
   let y = trackStartY;
   for (let idx = 0; idx < input.tracks.length; idx++) {
     const track = input.tracks[idx];
-    const num = String(idx + 1);
-
-    items.push({
-      type: "trackNumber",
-      x: PAD,
-      y,
-      width: NUM_COL_W,
-      height: trackNumberSize + 2,
-      text: num,
-      fontSize: trackNumberSize,
-      fontWeight: "normal",
-      color: c.trackNumber,
-      textAlign: "right",
-    });
 
     items.push({
       type: "trackTitle",
-      x: PAD + NUM_COL_W + 8,
+      x: PAD,
       y,
-      width: textAreaWidth - NUM_COL_W - 8,
+      width: textAreaWidth,
       height: trackTitleSize + 4,
       text: track.title,
       fontSize: trackTitleSize,
       fontWeight: "600",
       color: c.trackTitle,
     });
+    y += trackTitleSize + 4;
 
     if (track.artist) {
       items.push({
         type: "trackArtist",
-        x: CANVAS_W - PAD,
+        x: PAD,
         y,
         width: textAreaWidth,
         height: trackArtistSize + 2,
@@ -132,11 +117,11 @@ export function calculateLayout(
         fontSize: trackArtistSize,
         fontWeight: "normal",
         color: c.trackArtist,
-        textAlign: "right",
       });
+      y += trackArtistSize + 2;
     }
 
-    y += trackLineHeight;
+    y += trackGap;
   }
 
   const trackBottom = y;
@@ -198,13 +183,7 @@ export async function renderShareImage(
       ctx.fillStyle = item.color!;
       ctx.font = `${item.fontWeight} ${item.fontSize}px "Noto Sans JP", sans-serif`;
       ctx.textBaseline = "top";
-      if (item.textAlign === "right") {
-        ctx.textAlign = "right";
-        ctx.fillText(item.text!, item.x, item.y);
-        ctx.textAlign = "left";
-      } else {
-        ctx.fillText(item.text!, item.x, item.y, item.width);
-      }
+      ctx.fillText(item.text!, item.x, item.y, item.width);
     }
   }
 
