@@ -8,6 +8,7 @@ export type ColorPreset = {
   trackTitle: string;
   trackArtist: string;
   watermark: string;
+  decorationColor: string;
 };
 
 export type DecorationMotif = "none" | "sparkle" | "bars" | "dots";
@@ -16,7 +17,6 @@ export type DecorationPreset = {
   id: string;
   label: string;
   motif: DecorationMotif;
-  color: string;
 };
 
 export const COLOR_PRESETS: ColorPreset[] = [
@@ -30,6 +30,7 @@ export const COLOR_PRESETS: ColorPreset[] = [
     trackTitle: "#e5e5e5",
     trackArtist: "#737373",
     watermark: "#525252",
+    decorationColor: "#ffffff",
   },
   {
     id: "midnight",
@@ -41,28 +42,31 @@ export const COLOR_PRESETS: ColorPreset[] = [
     trackTitle: "#cbd5e1",
     trackArtist: "#64748b",
     watermark: "#475569",
+    decorationColor: "#94a3b8",
   },
   {
     id: "forest",
     label: "フォレスト",
-    background: "#052e16",
-    card: "#14532d",
-    title: "#dcfce7",
-    event: "#86efac",
-    trackTitle: "#bbf7d0",
-    trackArtist: "#4ade80",
-    watermark: "#166534",
+    background: "#c6dbbe",
+    card: "#ffffff",
+    title: "#1a4d2e",
+    event: "#3d7a4f",
+    trackTitle: "#1a4d2e",
+    trackArtist: "#4a7c59",
+    watermark: "#a3c4a3",
+    decorationColor: "#2d6a3f",
   },
   {
     id: "sunset",
     label: "サンセット",
-    background: "#1c1917",
-    card: "#292524",
-    title: "#fef3c7",
-    event: "#fbbf24",
-    trackTitle: "#fde68a",
-    trackArtist: "#d97706",
-    watermark: "#78350f",
+    background: "#fde8d0",
+    card: "#ffffff",
+    title: "#7c2d12",
+    event: "#c2410c",
+    trackTitle: "#7c2d12",
+    trackArtist: "#b45309",
+    watermark: "#e8c4a0",
+    decorationColor: "#ea580c",
   },
   {
     id: "light",
@@ -74,14 +78,39 @@ export const COLOR_PRESETS: ColorPreset[] = [
     trackTitle: "#262626",
     trackArtist: "#737373",
     watermark: "#d4d4d4",
+    decorationColor: "#000000",
+  },
+  {
+    id: "sakura",
+    label: "サクラ",
+    background: "#fce4ec",
+    card: "#ffffff",
+    title: "#880e4f",
+    event: "#c2185b",
+    trackTitle: "#880e4f",
+    trackArtist: "#ad1457",
+    watermark: "#f8bbd0",
+    decorationColor: "#e91e63",
+  },
+  {
+    id: "ocean",
+    label: "オーシャン",
+    background: "#e0f2f1",
+    card: "#ffffff",
+    title: "#004d40",
+    event: "#00796b",
+    trackTitle: "#004d40",
+    trackArtist: "#00897b",
+    watermark: "#b2dfdb",
+    decorationColor: "#009688",
   },
 ];
 
 export const DECORATION_PRESETS: DecorationPreset[] = [
-  { id: "none", label: "なし", motif: "none", color: "#ffffff" },
-  { id: "sparkle", label: "キラキラ", motif: "sparkle", color: "#ffffff" },
-  { id: "bars", label: "バー", motif: "bars", color: "#ffffff" },
-  { id: "dots-scatter", label: "ドット", motif: "dots", color: "#ffffff" },
+  { id: "none", label: "なし", motif: "none" },
+  { id: "sparkle", label: "キラキラ", motif: "sparkle" },
+  { id: "bars", label: "バー", motif: "bars" },
+  { id: "dots-scatter", label: "ドット", motif: "dots" },
 ];
 
 export function getColorPreset(id: string): ColorPreset {

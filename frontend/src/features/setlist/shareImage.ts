@@ -45,8 +45,8 @@ const THUMB_H = 112;
 const THUMB_COL_GAP = 12;
 const THUMB_ROW_GAP = 16;
 
-const CARD_MARGIN = 32;
-const CARD_RADIUS = 20;
+const CARD_MARGIN = 60;
+const CARD_RADIUS = 24;
 
 export function calculateLayout(
   input: ShareImageInput,
@@ -165,7 +165,7 @@ export async function renderShareImage(
   ctx.fillStyle = colors.background;
   ctx.fillRect(0, 0, width, height);
 
-  drawMotifs(ctx, width, height, decoration);
+  drawMotifs(ctx, width, height, decoration, colors.decorationColor);
 
   drawCard(ctx, width, height, colors.card);
 
@@ -236,13 +236,14 @@ function drawMotifs(
   ctx: CanvasRenderingContext2D,
   w: number,
   h: number,
-  decoration: DecorationPreset
+  decoration: DecorationPreset,
+  decorationColor: string
 ) {
   if (decoration.motif === "none") return;
 
   ctx.save();
-  ctx.fillStyle = decoration.color;
-  ctx.strokeStyle = decoration.color;
+  ctx.fillStyle = decorationColor;
+  ctx.strokeStyle = decorationColor;
   ctx.globalAlpha = 0.65;
 
   const positions = seededPositions(w, h, 24);
