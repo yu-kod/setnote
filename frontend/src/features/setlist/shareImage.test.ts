@@ -6,6 +6,7 @@ import {
   type ShareImageInput,
   type LayoutResult,
 } from "./shareImage";
+import type { ColorPreset } from "./theme";
 
 function buildInput(overrides: Partial<ShareImageInput> = {}): ShareImageInput {
   return {
@@ -26,6 +27,8 @@ function createMockCanvas() {
     font: "",
     textBaseline: "",
     globalAlpha: 1,
+    lineWidth: 1,
+    strokeStyle: "",
     fillRect: vi.fn(),
     fillText: vi.fn(),
     drawImage: vi.fn(),
@@ -37,6 +40,9 @@ function createMockCanvas() {
     lineTo: vi.fn(),
     quadraticCurveTo: vi.fn(),
     closePath: vi.fn(),
+    arc: vi.fn(),
+    fill: vi.fn(),
+    stroke: vi.fn(),
     measureText: vi.fn().mockReturnValue({ width: 50 }),
   };
 
@@ -91,6 +97,29 @@ describe("calculateLayout", () => {
     const veryLong = "あ".repeat(100);
     const { width } = calculateLayout(buildInput({ name: veryLong, thumbnailCount: 2 }));
     expect(width).toBeLessThanOrEqual(1200);
+  });
+
+  it("applies color preset to layout items", () => {
+    const colors: ColorPreset = {
+      id: "test",
+      label: "Test",
+      background: "#000000",
+      title: "#ff0000",
+      event: "#00ff00",
+      trackTitle: "#0000ff",
+      trackArtist: "#ffff00",
+      watermark: "#cccccc",
+    };
+    const { items } = calculateLayout(buildInput(), undefined, colors);
+    expect(items.find((i) => i.type === "title")!.color).toBe("#ff0000");
+    expect(items.find((i) => i.type === "event")!.color).toBe("#00ff00");
+    expect(items.find((i) => i.type === "trackTitle")!.color).toBe("#0000ff");
+    expect(items.find((i) => i.type === "trackArtist")!.color).toBe("#ffff00");
+  });
+
+  it("uses default dark colors when no color preset is provided", () => {
+    const { items } = calculateLayout(buildInput());
+    expect(items.find((i) => i.type === "title")!.color).toBe("#f5f5f5");
   });
 
   it("places the setlist name at the top", () => {
@@ -317,6 +346,85 @@ describe("renderShareImage", () => {
     );
     expect(blob).toBeInstanceOf(Blob);
     expect(ctx.fillText).toHaveBeenCalled();
+  });
+
+  it("applies color preset background", async () => {
+    const { canvas, ctx } = createMockCanvas();
+    const origCreateElement = document.createElement.bind(document);
+    vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
+      if (tag === "canvas") return canvas as unknown as HTMLCanvasElement;
+      return origCreateElement(tag);
+    });
+
+    const colors: ColorPreset = {
+      id: "test",
+      label: "Test",
+      background: "#ff0000",
+      title: "#ffffff",
+      event: "#cccccc",
+      trackTitle: "#eeeeee",
+      trackArtist: "#aaaaaa",
+      watermark: "#888888",
+    };
+    await renderShareImage(buildInput({ thumbnailCount: 0 }), [], { colors });
+    const fillRectCalls = ctx.fillRect.mock.calls;
+    expect(fillRectCalls.length).toBeGreaterThan(0);
+  });
+
+  it("draws dots decoration pattern", async () => {
+    const { canvas, ctx } = createMockCanvas();
+    const origCreateElement = document.createElement.bind(document);
+    vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
+      if (tag === "canvas") return canvas as unknown as HTMLCanvasElement;
+      return origCreateElement(tag);
+    });
+
+    await renderShareImage(buildInput({ thumbnailCount: 0 }), [], {
+      decoration: { id: "d", label: "D", pattern: "dots", color: "#fff" },
+    });
+    expect(ctx.arc.mock.calls.length).toBeGreaterThan(0);
+  });
+
+  it("draws grid decoration pattern", async () => {
+    const { canvas, ctx } = createMockCanvas();
+    const origCreateElement = document.createElement.bind(document);
+    vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
+      if (tag === "canvas") return canvas as unknown as HTMLCanvasElement;
+      return origCreateElement(tag);
+    });
+
+    await renderShareImage(buildInput({ thumbnailCount: 0 }), [], {
+      decoration: { id: "g", label: "G", pattern: "grid", color: "#fff" },
+    });
+    expect(ctx.stroke.mock.calls.length).toBeGreaterThan(0);
+  });
+
+  it("draws diagonal decoration pattern", async () => {
+    const { canvas, ctx } = createMockCanvas();
+    const origCreateElement = document.createElement.bind(document);
+    vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
+      if (tag === "canvas") return canvas as unknown as HTMLCanvasElement;
+      return origCreateElement(tag);
+    });
+
+    await renderShareImage(buildInput({ thumbnailCount: 0 }), [], {
+      decoration: { id: "dg", label: "DG", pattern: "diagonal", color: "#fff" },
+    });
+    expect(ctx.stroke.mock.calls.length).toBeGreaterThan(0);
+  });
+
+  it("draws border decoration pattern", async () => {
+    const { canvas, ctx } = createMockCanvas();
+    const origCreateElement = document.createElement.bind(document);
+    vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
+      if (tag === "canvas") return canvas as unknown as HTMLCanvasElement;
+      return origCreateElement(tag);
+    });
+
+    await renderShareImage(buildInput({ thumbnailCount: 0 }), [], {
+      decoration: { id: "b", label: "B", pattern: "border", color: "#fff" },
+    });
+    expect(ctx.stroke.mock.calls.length).toBeGreaterThan(0);
   });
 
   it("rejects when toBlob returns null", async () => {
