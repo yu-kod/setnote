@@ -7,6 +7,7 @@ import NotFoundPage from "./pages/NotFoundPage";
 import DashboardPage from "./pages/DashboardPage";
 import LandingPage from "./pages/LandingPage";
 import SetlistEditPage from "./pages/SetlistEditPage";
+import SetlistDesignPage from "./pages/SetlistDesignPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import AnalyticsTracksPage from "./pages/AnalyticsTracksPage";
 import AnalyticsLikesPage from "./pages/AnalyticsLikesPage";
@@ -67,6 +68,7 @@ export default function App() {
             <Route path="/analytics/likes" element={<AnalyticsLikesPage />} />
             <Route path="/analytics/views" element={<AnalyticsViewsPage />} />
             <Route path="/setlists/:id/edit" element={<SetlistEditPage />} />
+            <Route path="/setlists/:id/design" element={<SetlistDesignPage />} />
           </Route>
           <Route path="*" element={<NotFoundPage />} />
         </Routes>

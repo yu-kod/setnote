@@ -10,7 +10,6 @@ import {
   fetchTrackSuggestions,
   parseImageTracks,
 } from "../api";
-import * as shareImageModule from "../shareImage";
 import { toast } from "sonner";
 import type { Setlist } from "../types";
 
@@ -539,115 +538,20 @@ describe("SetlistEditor", () => {
     expect(mockPublishSetlist).not.toHaveBeenCalled();
   });
 
-  it("shows the share image button only when published", async () => {
+  it("shows the share image link only when published", async () => {
     mockFetchSetlist.mockResolvedValue(buildSetlist({ status: "published" }));
     renderWithProviders(<SetlistEditor id="s1" />);
 
     await screen.findByLabelText("セットリスト名");
-    expect(screen.getByRole("button", { name: "シェア画像" })).toBeInTheDocument();
+    const link = screen.getByRole("link", { name: "シェア画像" });
+    expect(link).toHaveAttribute("href", "/setlists/s1/design");
   });
 
-  it("does not show the share image button when in draft", async () => {
+  it("does not show the share image link when in draft", async () => {
     mockFetchSetlist.mockResolvedValue(buildSetlist({ status: "draft" }));
     renderWithProviders(<SetlistEditor id="s1" />);
 
     await screen.findByLabelText("セットリスト名");
-    expect(screen.queryByRole("button", { name: "シェア画像" })).not.toBeInTheDocument();
-  });
-
-  it("generates and downloads a share image when the button is clicked", async () => {
-    mockFetchSetlist.mockResolvedValue(
-      buildSetlist({
-        name: "Test Set",
-        status: "published",
-        tracks: [
-          { id: "t1", title: "Song", artist: "Artist", songLink: "", source: "", customFields: [] },
-        ],
-      })
-    );
-    const fakeBlob = new Blob(["img"], { type: "image/png" });
-    vi.spyOn(shareImageModule, "renderShareImage").mockResolvedValue(fakeBlob);
-    vi.spyOn(shareImageModule, "downloadBlob").mockImplementation(() => {});
-    const user = userEvent.setup();
-    renderWithProviders(<SetlistEditor id="s1" />);
-
-    await screen.findByLabelText("セットリスト名");
-    await user.click(screen.getByRole("button", { name: "シェア画像" }));
-
-    await waitFor(() => {
-      expect(shareImageModule.renderShareImage).toHaveBeenCalled();
-    });
-    expect(shareImageModule.downloadBlob).toHaveBeenCalledWith(fakeBlob, "test-set-share.png");
-  });
-
-  it("shows an error toast when share image generation fails", async () => {
-    mockFetchSetlist.mockResolvedValue(buildSetlist({ name: "Set", status: "published" }));
-    vi.spyOn(shareImageModule, "renderShareImage").mockRejectedValue(new Error("fail"));
-    vi.spyOn(shareImageModule, "downloadBlob").mockImplementation(() => {});
-    const user = userEvent.setup();
-    renderWithProviders(<SetlistEditor id="s1" />);
-
-    await screen.findByLabelText("セットリスト名");
-    await user.click(screen.getByRole("button", { name: "シェア画像" }));
-
-    await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith("画像の生成に失敗しました");
-    });
-  });
-
-  it("generates share image without thumbnails even when tracks have songLinks", async () => {
-    mockFetchSetlist.mockResolvedValue(
-      buildSetlist({
-        name: "With Thumb",
-        status: "published",
-        tracks: [
-          {
-            id: "t1",
-            title: "Song",
-            artist: "Artist",
-            songLink: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-            source: "",
-            customFields: [],
-          },
-        ],
-      })
-    );
-    const fakeBlob = new Blob(["img"], { type: "image/png" });
-    vi.spyOn(shareImageModule, "renderShareImage").mockResolvedValue(fakeBlob);
-    vi.spyOn(shareImageModule, "downloadBlob").mockImplementation(() => {});
-
-    const user = userEvent.setup();
-    renderWithProviders(<SetlistEditor id="s1" />);
-    await screen.findByLabelText("セットリスト名");
-    await user.click(screen.getByRole("button", { name: "シェア画像" }));
-
-    await waitFor(() => {
-      expect(shareImageModule.renderShareImage).toHaveBeenCalled();
-    });
-    const [input, thumbs] = vi.mocked(shareImageModule.renderShareImage).mock.calls[0];
-    expect(input.thumbnailCount).toBe(0);
-    expect(thumbs).toHaveLength(0);
-  });
-
-  it("uses 'setlist' as the fallback filename when name has no alphanumeric chars", async () => {
-    mockFetchSetlist.mockResolvedValue(
-      buildSetlist({
-        name: "＊＊＊",
-        status: "published",
-        tracks: [],
-      })
-    );
-    const fakeBlob = new Blob(["img"], { type: "image/png" });
-    vi.spyOn(shareImageModule, "renderShareImage").mockResolvedValue(fakeBlob);
-    vi.spyOn(shareImageModule, "downloadBlob").mockImplementation(() => {});
-    const user = userEvent.setup();
-    renderWithProviders(<SetlistEditor id="s1" />);
-
-    await screen.findByLabelText("セットリスト名");
-    await user.click(screen.getByRole("button", { name: "シェア画像" }));
-
-    await waitFor(() => {
-      expect(shareImageModule.downloadBlob).toHaveBeenCalledWith(fakeBlob, "setlist-share.png");
-    });
+    expect(screen.queryByRole("link", { name: "シェア画像" })).not.toBeInTheDocument();
   });
 });

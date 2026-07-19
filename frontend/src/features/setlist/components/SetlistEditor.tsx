@@ -37,7 +37,6 @@ import NotFoundPage from "@/pages/NotFoundPage";
 import { AddTrackForm } from "./AddTrackForm";
 import { ImageTrackImport } from "./ImageTrackImport";
 import { TrackCard } from "./TrackCard";
-import { renderShareImage, downloadBlob } from "../shareImage";
 
 type FormState = {
   name: string;
@@ -68,7 +67,6 @@ export function SetlistEditor({ id }: { id: string }) {
   const [publishing, setPublishing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [suggestions, setSuggestions] = useState<Track[]>([]);
-  const [generatingImage, setGeneratingImage] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -197,31 +195,6 @@ export function SetlistEditor({ id }: { id: string }) {
     toast.success("コピーしました");
   }
 
-  async function handleShareImage() {
-    setGeneratingImage(true);
-    try {
-      const blob = await renderShareImage(
-        {
-          name: form.name,
-          eventName: toNullable(form.eventName),
-          tracks: tracks.map((t) => ({ title: t.title, artist: t.artist })),
-          thumbnailCount: 0,
-        },
-        []
-      );
-      const slug = form.name
-        .trim()
-        .toLowerCase()
-        .replace(/\s+/g, "-")
-        .replace(/[^\w-]/g, "");
-      downloadBlob(blob, `${slug || "setlist"}-share.png`);
-    } catch {
-      toast.error("画像の生成に失敗しました");
-    } finally {
-      setGeneratingImage(false);
-    }
-  }
-
   if (loading) {
     return (
       <div role="status" aria-label="読み込み中" className="space-y-4">
@@ -258,15 +231,11 @@ export function SetlistEditor({ id }: { id: string }) {
           <Button type="button" variant="outline" size="sm" onClick={handleCopy}>
             コピー
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={handleShareImage}
-            disabled={generatingImage}
-          >
-            <ImageDown className="size-4" aria-hidden="true" />
-            {generatingImage ? "生成中..." : "シェア画像"}
+          <Button type="button" variant="outline" size="sm" asChild>
+            <Link to={`/setlists/${id}/design`}>
+              <ImageDown className="size-4" aria-hidden="true" />
+              シェア画像
+            </Link>
           </Button>
         </div>
       )}
