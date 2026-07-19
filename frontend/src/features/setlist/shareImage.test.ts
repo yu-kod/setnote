@@ -31,7 +31,7 @@ function buildColors(overrides: Partial<ColorPreset> = {}): ColorPreset {
     event: "#00ff00",
     trackTitle: "#0000ff",
     trackArtist: "#ffff00",
-    trackNumber: "#999999",
+
     watermark: "#cccccc",
     decorationColor: "#ff00ff",
     ...overrides,
@@ -108,7 +108,6 @@ describe("calculateLayout", () => {
     expect(items.find((i) => i.type === "event")!.color).toBe("#00ff00");
     expect(items.find((i) => i.type === "trackTitle")!.color).toBe("#0000ff");
     expect(items.find((i) => i.type === "trackArtist")!.color).toBe("#ffff00");
-    expect(items.find((i) => i.type === "trackNumber")!.color).toBe("#999999");
   });
 
   it("uses default dark colors when no color preset is provided", () => {
@@ -137,15 +136,6 @@ describe("calculateLayout", () => {
     expect(items.find((item) => item.type === "event")).toBeUndefined();
   });
 
-  it("places track numbers before each track", () => {
-    const { items } = calculateLayout(buildInput());
-    const numbers = items.filter((item) => item.type === "trackNumber");
-    expect(numbers).toHaveLength(2);
-    expect(numbers[0].text).toBe("1");
-    expect(numbers[1].text).toBe("2");
-    expect(numbers[0].textAlign).toBe("right");
-  });
-
   it("places tracks below the header", () => {
     const { items } = calculateLayout(buildInput());
     const header = items.filter((item) => item.type === "title" || item.type === "event");
@@ -156,15 +146,13 @@ describe("calculateLayout", () => {
     expect(tracks[0].text).toBe("Opening");
   });
 
-  it("places artist names on same line as track title, right-aligned", () => {
+  it("places artist names below track title", () => {
     const { items } = calculateLayout(buildInput());
     const trackTitles = items.filter((item) => item.type === "trackTitle");
     const artists = items.filter((item) => item.type === "trackArtist");
     expect(artists.length).toBe(2);
-    expect(artists[0].y).toBe(trackTitles[0].y);
+    expect(artists[0].y).toBeGreaterThan(trackTitles[0].y);
     expect(artists[0].text).toBe("DJ Test");
-    expect(artists[0].x).toBeGreaterThan(trackTitles[0].x);
-    expect(artists[0].textAlign).toBe("right");
   });
 
   it("skips artist items when artist is empty", () => {

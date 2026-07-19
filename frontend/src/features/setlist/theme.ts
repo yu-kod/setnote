@@ -7,7 +7,6 @@ export type ColorPreset = {
   event: string;
   trackTitle: string;
   trackArtist: string;
-  trackNumber: string;
   watermark: string;
   decorationColor: string;
 };
@@ -30,7 +29,7 @@ export const COLOR_PRESETS: ColorPreset[] = [
     event: "#a3a3a3",
     trackTitle: "#e5e5e5",
     trackArtist: "#737373",
-    trackNumber: "#a3a3a3",
+
     watermark: "#525252",
     decorationColor: "#ffffff",
   },
@@ -43,7 +42,7 @@ export const COLOR_PRESETS: ColorPreset[] = [
     event: "#94a3b8",
     trackTitle: "#cbd5e1",
     trackArtist: "#64748b",
-    trackNumber: "#94a3b8",
+
     watermark: "#475569",
     decorationColor: "#94a3b8",
   },
@@ -56,7 +55,7 @@ export const COLOR_PRESETS: ColorPreset[] = [
     event: "#3d7a4f",
     trackTitle: "#1a4d2e",
     trackArtist: "#4a7c59",
-    trackNumber: "#3d7a4f",
+
     watermark: "#a3c4a3",
     decorationColor: "#2d6a3f",
   },
@@ -69,7 +68,7 @@ export const COLOR_PRESETS: ColorPreset[] = [
     event: "#c2410c",
     trackTitle: "#7c2d12",
     trackArtist: "#b45309",
-    trackNumber: "#c2410c",
+
     watermark: "#e8c4a0",
     decorationColor: "#ea580c",
   },
@@ -82,7 +81,7 @@ export const COLOR_PRESETS: ColorPreset[] = [
     event: "#525252",
     trackTitle: "#262626",
     trackArtist: "#737373",
-    trackNumber: "#525252",
+
     watermark: "#d4d4d4",
     decorationColor: "#000000",
   },
@@ -95,7 +94,7 @@ export const COLOR_PRESETS: ColorPreset[] = [
     event: "#c2185b",
     trackTitle: "#880e4f",
     trackArtist: "#ad1457",
-    trackNumber: "#c2185b",
+
     watermark: "#f8bbd0",
     decorationColor: "#e91e63",
   },
@@ -108,7 +107,7 @@ export const COLOR_PRESETS: ColorPreset[] = [
     event: "#00796b",
     trackTitle: "#004d40",
     trackArtist: "#00897b",
-    trackNumber: "#00796b",
+
     watermark: "#b2dfdb",
     decorationColor: "#009688",
   },
