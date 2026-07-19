@@ -21,29 +21,11 @@ function buildInput(overrides: Partial<ShareImageInput> = {}): ShareImageInput {
   };
 }
 
-function buildColors(overrides: Partial<ColorPreset> = {}): ColorPreset {
-  return {
-    id: "test",
-    label: "Test",
-    background: "#000000",
-    card: "#111111",
-    title: "#ff0000",
-    event: "#00ff00",
-    trackTitle: "#0000ff",
-    trackArtist: "#ffff00",
-
-    watermark: "#cccccc",
-    decorationColor: "#ff00ff",
-    ...overrides,
-  };
-}
-
 function createMockCanvas() {
   const ctx = {
     fillStyle: "",
     font: "",
     textBaseline: "",
-    textAlign: "",
     globalAlpha: 1,
     lineWidth: 1,
     strokeStyle: "",
@@ -79,30 +61,58 @@ function createMockCanvas() {
 }
 
 describe("calculateLayout", () => {
-  it("returns fixed 900x1200 canvas for Twitter vertical image", () => {
+  it("returns items, width, and height", () => {
     const result: LayoutResult = calculateLayout(buildInput());
     expect(result.items).toBeInstanceOf(Array);
-    expect(result.width).toBe(900);
-    expect(result.height).toBe(1200);
+    expect(result.width).toBeGreaterThan(0);
+    expect(result.height).toBeGreaterThanOrEqual(675);
   });
 
-  it("always uses fixed 900 width regardless of content", () => {
+  it("adjusts canvas width to fit content", () => {
     const short = calculateLayout(
-      buildInput({ name: "A", tracks: [{ title: "B", artist: "" }], thumbnailCount: 0 })
+      buildInput({ name: "A", tracks: [{ title: "B", artist: "" }], thumbnailCount: 2 })
     );
-    const long = calculateLayout(
-      buildInput({
-        name: "あ".repeat(100),
-        tracks: [{ title: "B", artist: "" }],
-        thumbnailCount: 0,
-      })
+    expect(short.width).toBeLessThan(1200);
+  });
+
+  it("adjusts width for a single thumbnail column", () => {
+    const result = calculateLayout(
+      buildInput({ name: "A", tracks: [{ title: "B", artist: "" }], thumbnailCount: 1 })
     );
-    expect(short.width).toBe(900);
-    expect(long.width).toBe(900);
+    const twoCol = calculateLayout(
+      buildInput({ name: "A", tracks: [{ title: "B", artist: "" }], thumbnailCount: 2 })
+    );
+    expect(result.width).toBeLessThan(twoCol.width);
+  });
+
+  it("uses narrower width when there are no thumbnails", () => {
+    const noThumbs = calculateLayout(
+      buildInput({ name: "Short", tracks: [{ title: "Track", artist: "" }], thumbnailCount: 0 })
+    );
+    const withThumbs = calculateLayout(
+      buildInput({ name: "Short", tracks: [{ title: "Track", artist: "" }], thumbnailCount: 2 })
+    );
+    expect(noThumbs.width).toBeLessThan(withThumbs.width);
+  });
+
+  it("caps canvas width at 1200", () => {
+    const veryLong = "あ".repeat(100);
+    const { width } = calculateLayout(buildInput({ name: veryLong, thumbnailCount: 2 }));
+    expect(width).toBeLessThanOrEqual(1200);
   });
 
   it("applies color preset to layout items", () => {
-    const colors = buildColors();
+    const colors: ColorPreset = {
+      id: "test",
+      label: "Test",
+      background: "#000000",
+      card: "#111111",
+      title: "#ff0000",
+      event: "#00ff00",
+      trackTitle: "#0000ff",
+      trackArtist: "#ffff00",
+      watermark: "#cccccc",
+    };
     const { items } = calculateLayout(buildInput(), undefined, colors);
     expect(items.find((i) => i.type === "title")!.color).toBe("#ff0000");
     expect(items.find((i) => i.type === "event")!.color).toBe("#00ff00");
@@ -146,12 +156,13 @@ describe("calculateLayout", () => {
     expect(tracks[0].text).toBe("Opening");
   });
 
-  it("places artist names below track title", () => {
+  it("places artist names below their track titles with a smaller font", () => {
     const { items } = calculateLayout(buildInput());
     const trackTitles = items.filter((item) => item.type === "trackTitle");
     const artists = items.filter((item) => item.type === "trackArtist");
     expect(artists.length).toBe(2);
     expect(artists[0].y).toBeGreaterThan(trackTitles[0].y);
+    expect(artists[0].fontSize!).toBeLessThan(trackTitles[0].fontSize!);
     expect(artists[0].text).toBe("DJ Test");
   });
 
@@ -175,30 +186,46 @@ describe("calculateLayout", () => {
     expect(trackTitles).toHaveLength(30);
   });
 
-  it("keeps fixed height of 1200 even with many tracks", () => {
+  it("expands height to fit all tracks", () => {
     const manyTracks = Array.from({ length: 30 }, (_, i) => ({
       title: `Track ${i + 1}`,
       artist: `Artist ${i + 1}`,
     }));
     const { height } = calculateLayout(buildInput({ tracks: manyTracks, thumbnailCount: 0 }));
-    expect(height).toBe(1200);
+    expect(height).toBeGreaterThan(675);
   });
 
-  it("maintains fixed height of 1200 for few tracks", () => {
+  it("maintains minimum height of 675 for few tracks", () => {
     const { height } = calculateLayout(
       buildInput({ tracks: [{ title: "Solo", artist: "" }], thumbnailCount: 0 })
     );
-    expect(height).toBe(1200);
+    expect(height).toBe(675);
   });
 
-  it("uses appropriate font sizes for readability", () => {
+  it("uses larger font sizes for readability", () => {
     const { items } = calculateLayout(buildInput());
     const title = items.find((item) => item.type === "title")!;
     const trackTitle = items.find((item) => item.type === "trackTitle")!;
     const artist = items.find((item) => item.type === "trackArtist")!;
-    expect(title.fontSize!).toBeGreaterThanOrEqual(40);
-    expect(trackTitle.fontSize!).toBeGreaterThanOrEqual(20);
+    expect(title.fontSize!).toBeGreaterThanOrEqual(46);
+    expect(trackTitle.fontSize!).toBeGreaterThanOrEqual(26);
     expect(artist.fontSize!).toBeGreaterThanOrEqual(18);
+  });
+
+  it("positions thumbnails right after the longest text", () => {
+    const short = calculateLayout(
+      buildInput({ name: "A", tracks: [{ title: "B", artist: "" }], thumbnailCount: 2 })
+    );
+    const long = calculateLayout(
+      buildInput({
+        name: "吉原ラメント(あんたれすP Remix)",
+        tracks: [{ title: "アニマリズムと25人の子供たち", artist: "" }],
+        thumbnailCount: 2,
+      })
+    );
+    const shortThumb = short.items.find((i) => i.type === "thumbnail")!;
+    const longThumb = long.items.find((i) => i.type === "thumbnail")!;
+    expect(longThumb.x).toBeGreaterThan(shortThumb.x);
   });
 
   it("places thumbnails within canvas bounds", () => {
@@ -209,6 +236,29 @@ describe("calculateLayout", () => {
       expect(thumb.x + thumb.width).toBeLessThanOrEqual(width);
       expect(thumb.y).toBeGreaterThanOrEqual(0);
       expect(thumb.y + thumb.height).toBeLessThanOrEqual(height);
+    }
+  });
+
+  it("aligns thumbnails in a clean grid without jitter", () => {
+    const { items } = calculateLayout(buildInput({ thumbnailCount: 6 }));
+    const thumbnails = items.filter((item) => item.type === "thumbnail");
+    const col1Thumbs = thumbnails.filter((_, i) => i % 2 === 0);
+    const col2Thumbs = thumbnails.filter((_, i) => i % 2 === 1);
+    const col1Xs = new Set(col1Thumbs.map((t) => t.x));
+    const col2Xs = new Set(col2Thumbs.map((t) => t.x));
+    expect(col1Xs.size).toBe(1);
+    expect(col2Xs.size).toBe(1);
+  });
+
+  it("caps text area width so thumbnails always fit", () => {
+    const veryLong = "あ".repeat(100);
+    const { items, width } = calculateLayout(
+      buildInput({ name: veryLong, tracks: [], thumbnailCount: 2 })
+    );
+    const thumbnails = items.filter((i) => i.type === "thumbnail");
+    expect(thumbnails).toHaveLength(2);
+    for (const thumb of thumbnails) {
+      expect(thumb.x + thumb.width).toBeLessThanOrEqual(width);
     }
   });
 
@@ -232,6 +282,27 @@ describe("calculateLayout", () => {
         expect(overlaps, `thumbnails ${i} and ${j} overlap`).toBe(false);
       }
     }
+  });
+
+  it("places all thumbnails without a fixed slot cap", () => {
+    const { items } = calculateLayout(buildInput({ thumbnailCount: 12 }));
+    const thumbnails = items.filter((item) => item.type === "thumbnail");
+    expect(thumbnails).toHaveLength(12);
+  });
+
+  it("expands height to fit many thumbnails", () => {
+    const { height } = calculateLayout(buildInput({ thumbnailCount: 12 }));
+    expect(height).toBeGreaterThan(675);
+  });
+
+  it("skips thumbnails that would overlap with already placed ones", () => {
+    const overlappingSlots: [number, number][] = [
+      [530, 100],
+      [530, 100],
+    ];
+    const { items } = calculateLayout(buildInput({ thumbnailCount: 2 }), overlappingSlots);
+    const thumbnails = items.filter((item) => item.type === "thumbnail");
+    expect(thumbnails).toHaveLength(1);
   });
 });
 
@@ -286,7 +357,17 @@ describe("renderShareImage", () => {
       return origCreateElement(tag);
     });
 
-    const colors = buildColors({ background: "#ff0000" });
+    const colors: ColorPreset = {
+      id: "test",
+      label: "Test",
+      background: "#ff0000",
+      card: "#ffffff",
+      title: "#ffffff",
+      event: "#cccccc",
+      trackTitle: "#eeeeee",
+      trackArtist: "#aaaaaa",
+      watermark: "#888888",
+    };
     await renderShareImage(buildInput({ thumbnailCount: 0 }), [], { colors });
     const fillRectCalls = ctx.fillRect.mock.calls;
     expect(fillRectCalls.length).toBeGreaterThan(0);
@@ -304,7 +385,7 @@ describe("renderShareImage", () => {
     expect(ctx.fill.mock.calls.length).toBeGreaterThan(0);
   });
 
-  it("draws sparkle motifs when decorations include sparkle", async () => {
+  it("draws sparkle motifs on the background", async () => {
     const { canvas, ctx } = createMockCanvas();
     vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
       if (tag === "canvas") return canvas as unknown as HTMLCanvasElement;
@@ -312,13 +393,13 @@ describe("renderShareImage", () => {
     });
 
     await renderShareImage(buildInput({ thumbnailCount: 0 }), [], {
-      decorations: ["sparkle"],
+      decoration: { id: "s", label: "S", motif: "sparkle", color: "#fff" },
     });
     expect(ctx.moveTo.mock.calls.length).toBeGreaterThan(0);
     expect(ctx.lineTo.mock.calls.length).toBeGreaterThan(0);
   });
 
-  it("draws bar motifs when decorations include bars", async () => {
+  it("draws bar motifs on the background", async () => {
     const { canvas, ctx } = createMockCanvas();
     vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
       if (tag === "canvas") return canvas as unknown as HTMLCanvasElement;
@@ -326,13 +407,13 @@ describe("renderShareImage", () => {
     });
 
     await renderShareImage(buildInput({ thumbnailCount: 0 }), [], {
-      decorations: ["bars"],
+      decoration: { id: "b", label: "B", motif: "bars", color: "#fff" },
     });
     expect(ctx.rotate.mock.calls.length).toBeGreaterThan(0);
     expect(ctx.fill.mock.calls.length).toBeGreaterThan(0);
   });
 
-  it("draws dot motifs when decorations include dots", async () => {
+  it("draws dot motifs on the background", async () => {
     const { canvas, ctx } = createMockCanvas();
     vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
       if (tag === "canvas") return canvas as unknown as HTMLCanvasElement;
@@ -340,12 +421,12 @@ describe("renderShareImage", () => {
     });
 
     await renderShareImage(buildInput({ thumbnailCount: 0 }), [], {
-      decorations: ["dots"],
+      decoration: { id: "d", label: "D", motif: "dots", color: "#fff" },
     });
     expect(ctx.arc.mock.calls.length).toBeGreaterThan(0);
   });
 
-  it("draws multiple motifs when multiple decorations are enabled", async () => {
+  it("does not draw motifs when decoration is none", async () => {
     const { canvas, ctx } = createMockCanvas();
     vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
       if (tag === "canvas") return canvas as unknown as HTMLCanvasElement;
@@ -353,21 +434,7 @@ describe("renderShareImage", () => {
     });
 
     await renderShareImage(buildInput({ thumbnailCount: 0 }), [], {
-      decorations: ["sparkle", "bars"],
-    });
-    expect(ctx.moveTo.mock.calls.length).toBeGreaterThan(0);
-    expect(ctx.rotate.mock.calls.length).toBeGreaterThan(0);
-  });
-
-  it("does not draw motifs when decorations is empty", async () => {
-    const { canvas, ctx } = createMockCanvas();
-    vi.spyOn(document, "createElement").mockImplementation((tag: string) => {
-      if (tag === "canvas") return canvas as unknown as HTMLCanvasElement;
-      return origCreateElement(tag);
-    });
-
-    await renderShareImage(buildInput({ thumbnailCount: 0 }), [], {
-      decorations: [],
+      decoration: { id: "n", label: "N", motif: "none", color: "#fff" },
     });
     expect(ctx.arc.mock.calls.length).toBe(0);
     expect(ctx.rotate.mock.calls.length).toBe(0);

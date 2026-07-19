@@ -4,9 +4,9 @@ import { fetchSetlist } from "../api";
 import { renderShareImage, downloadBlob, type ThemeOptions } from "../shareImage";
 import {
   COLOR_PRESETS,
-  DECORATION_OPTIONS,
+  DECORATION_PRESETS,
   type ColorPreset,
-  type DecorationMotif,
+  type DecorationPreset,
 } from "../theme";
 import { Button } from "../../../components/ui/button";
 import type { Setlist } from "../types";
@@ -18,7 +18,7 @@ type LoadState =
 export function SetlistDesigner({ id }: Props) {
   const [state, setState] = useState<LoadState>({ status: "loading" });
   const [colorPreset, setColorPreset] = useState<ColorPreset>(COLOR_PRESETS[0]);
-  const [activeMotifs, setActiveMotifs] = useState<DecorationMotif[]>([]);
+  const [decorationPreset, setDecorationPreset] = useState<DecorationPreset>(DECORATION_PRESETS[0]);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const prevUrlRef = useRef<string | null>(null);
@@ -34,7 +34,7 @@ export function SetlistDesigner({ id }: Props) {
     if (state.status !== "loaded") return;
     let cancelled = false;
     const { setlist } = state;
-    const theme: ThemeOptions = { colors: colorPreset, decorations: activeMotifs };
+    const theme: ThemeOptions = { colors: colorPreset, decoration: decorationPreset };
     const run = async () => {
       setGenerating(true);
       try {
@@ -61,19 +61,13 @@ export function SetlistDesigner({ id }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [state, colorPreset, activeMotifs]);
+  }, [state, colorPreset, decorationPreset]);
 
   useEffect(() => {
     return () => {
       if (prevUrlRef.current) URL.revokeObjectURL(prevUrlRef.current);
     };
   }, []);
-
-  function toggleMotif(motif: DecorationMotif) {
-    setActiveMotifs((prev) =>
-      prev.includes(motif) ? prev.filter((m) => m !== motif) : [...prev, motif]
-    );
-  }
 
   if (state.status === "loading") {
     return (
@@ -98,7 +92,7 @@ export function SetlistDesigner({ id }: Props) {
   const { setlist } = state;
 
   async function handleDownload() {
-    const theme: ThemeOptions = { colors: colorPreset, decorations: activeMotifs };
+    const theme: ThemeOptions = { colors: colorPreset, decoration: decorationPreset };
     const blob = await renderShareImage(
       {
         name: setlist.name,
@@ -119,18 +113,13 @@ export function SetlistDesigner({ id }: Props) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Link
-            to={`/setlists/${id}/edit`}
-            className="text-sm text-muted-foreground hover:text-primary"
-          >
-            &larr; 編集に戻る
-          </Link>
-        </div>
-        <Button onClick={handleDownload} disabled={generating}>
-          ダウンロード
-        </Button>
+      <div className="flex items-center gap-2">
+        <Link
+          to={`/setlists/${id}/edit`}
+          className="text-sm text-muted-foreground hover:text-primary"
+        >
+          &larr; 編集に戻る
+        </Link>
       </div>
 
       <h2 className="text-xl font-bold">シェア画像デザイン</h2>
@@ -170,25 +159,27 @@ export function SetlistDesigner({ id }: Props) {
 
         <fieldset>
           <legend className="sr-only">装飾</legend>
-          <p className="mb-2 text-sm font-medium">装飾（複数選択可）</p>
-          <div className="flex flex-wrap gap-2">
-            {DECORATION_OPTIONS.map((opt) => (
+          <p className="mb-2 text-sm font-medium">装飾</p>
+          <div role="radiogroup" aria-label="装飾" className="flex flex-wrap gap-2">
+            {DECORATION_PRESETS.map((preset) => (
               <label
-                key={opt.motif}
+                key={preset.id}
                 className={`cursor-pointer rounded-lg border px-3 py-2 text-sm transition-colors ${
-                  activeMotifs.includes(opt.motif)
+                  decorationPreset.id === preset.id
                     ? "border-primary bg-primary/10"
                     : "border-border hover:border-primary/50"
                 }`}
               >
                 <input
-                  type="checkbox"
-                  checked={activeMotifs.includes(opt.motif)}
-                  onChange={() => toggleMotif(opt.motif)}
+                  type="radio"
+                  name="decoration-preset"
+                  value={preset.id}
+                  checked={decorationPreset.id === preset.id}
+                  onChange={() => setDecorationPreset(preset)}
                   className="sr-only"
-                  aria-label={opt.label}
+                  aria-label={preset.label}
                 />
-                <span>{opt.label}</span>
+                <span>{preset.label}</span>
               </label>
             ))}
           </div>
@@ -204,6 +195,10 @@ export function SetlistDesigner({ id }: Props) {
           </div>
         )}
       </div>
+
+      <Button onClick={handleDownload} disabled={generating}>
+        ダウンロード
+      </Button>
     </div>
   );
 }

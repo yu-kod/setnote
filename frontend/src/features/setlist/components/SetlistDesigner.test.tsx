@@ -65,13 +65,11 @@ describe("SetlistDesigner", () => {
     });
   });
 
-  it("renders decoration checkboxes", async () => {
+  it("renders decoration preset selector", async () => {
     mockFetchSetlist.mockResolvedValue(buildSetlist());
     renderWithProviders(<SetlistDesigner id="s1" />);
     await waitFor(() => {
-      expect(screen.getByRole("checkbox", { name: "キラキラ" })).toBeInTheDocument();
-      expect(screen.getByRole("checkbox", { name: "バー" })).toBeInTheDocument();
-      expect(screen.getByRole("checkbox", { name: "ドット" })).toBeInTheDocument();
+      expect(screen.getByRole("radiogroup", { name: "装飾" })).toBeInTheDocument();
     });
   });
 
@@ -111,31 +109,23 @@ describe("SetlistDesigner", () => {
     });
   });
 
-  it("changes preview when a decoration checkbox is toggled", async () => {
+  it("changes preview when a different decoration preset is selected", async () => {
     mockFetchSetlist.mockResolvedValue(buildSetlist());
 
     const user = userEvent.setup();
     renderWithProviders(<SetlistDesigner id="s1" />);
 
     await waitFor(() => {
-      expect(screen.getByRole("checkbox", { name: "キラキラ" })).toBeInTheDocument();
+      expect(screen.getByRole("radiogroup", { name: "装飾" })).toBeInTheDocument();
     });
 
-    const sparkleCheckbox = screen.getByRole("checkbox", { name: "キラキラ" });
-    await user.click(sparkleCheckbox);
+    const sparkleRadio = screen.getByRole("radio", { name: "キラキラ" });
+    await user.click(sparkleRadio);
 
     await waitFor(() => {
       const calls = mockRenderShareImage.mock.calls;
       const lastCall = calls[calls.length - 1];
-      expect(lastCall[2]?.decorations).toContain("sparkle");
-    });
-
-    await user.click(sparkleCheckbox);
-
-    await waitFor(() => {
-      const calls = mockRenderShareImage.mock.calls;
-      const lastCall = calls[calls.length - 1];
-      expect(lastCall[2]?.decorations).not.toContain("sparkle");
+      expect(lastCall[2]?.decoration?.id).toBe("sparkle");
     });
   });
 
