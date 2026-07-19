@@ -1,8 +1,20 @@
+import {
+  type ColorPreset,
+  type DecorationPreset,
+  getColorPreset,
+  getDecorationPreset,
+} from "./theme";
+
 export type ShareImageInput = {
   name: string;
   eventName: string | null;
   tracks: { title: string; artist: string }[];
   thumbnailCount: number;
+};
+
+export type ThemeOptions = {
+  colors?: ColorPreset;
+  decoration?: DecorationPreset;
 };
 
 export type LayoutItem = {
@@ -55,8 +67,13 @@ function estimateTextWidth(text: string, fontSize: number): number {
   return width;
 }
 
-export function calculateLayout(input: ShareImageInput, slots?: [number, number][]): LayoutResult {
+export function calculateLayout(
+  input: ShareImageInput,
+  slots?: [number, number][],
+  colors?: ColorPreset
+): LayoutResult {
   const items: LayoutItem[] = [];
+  const c = colors ?? getColorPreset("dark");
 
   const titleFontSize = 48;
   const eventFontSize = 30;
@@ -100,7 +117,7 @@ export function calculateLayout(input: ShareImageInput, slots?: [number, number]
     text: input.name,
     fontSize: titleFontSize,
     fontWeight: "bold",
-    color: "#f5f5f5",
+    color: c.title,
   });
 
   let trackStartY = 115;
@@ -115,7 +132,7 @@ export function calculateLayout(input: ShareImageInput, slots?: [number, number]
       text: input.eventName,
       fontSize: eventFontSize,
       fontWeight: "normal",
-      color: "#a3a3a3",
+      color: c.event,
     });
     trackStartY = 150;
   }
@@ -131,7 +148,7 @@ export function calculateLayout(input: ShareImageInput, slots?: [number, number]
       text: track.title,
       fontSize: trackTitleSize,
       fontWeight: "600",
-      color: "#e5e5e5",
+      color: c.trackTitle,
     });
     y += trackTitleSize + 4;
 
@@ -145,7 +162,7 @@ export function calculateLayout(input: ShareImageInput, slots?: [number, number]
         text: track.artist,
         fontSize: trackArtistSize,
         fontWeight: "normal",
-        color: "#737373",
+        color: c.trackArtist,
       });
       y += trackArtistSize + 2;
     }
@@ -189,17 +206,22 @@ export function calculateLayout(input: ShareImageInput, slots?: [number, number]
 
 export async function renderShareImage(
   input: ShareImageInput,
-  thumbnails: HTMLImageElement[]
+  thumbnails: HTMLImageElement[],
+  theme?: ThemeOptions
 ): Promise<Blob> {
-  const { items: layout, width, height } = calculateLayout(input);
+  const colors = theme?.colors ?? getColorPreset("dark");
+  const decoration = theme?.decoration ?? getDecorationPreset("none");
+  const { items: layout, width, height } = calculateLayout(input, undefined, colors);
 
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext("2d")!;
 
-  ctx.fillStyle = "#1a1a1a";
+  ctx.fillStyle = colors.background;
   ctx.fillRect(0, 0, width, height);
+
+  drawDecoration(ctx, width, height, decoration);
 
   for (const item of layout) {
     if (item.type === "thumbnail") {
@@ -220,7 +242,7 @@ export async function renderShareImage(
     }
   }
 
-  ctx.fillStyle = "#525252";
+  ctx.fillStyle = colors.watermark;
   ctx.font = '14px "Noto Sans JP", sans-serif';
   ctx.textBaseline = "bottom";
   ctx.fillText("setnote", width - PAD - ctx.measureText("setnote").width, height - 16);
@@ -231,6 +253,68 @@ export async function renderShareImage(
       "image/png"
     );
   });
+}
+
+function drawDecoration(
+  ctx: CanvasRenderingContext2D,
+  w: number,
+  h: number,
+  decoration: DecorationPreset
+) {
+  ctx.save();
+  ctx.globalAlpha = 0.06;
+  ctx.fillStyle = decoration.color;
+
+  switch (decoration.pattern) {
+    case "dots":
+      for (let x = 20; x < w; x += 40) {
+        for (let y = 20; y < h; y += 40) {
+          ctx.beginPath();
+          ctx.arc(x, y, 2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      break;
+    case "grid":
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = decoration.color;
+      ctx.globalAlpha = 0.04;
+      for (let x = 0; x < w; x += 40) {
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, h);
+        ctx.stroke();
+      }
+      for (let y = 0; y < h; y += 40) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+      }
+      break;
+    case "diagonal":
+      ctx.lineWidth = 1;
+      ctx.strokeStyle = decoration.color;
+      ctx.globalAlpha = 0.05;
+      for (let i = -h; i < w; i += 30) {
+        ctx.beginPath();
+        ctx.moveTo(i, 0);
+        ctx.lineTo(i + h, h);
+        ctx.stroke();
+      }
+      break;
+    case "border": {
+      ctx.globalAlpha = 0.15;
+      ctx.strokeStyle = decoration.color;
+      ctx.lineWidth = 3;
+      const m = 16;
+      roundRect(ctx, m, m, w - 2 * m, h - 2 * m, 12);
+      ctx.stroke();
+      break;
+    }
+  }
+
+  ctx.restore();
 }
 
 function roundRect(
