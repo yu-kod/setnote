@@ -7,7 +7,8 @@ import {
   unlikeTrack,
 } from "../features/setlist/api";
 import { getLikedTrackIds, markLiked, unmarkLiked } from "../features/setlist/likes";
-import type { Setlist } from "../features/setlist/types";
+import { groupTracks } from "../features/setlist/trackGroup";
+import type { Setlist, Track } from "../features/setlist/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExternalLink, Heart } from "lucide-react";
@@ -77,8 +78,16 @@ export default function SetlistPage() {
   }
 
   const tracks = setlist.tracks;
+  const groups = groupTracks(tracks);
+  const trackNumber = new Map<string, number>();
+  groups.forEach((group, gi) => {
+    for (const t of group) trackNumber.set(t.id, gi + 1);
+  });
   // 未選択（初期表示）は先頭曲を開いた状態にする。
   const selected = tracks.find((t) => t.id === selectedId) ?? tracks[0];
+  const selectedGroup: Track[] = selected
+    ? groups.find((g) => g.some((t) => t.id === selected.id))!
+    : [];
 
   const handleSelect = (trackId: string) => {
     setSelectedId(trackId);
@@ -122,7 +131,7 @@ export default function SetlistPage() {
         <div className="space-y-4">
           {/* 目次：全曲を一覧表示。行をタップすると下のプレイヤーが切り替わる。 */}
           <ol className="divide-y overflow-hidden rounded-md border">
-            {tracks.map((track, i) => {
+            {tracks.map((track) => {
               const active = track.id === selected.id;
               const alreadyLiked = liked.has(track.id);
               return (
@@ -135,7 +144,7 @@ export default function SetlistPage() {
                       active ? "bg-muted" : "hover:bg-muted/50"
                     }`}
                   >
-                    <span className="text-muted-foreground">{i + 1}.</span>
+                    <span className="text-muted-foreground">{trackNumber.get(track.id)}.</span>
                     <span className="font-medium">{track.title}</span>
                     {track.artist && (
                       <span className="text-muted-foreground">— {track.artist}</span>
@@ -161,43 +170,47 @@ export default function SetlistPage() {
             })}
           </ol>
 
-          {/* 選択中の1曲だけをプレイヤーとして開く。 */}
+          {/* 選択中のグループをプレイヤーとして開く。 */}
           <div ref={playerRef} role="region" aria-label="選択中の曲">
             <Card>
               <CardContent className="space-y-3">
-                {selected.songLink ? (
-                  <MediaEmbed url={selected.songLink} />
-                ) : (
-                  <p className="text-sm text-muted-foreground">再生リンクはありません</p>
-                )}
-                <div>
-                  <p className="font-semibold">{selected.title}</p>
-                  {selected.artist && (
-                    <p className="text-sm text-muted-foreground">{selected.artist}</p>
-                  )}
-                </div>
-                {selected.source &&
-                  (isUrl(selected.source) ? (
-                    <a
-                      href={selected.source}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="block text-sm text-primary underline underline-offset-4"
-                    >
-                      入手元
-                    </a>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">入手元: {selected.source}</p>
-                  ))}
-                {selected.customFields.length > 0 && (
-                  <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                    {selected.customFields.map((f) => (
-                      <span key={f.id}>
-                        {f.label}: {f.value}
-                      </span>
-                    ))}
+                {selectedGroup.map((t) => (
+                  <div key={t.id} className="space-y-3">
+                    {t.songLink ? (
+                      <MediaEmbed url={t.songLink} />
+                    ) : (
+                      <p className="text-sm text-muted-foreground">再生リンクはありません</p>
+                    )}
+                    <div>
+                      <p className="font-semibold">{t.title}</p>
+                      {t.artist && (
+                        <p className="text-sm text-muted-foreground">{t.artist}</p>
+                      )}
+                    </div>
+                    {t.source &&
+                      (isUrl(t.source) ? (
+                        <a
+                          href={t.source}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="block text-sm text-primary underline underline-offset-4"
+                        >
+                          入手元
+                        </a>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">入手元: {t.source}</p>
+                      ))}
+                    {t.customFields.length > 0 && (
+                      <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                        {t.customFields.map((f) => (
+                          <span key={f.id}>
+                            {f.label}: {f.value}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                )}
+                ))}
               </CardContent>
             </Card>
           </div>

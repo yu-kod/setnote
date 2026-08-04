@@ -11,6 +11,7 @@ describe("createTrack", () => {
       songLink: "",
       source: "",
       customFields: [],
+      groupId: null,
     });
   });
 

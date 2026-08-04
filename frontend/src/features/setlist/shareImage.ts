@@ -8,7 +8,7 @@ import {
 export type ShareImageInput = {
   name: string;
   eventName: string | null;
-  tracks: { title: string; artist: string }[];
+  tracks: { title: string; artist: string; groupId?: string | null }[];
   thumbnailCount: number;
 };
 
@@ -141,7 +141,8 @@ export function calculateLayout(
   }
 
   let y = trackStartY;
-  for (const track of input.tracks) {
+  for (let ti = 0; ti < input.tracks.length; ti++) {
+    const track = input.tracks[ti];
     items.push({
       type: "trackTitle",
       x: PAD,
@@ -170,7 +171,9 @@ export function calculateLayout(
       y += trackArtistSize + 2;
     }
 
-    y += trackGap;
+    const next = input.tracks[ti + 1];
+    const sameGroup = track.groupId && next && next.groupId === track.groupId;
+    if (!sameGroup) y += trackGap;
   }
 
   const trackBottom = y;

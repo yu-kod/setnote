@@ -14,7 +14,7 @@ import type { Setlist, Track } from "../types";
 import type { ParsedTrack } from "../api";
 import { matchImportedTracks } from "../importMatch";
 import { hasEmptyTitleTracks } from "../trackValidation";
-import { GripVertical, ImageDown } from "lucide-react";
+import { GripVertical, ImageDown, Link2, Unlink2 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,6 +37,7 @@ import NotFoundPage from "@/pages/NotFoundPage";
 import { AddTrackForm } from "./AddTrackForm";
 import { ImageTrackImport } from "./ImageTrackImport";
 import { TrackCard } from "./TrackCard";
+import { toggleGroup } from "../trackGroup";
 
 type FormState = {
   name: string;
@@ -305,30 +306,51 @@ export function SetlistEditor({ id }: { id: string }) {
           getItemValue={(t) => t.id}
           className="space-y-3"
         >
-          {tracks.map((track, i) => (
-            <SortableItem key={track.id} value={track.id}>
-              <TrackCard
-                track={track}
-                index={i}
-                onChange={(updated) => updateTrack(track.id, updated)}
-                onDelete={() => removeTrack(track.id)}
-                suggestions={suggestions}
-                dragHandle={
-                  <SortableItemHandle asChild>
+          {tracks.map((track, i) => {
+            const next = tracks[i + 1];
+            const isGrouped =
+              next && track.groupId !== null && track.groupId === next.groupId;
+            return (
+              <div key={track.id}>
+                <SortableItem value={track.id}>
+                  <TrackCard
+                    track={track}
+                    index={i}
+                    onChange={(updated) => updateTrack(track.id, updated)}
+                    onDelete={() => removeTrack(track.id)}
+                    suggestions={suggestions}
+                    dragHandle={
+                      <SortableItemHandle asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          aria-label="並べ替え"
+                          className="text-muted-foreground"
+                        >
+                          <GripVertical />
+                        </Button>
+                      </SortableItemHandle>
+                    }
+                  />
+                </SortableItem>
+                {next && (
+                  <div className="flex justify-center py-1">
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
-                      aria-label="並べ替え"
-                      className="text-muted-foreground"
+                      aria-label={isGrouped ? "結合解除" : "結合"}
+                      className="size-6 text-muted-foreground"
+                      onClick={() => setTracks(toggleGroup(tracks, i))}
                     >
-                      <GripVertical />
+                      {isGrouped ? <Unlink2 className="size-3.5" /> : <Link2 className="size-3.5" />}
                     </Button>
-                  </SortableItemHandle>
-                }
-              />
-            </SortableItem>
-          ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </Sortable>
         <AddTrackForm onAdd={addTrack} />
         <ImageTrackImport onImport={importTracks} />
