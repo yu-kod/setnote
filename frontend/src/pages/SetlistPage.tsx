@@ -183,9 +183,7 @@ export default function SetlistPage() {
                     )}
                     <div>
                       <p className="font-semibold">{t.title}</p>
-                      {t.artist && (
-                        <p className="text-sm text-muted-foreground">{t.artist}</p>
-                      )}
+                      {t.artist && <p className="text-sm text-muted-foreground">{t.artist}</p>}
                     </div>
                     {t.source &&
                       (isUrl(t.source) ? (

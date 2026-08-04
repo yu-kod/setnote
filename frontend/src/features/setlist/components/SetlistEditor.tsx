@@ -308,8 +308,7 @@ export function SetlistEditor({ id }: { id: string }) {
         >
           {tracks.map((track, i) => {
             const next = tracks[i + 1];
-            const isGrouped =
-              next && track.groupId !== null && track.groupId === next.groupId;
+            const isGrouped = next && track.groupId !== null && track.groupId === next.groupId;
             return (
               <div key={track.id}>
                 <SortableItem value={track.id}>
@@ -344,7 +343,11 @@ export function SetlistEditor({ id }: { id: string }) {
                       className="size-6 text-muted-foreground"
                       onClick={() => setTracks(toggleGroup(tracks, i))}
                     >
-                      {isGrouped ? <Unlink2 className="size-3.5" /> : <Link2 className="size-3.5" />}
+                      {isGrouped ? (
+                        <Unlink2 className="size-3.5" />
+                      ) : (
+                        <Link2 className="size-3.5" />
+                      )}
                     </Button>
                   </div>
                 )}

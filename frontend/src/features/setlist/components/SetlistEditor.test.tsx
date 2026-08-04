@@ -552,8 +552,24 @@ describe("SetlistEditor", () => {
       buildSetlist({
         name: "Set",
         tracks: [
-          { id: "a", title: "Track A", artist: "", songLink: "", source: "", customFields: [], groupId: null },
-          { id: "b", title: "Track B", artist: "", songLink: "", source: "", customFields: [], groupId: null },
+          {
+            id: "a",
+            title: "Track A",
+            artist: "",
+            songLink: "",
+            source: "",
+            customFields: [],
+            groupId: null,
+          },
+          {
+            id: "b",
+            title: "Track B",
+            artist: "",
+            songLink: "",
+            source: "",
+            customFields: [],
+            groupId: null,
+          },
         ],
       })
     );
@@ -568,8 +584,24 @@ describe("SetlistEditor", () => {
       buildSetlist({
         name: "Set",
         tracks: [
-          { id: "a", title: "Track A", artist: "", songLink: "", source: "", customFields: [], groupId: null },
-          { id: "b", title: "Track B", artist: "", songLink: "", source: "", customFields: [], groupId: null },
+          {
+            id: "a",
+            title: "Track A",
+            artist: "",
+            songLink: "",
+            source: "",
+            customFields: [],
+            groupId: null,
+          },
+          {
+            id: "b",
+            title: "Track B",
+            artist: "",
+            songLink: "",
+            source: "",
+            customFields: [],
+            groupId: null,
+          },
         ],
       })
     );
@@ -594,8 +626,24 @@ describe("SetlistEditor", () => {
       buildSetlist({
         name: "Set",
         tracks: [
-          { id: "a", title: "Track A", artist: "", songLink: "", source: "", customFields: [], groupId: "g1" },
-          { id: "b", title: "Track B", artist: "", songLink: "", source: "", customFields: [], groupId: "g1" },
+          {
+            id: "a",
+            title: "Track A",
+            artist: "",
+            songLink: "",
+            source: "",
+            customFields: [],
+            groupId: "g1",
+          },
+          {
+            id: "b",
+            title: "Track B",
+            artist: "",
+            songLink: "",
+            source: "",
+            customFields: [],
+            groupId: "g1",
+          },
         ],
       })
     );

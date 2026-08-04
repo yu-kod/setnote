@@ -61,10 +61,7 @@ describe("toggleGroup", () => {
   });
 
   it("unlinks two grouped adjacent tracks", () => {
-    const tracks = [
-      buildTrack({ id: "a", groupId: "g1" }),
-      buildTrack({ id: "b", groupId: "g1" }),
-    ];
+    const tracks = [buildTrack({ id: "a", groupId: "g1" }), buildTrack({ id: "b", groupId: "g1" })];
     const result = toggleGroup(tracks, 0);
     expect(result[0].groupId).toBeNull();
     expect(result[1].groupId).toBeNull();

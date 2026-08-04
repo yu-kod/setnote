@@ -20,16 +20,13 @@ export function toggleGroup(tracks: Track[], gapIndex: number): Track[] {
   const b = tracks[gapIndex + 1];
 
   if (a.groupId && a.groupId === b.groupId) {
-    return tracks.map((t) =>
-      t.groupId === a.groupId ? { ...t, groupId: null } : t
-    );
+    return tracks.map((t) => (t.groupId === a.groupId ? { ...t, groupId: null } : t));
   }
 
   const groupId = a.groupId ?? b.groupId ?? crypto.randomUUID();
   return tracks.map((t) => {
     if (t === a || t === b) return { ...t, groupId };
-    if (t.groupId && (t.groupId === a.groupId || t.groupId === b.groupId))
-      return { ...t, groupId };
+    if (t.groupId && (t.groupId === a.groupId || t.groupId === b.groupId)) return { ...t, groupId };
     return t;
   });
 }

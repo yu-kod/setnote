@@ -247,10 +247,42 @@ describe("SetlistPage", () => {
       buildPublicSetlist({
         name: "Grouped",
         tracks: [
-          { id: "t1", title: "Solo", artist: "A", songLink: "", source: "", customFields: [], groupId: null },
-          { id: "t2", title: "Blend A", artist: "B", songLink: "", source: "", customFields: [], groupId: "g1" },
-          { id: "t3", title: "Blend B", artist: "C", songLink: "", source: "", customFields: [], groupId: "g1" },
-          { id: "t4", title: "Closer", artist: "D", songLink: "", source: "", customFields: [], groupId: null },
+          {
+            id: "t1",
+            title: "Solo",
+            artist: "A",
+            songLink: "",
+            source: "",
+            customFields: [],
+            groupId: null,
+          },
+          {
+            id: "t2",
+            title: "Blend A",
+            artist: "B",
+            songLink: "",
+            source: "",
+            customFields: [],
+            groupId: "g1",
+          },
+          {
+            id: "t3",
+            title: "Blend B",
+            artist: "C",
+            songLink: "",
+            source: "",
+            customFields: [],
+            groupId: "g1",
+          },
+          {
+            id: "t4",
+            title: "Closer",
+            artist: "D",
+            songLink: "",
+            source: "",
+            customFields: [],
+            groupId: null,
+          },
         ],
       })
     );
@@ -272,9 +304,33 @@ describe("SetlistPage", () => {
       buildPublicSetlist({
         name: "Grouped",
         tracks: [
-          { id: "t1", title: "Solo", artist: "", songLink: "", source: "", customFields: [], groupId: null },
-          { id: "t2", title: "Blend A", artist: "B", songLink: "", source: "", customFields: [], groupId: "g1" },
-          { id: "t3", title: "Blend B", artist: "C", songLink: "", source: "", customFields: [], groupId: "g1" },
+          {
+            id: "t1",
+            title: "Solo",
+            artist: "",
+            songLink: "",
+            source: "",
+            customFields: [],
+            groupId: null,
+          },
+          {
+            id: "t2",
+            title: "Blend A",
+            artist: "B",
+            songLink: "",
+            source: "",
+            customFields: [],
+            groupId: "g1",
+          },
+          {
+            id: "t3",
+            title: "Blend B",
+            artist: "C",
+            songLink: "",
+            source: "",
+            customFields: [],
+            groupId: "g1",
+          },
         ],
       })
     );
