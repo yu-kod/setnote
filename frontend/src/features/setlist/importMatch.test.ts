@@ -11,6 +11,7 @@ function track(overrides: Partial<Track>): Track {
     songLink: "",
     source: "",
     customFields: [],
+    groupId: null,
     ...overrides,
   };
 }

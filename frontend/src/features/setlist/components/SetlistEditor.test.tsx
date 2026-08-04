@@ -11,7 +11,7 @@ import {
   parseImageTracks,
 } from "../api";
 import { toast } from "sonner";
-import type { Setlist } from "../types";
+import type { Setlist, Track } from "../types";
 
 const { mockNavigate } = vi.hoisted(() => ({ mockNavigate: vi.fn() }));
 vi.mock("react-router-dom", async () => {
@@ -150,6 +150,7 @@ describe("SetlistEditor", () => {
       songLink: "",
       source: "",
       customFields: [],
+      groupId: null,
     };
     const original = buildSetlist({ name: "Old", tracks: [keepTrack] });
     mockFetchSetlist.mockResolvedValue(original);
@@ -235,8 +236,24 @@ describe("SetlistEditor", () => {
       buildSetlist({
         name: "Set",
         tracks: [
-          { id: "a", title: "First", artist: "", songLink: "", source: "", customFields: [] },
-          { id: "b", title: "Second", artist: "", songLink: "", source: "", customFields: [] },
+          {
+            id: "a",
+            title: "First",
+            artist: "",
+            songLink: "",
+            source: "",
+            customFields: [],
+            groupId: null,
+          },
+          {
+            id: "b",
+            title: "Second",
+            artist: "",
+            songLink: "",
+            source: "",
+            customFields: [],
+            groupId: null,
+          },
         ],
       })
     );
@@ -420,7 +437,15 @@ describe("SetlistEditor", () => {
   it("shows suggestions in the track card title input", async () => {
     mockFetchSetlist.mockResolvedValue(buildSetlist({ name: "Set", tracks: [] }));
     mockFetchTrackSuggestions.mockResolvedValue([
-      { id: "p1", title: "Past Song", artist: "DJ P", songLink: "", source: "", customFields: [] },
+      {
+        id: "p1",
+        title: "Past Song",
+        artist: "DJ P",
+        songLink: "",
+        source: "",
+        customFields: [],
+        groupId: null,
+      },
     ]);
     const user = userEvent.setup();
     renderWithProviders(<SetlistEditor id="s1" />);
@@ -480,6 +505,7 @@ describe("SetlistEditor", () => {
         songLink: "https://link",
         source: "Beatport",
         customFields: [{ id: "c1", label: "BPM", value: "128" }],
+        groupId: null,
       },
     ]);
     mockParseImageTracks.mockResolvedValue([{ title: "Track A", artist: "Artist A" }]);
@@ -616,7 +642,7 @@ describe("SetlistEditor", () => {
     await waitFor(() => {
       expect(mockUpdateSetlist).toHaveBeenCalled();
     });
-    const tracks = mockUpdateSetlist.mock.calls[0][1].tracks;
+    const tracks = mockUpdateSetlist.mock.calls[0][1].tracks as Track[];
     expect(tracks[0].groupId).toBeTruthy();
     expect(tracks[0].groupId).toBe(tracks[1].groupId);
   });
@@ -659,7 +685,7 @@ describe("SetlistEditor", () => {
     await waitFor(() => {
       expect(mockUpdateSetlist).toHaveBeenCalled();
     });
-    const tracks = mockUpdateSetlist.mock.calls[0][1].tracks;
+    const tracks = mockUpdateSetlist.mock.calls[0][1].tracks as Track[];
     expect(tracks[0].groupId).toBeNull();
     expect(tracks[1].groupId).toBeNull();
   });

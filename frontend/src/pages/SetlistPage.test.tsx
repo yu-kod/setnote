@@ -57,7 +57,17 @@ beforeEach(() => {
 
 function buildLikableSetlist() {
   return buildPublicSetlist({
-    tracks: [{ id: "t1", title: "Song A", artist: "", songLink: "", source: "", customFields: [] }],
+    tracks: [
+      {
+        id: "t1",
+        title: "Song A",
+        artist: "",
+        songLink: "",
+        source: "",
+        customFields: [],
+        groupId: null,
+      },
+    ],
     likeCounts: { t1: 2 },
   });
 }
@@ -114,6 +124,7 @@ describe("SetlistPage", () => {
             songLink: "https://youtu.be/dQw4w9WgXcQ",
             source: "https://shop.example.com",
             customFields: [{ id: "c1", label: "BPM", value: "128" }],
+            groupId: null,
           },
           {
             id: "t2",
@@ -122,6 +133,7 @@ describe("SetlistPage", () => {
             songLink: "https://example.com/track",
             source: "レコード店で購入",
             customFields: [],
+            groupId: null,
           },
         ],
       })
@@ -182,7 +194,15 @@ describe("SetlistPage", () => {
       buildPublicSetlist({
         name: "Bare",
         tracks: [
-          { id: "t3", title: "Solo", artist: "", songLink: "", source: "", customFields: [] },
+          {
+            id: "t3",
+            title: "Solo",
+            artist: "",
+            songLink: "",
+            source: "",
+            customFields: [],
+            groupId: null,
+          },
         ],
       })
     );
@@ -200,7 +220,17 @@ describe("SetlistPage", () => {
       buildPublicSetlist({
         name: "Set",
         eventName: "Club Night",
-        tracks: [{ id: "t9", title: "X", artist: "", songLink: "", source: "", customFields: [] }],
+        tracks: [
+          {
+            id: "t9",
+            title: "X",
+            artist: "",
+            songLink: "",
+            source: "",
+            customFields: [],
+            groupId: null,
+          },
+        ],
       })
     );
     renderWithProviders(<SetlistPage />);
