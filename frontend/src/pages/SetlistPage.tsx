@@ -130,12 +130,21 @@ export default function SetlistPage() {
       {selected ? (
         <div className="space-y-4">
           {/* 目次：全曲を一覧表示。行をタップすると下のプレイヤーが切り替わる。 */}
-          <ol className="divide-y overflow-hidden rounded-md border">
-            {tracks.map((track) => {
+          <ol className="overflow-hidden rounded-md border">
+            {tracks.map((track, i) => {
               const active = track.id === selected.id;
               const alreadyLiked = liked.has(track.id);
+              const prevTrack = tracks[i - 1];
+              const isGroupedWithPrev =
+                prevTrack && track.groupId != null && prevTrack.groupId === track.groupId;
               return (
-                <li key={track.id} className="flex items-stretch">
+                <li
+                  key={track.id}
+                  className={`flex items-stretch ${i > 0 && !isGroupedWithPrev ? "border-t" : ""}`}
+                >
+                  {track.groupId != null && (
+                    <div className="w-1 shrink-0 bg-primary" aria-hidden="true" />
+                  )}
                   <button
                     type="button"
                     onClick={() => handleSelect(track.id)}
@@ -148,6 +157,11 @@ export default function SetlistPage() {
                     <span className="font-medium">{track.title}</span>
                     {track.artist && (
                       <span className="text-muted-foreground">— {track.artist}</span>
+                    )}
+                    {isGroupedWithPrev && (
+                      <span className="rounded bg-primary/10 px-1 py-0.5 text-[10px] font-semibold text-primary">
+                        B2B
+                      </span>
                     )}
                   </button>
                   <button
