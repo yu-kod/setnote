@@ -327,6 +327,11 @@ describe("SetlistPage", () => {
     expect(within(items[1]).getByText("2.")).toBeInTheDocument();
     expect(within(items[2]).getByText("2.")).toBeInTheDocument();
     expect(within(items[3]).getByText("3.")).toBeInTheDocument();
+
+    // 結合された2曲目にB2Bマークが表示される
+    expect(within(items[2]).getByText("B2B")).toBeInTheDocument();
+    // 結合グループの先頭にはB2Bマークは付かない
+    expect(within(items[1]).queryByText("B2B")).not.toBeInTheDocument();
   });
 
   it("shows both tracks in the player when a grouped track is selected", async () => {

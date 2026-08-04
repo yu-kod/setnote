@@ -338,15 +338,20 @@ export function SetlistEditor({ id }: { id: string }) {
                     <Button
                       type="button"
                       variant="ghost"
-                      size="icon"
-                      aria-label={isGrouped ? "結合解除" : "結合"}
-                      className="size-6 text-muted-foreground"
+                      size="sm"
+                      className="h-6 gap-1 text-xs text-muted-foreground"
                       onClick={() => setTracks(toggleGroup(tracks, i))}
                     >
                       {isGrouped ? (
-                        <Unlink2 className="size-3.5" />
+                        <>
+                          <Unlink2 aria-hidden="true" className="size-3.5" />
+                          結合解除
+                        </>
                       ) : (
-                        <Link2 className="size-3.5" />
+                        <>
+                          <Link2 aria-hidden="true" className="size-3.5" />
+                          結合
+                        </>
                       )}
                     </Button>
                   </div>

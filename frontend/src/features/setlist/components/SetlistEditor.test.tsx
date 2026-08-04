@@ -602,7 +602,9 @@ describe("SetlistEditor", () => {
     renderWithProviders(<SetlistEditor id="s1" />);
     await screen.findByLabelText("セットリスト名");
 
-    expect(screen.getByRole("button", { name: "結合" })).toBeInTheDocument();
+    const linkBtn = screen.getByRole("button", { name: "結合" });
+    expect(linkBtn).toBeInTheDocument();
+    expect(linkBtn).toHaveTextContent("結合");
   });
 
   it("groups two tracks when the link button is clicked", async () => {
@@ -678,8 +680,10 @@ describe("SetlistEditor", () => {
     renderWithProviders(<SetlistEditor id="s1" />);
     await screen.findByLabelText("セットリスト名");
 
-    expect(screen.getByRole("button", { name: "結合解除" })).toBeInTheDocument();
-    await user.click(screen.getByRole("button", { name: "結合解除" }));
+    const unlinkBtn = screen.getByRole("button", { name: "結合解除" });
+    expect(unlinkBtn).toBeInTheDocument();
+    expect(unlinkBtn).toHaveTextContent("結合解除");
+    await user.click(unlinkBtn);
     await user.click(screen.getByRole("button", { name: "保存" }));
 
     await waitFor(() => {
