@@ -284,6 +284,34 @@ describe("calculateLayout", () => {
     }
   });
 
+  it("renders grouped tracks without extra gap between them", () => {
+    const ungrouped = calculateLayout(
+      buildInput({
+        tracks: [
+          { title: "A", artist: "X" },
+          { title: "B", artist: "Y" },
+          { title: "C", artist: "Z" },
+        ],
+        thumbnailCount: 0,
+      })
+    );
+    const grouped = calculateLayout(
+      buildInput({
+        tracks: [
+          { title: "A", artist: "X", groupId: "g1" },
+          { title: "B", artist: "Y", groupId: "g1" },
+          { title: "C", artist: "Z" },
+        ],
+        thumbnailCount: 0,
+      })
+    );
+    const ungroupedTitles = ungrouped.items.filter((i) => i.type === "trackTitle");
+    const groupedTitles = grouped.items.filter((i) => i.type === "trackTitle");
+    const ungroupedGapAB = ungroupedTitles[1].y - ungroupedTitles[0].y;
+    const groupedGapAB = groupedTitles[1].y - groupedTitles[0].y;
+    expect(groupedGapAB).toBeLessThan(ungroupedGapAB);
+  });
+
   it("places all thumbnails without a fixed slot cap", () => {
     const { items } = calculateLayout(buildInput({ thumbnailCount: 12 }));
     const thumbnails = items.filter((item) => item.type === "thumbnail");

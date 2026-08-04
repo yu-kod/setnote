@@ -11,6 +11,7 @@ export type Track = {
   songLink: string;
   source: string;
   customFields: CustomField[];
+  groupId: string | null;
 };
 
 export type Setlist = {

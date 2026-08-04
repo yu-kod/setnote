@@ -10,6 +10,7 @@ export function createTrack(overrides: Partial<Track> = {}): Track {
     songLink: "",
     source: "",
     customFields: [],
+    groupId: null,
     ...overrides,
   };
 }

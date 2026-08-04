@@ -57,7 +57,17 @@ beforeEach(() => {
 
 function buildLikableSetlist() {
   return buildPublicSetlist({
-    tracks: [{ id: "t1", title: "Song A", artist: "", songLink: "", source: "", customFields: [] }],
+    tracks: [
+      {
+        id: "t1",
+        title: "Song A",
+        artist: "",
+        songLink: "",
+        source: "",
+        customFields: [],
+        groupId: null,
+      },
+    ],
     likeCounts: { t1: 2 },
   });
 }
@@ -114,6 +124,7 @@ describe("SetlistPage", () => {
             songLink: "https://youtu.be/dQw4w9WgXcQ",
             source: "https://shop.example.com",
             customFields: [{ id: "c1", label: "BPM", value: "128" }],
+            groupId: null,
           },
           {
             id: "t2",
@@ -122,6 +133,7 @@ describe("SetlistPage", () => {
             songLink: "https://example.com/track",
             source: "レコード店で購入",
             customFields: [],
+            groupId: null,
           },
         ],
       })
@@ -182,7 +194,15 @@ describe("SetlistPage", () => {
       buildPublicSetlist({
         name: "Bare",
         tracks: [
-          { id: "t3", title: "Solo", artist: "", songLink: "", source: "", customFields: [] },
+          {
+            id: "t3",
+            title: "Solo",
+            artist: "",
+            songLink: "",
+            source: "",
+            customFields: [],
+            groupId: null,
+          },
         ],
       })
     );
@@ -200,7 +220,17 @@ describe("SetlistPage", () => {
       buildPublicSetlist({
         name: "Set",
         eventName: "Club Night",
-        tracks: [{ id: "t9", title: "X", artist: "", songLink: "", source: "", customFields: [] }],
+        tracks: [
+          {
+            id: "t9",
+            title: "X",
+            artist: "",
+            songLink: "",
+            source: "",
+            customFields: [],
+            groupId: null,
+          },
+        ],
       })
     );
     renderWithProviders(<SetlistPage />);
@@ -240,6 +270,112 @@ describe("SetlistPage", () => {
     // いいね済みの状態になる（取り消しできるよう有効なまま）
     expect(likeButton("Song A")).toHaveAttribute("aria-pressed", "true");
     expect(likeButton("Song A")).toBeEnabled();
+  });
+
+  it("displays grouped tracks under the same number in the track list", async () => {
+    mockFetch.mockResolvedValue(
+      buildPublicSetlist({
+        name: "Grouped",
+        tracks: [
+          {
+            id: "t1",
+            title: "Solo",
+            artist: "A",
+            songLink: "",
+            source: "",
+            customFields: [],
+            groupId: null,
+          },
+          {
+            id: "t2",
+            title: "Blend A",
+            artist: "B",
+            songLink: "",
+            source: "",
+            customFields: [],
+            groupId: "g1",
+          },
+          {
+            id: "t3",
+            title: "Blend B",
+            artist: "C",
+            songLink: "",
+            source: "",
+            customFields: [],
+            groupId: "g1",
+          },
+          {
+            id: "t4",
+            title: "Closer",
+            artist: "D",
+            songLink: "",
+            source: "",
+            customFields: [],
+            groupId: null,
+          },
+        ],
+      })
+    );
+    renderWithProviders(<SetlistPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "Grouped" })).toBeInTheDocument();
+    });
+
+    const items = screen.getAllByRole("listitem");
+    expect(within(items[0]).getByText("1.")).toBeInTheDocument();
+    expect(within(items[1]).getByText("2.")).toBeInTheDocument();
+    expect(within(items[2]).getByText("2.")).toBeInTheDocument();
+    expect(within(items[3]).getByText("3.")).toBeInTheDocument();
+  });
+
+  it("shows both tracks in the player when a grouped track is selected", async () => {
+    mockFetch.mockResolvedValue(
+      buildPublicSetlist({
+        name: "Grouped",
+        tracks: [
+          {
+            id: "t1",
+            title: "Solo",
+            artist: "",
+            songLink: "",
+            source: "",
+            customFields: [],
+            groupId: null,
+          },
+          {
+            id: "t2",
+            title: "Blend A",
+            artist: "B",
+            songLink: "",
+            source: "",
+            customFields: [],
+            groupId: "g1",
+          },
+          {
+            id: "t3",
+            title: "Blend B",
+            artist: "C",
+            songLink: "",
+            source: "",
+            customFields: [],
+            groupId: "g1",
+          },
+        ],
+      })
+    );
+    const user = userEvent.setup();
+    renderWithProviders(<SetlistPage />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "Grouped" })).toBeInTheDocument();
+    });
+
+    await user.click(selectButton("Blend A"));
+
+    const player = within(screen.getByRole("region", { name: "選択中の曲" }));
+    expect(player.getByText("Blend A")).toBeInTheDocument();
+    expect(player.getByText("Blend B")).toBeInTheDocument();
   });
 
   it("lets a viewer undo a like on an already-liked track", async () => {
