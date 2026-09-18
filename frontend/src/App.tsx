@@ -1,4 +1,4 @@
-import { Routes, Route, Link } from "react-router-dom";
+import { Routes, Route, Link, useLocation } from "react-router-dom";
 import SetlistPage from "./pages/SetlistPage";
 import SignupPage from "./pages/SignupPage";
 import ConfirmPage from "./pages/ConfirmPage";
@@ -20,55 +20,62 @@ import { AdminRoute } from "./features/auth/components/AdminRoute";
 import { useAuth } from "./features/auth/AuthContext";
 import { Button } from "./components/ui/button";
 import { Toaster } from "./components/ui/sonner";
+import { isListViewRoute } from "./features/setlist/listView";
 
 // 狭い画面ではメニューを1行に収めるため、文字とパディングを詰める。
 const navButton = "px-2 text-xs sm:px-3 sm:text-sm";
 
 export default function App() {
   const { isAuthenticated, isAdmin, logout } = useAuth();
+  // 一覧表示はそのままスクリーンショットを撮るための表示なので、
+  // セットリスト以外のもの（サイトのヘッダーとフッター）は画面に残さない。
+  const location = useLocation();
+  const chromeless = isListViewRoute(location.pathname, location.search);
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-2 md:px-6">
       {/* 幅が足りないとき、メニューは途中で折り返さず丸ごと次の行に移る。
-          ロゴに flex-1 を付けるとロゴ側が潰れて文字が重なるので付けない。 */}
-      <header className="flex flex-wrap items-center gap-x-2 gap-y-3 py-6 pb-4">
-        <Link to="/" className="flex min-w-0 items-center gap-2 no-underline">
-          <img src="/icon-192.png" alt="setnote" className="h-9 w-9 shrink-0 sm:h-10 sm:w-10" />
-          <div className="min-w-0">
-            <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
-              setnote
-            </h1>
-            {/* 説明文は狭い画面では省く。メニューと取り合いになって折り返しが増えるため。 */}
-            <p className="hidden text-xs text-muted-foreground sm:block">
-              DJセットリストを作成・共有
-            </p>
-          </div>
-        </Link>
-        <nav className="ml-auto flex shrink-0 items-center gap-1">
-          {isAuthenticated ? (
-            <>
-              <Button variant="ghost" size="sm" className={navButton} asChild>
-                <Link to="/dashboard">ダッシュボード</Link>
-              </Button>
-              <Button variant="ghost" size="sm" className={navButton} asChild>
-                <Link to="/analytics">分析</Link>
-              </Button>
-              {isAdmin && (
+          ロゴのリンクに flex-1 を付けるとロゴ側が先に潰れて文字が重なるので付けない。 */}
+      {!chromeless && (
+        <header className="flex flex-wrap items-center gap-x-2 gap-y-3 py-6 pb-4">
+          <Link to="/" className="flex min-w-0 items-center gap-2 no-underline">
+            <img src="/icon-192.png" alt="setnote" className="h-9 w-9 shrink-0 sm:h-10 sm:w-10" />
+            <div className="min-w-0">
+              <h1 className="text-xl font-bold tracking-tight text-foreground sm:text-2xl">
+                setnote
+              </h1>
+              {/* 説明文は狭い画面では省く。メニューと幅を取り合って折り返しが増えるため。 */}
+              <p className="hidden text-xs text-muted-foreground sm:block">
+                DJセットリストを作成・共有
+              </p>
+            </div>
+          </Link>
+          <nav className="ml-auto flex shrink-0 items-center gap-1">
+            {isAuthenticated ? (
+              <>
                 <Button variant="ghost" size="sm" className={navButton} asChild>
-                  <Link to="/admin">管理</Link>
+                  <Link to="/dashboard">ダッシュボード</Link>
                 </Button>
-              )}
-              <Button variant="outline" size="sm" className={navButton} onClick={() => logout()}>
-                ログアウト
+                <Button variant="ghost" size="sm" className={navButton} asChild>
+                  <Link to="/analytics">分析</Link>
+                </Button>
+                {isAdmin && (
+                  <Button variant="ghost" size="sm" className={navButton} asChild>
+                    <Link to="/admin">管理</Link>
+                  </Button>
+                )}
+                <Button variant="outline" size="sm" className={navButton} onClick={() => logout()}>
+                  ログアウト
+                </Button>
+              </>
+            ) : (
+              <Button variant="ghost" size="sm" className={navButton} asChild>
+                <Link to="/login">ログイン</Link>
               </Button>
-            </>
-          ) : (
-            <Button variant="ghost" size="sm" className={navButton} asChild>
-              <Link to="/login">ログイン</Link>
-            </Button>
-          )}
-        </nav>
-      </header>
+            )}
+          </nav>
+        </header>
+      )}
       <main>
         <Routes>
           <Route path="/" element={<LandingPage />} />
@@ -93,24 +100,29 @@ export default function App() {
           <Route path="*" element={<NotFoundPage />} />
         </Routes>
       </main>
-      <footer className="py-8 pb-4 text-center text-xs text-muted-foreground">
-        <Link to="/terms" className="text-muted-foreground transition-colors hover:text-primary">
-          利用規約
-        </Link>
-        <span className="mx-2 text-border">|</span>
-        <Link to="/privacy" className="text-muted-foreground transition-colors hover:text-primary">
-          プライバシーポリシー
-        </Link>
-        <span className="mx-2 text-border">|</span>
-        <a
-          href="https://x.com/tkgmirusen"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-muted-foreground transition-colors hover:text-primary"
-        >
-          作者
-        </a>
-      </footer>
+      {!chromeless && (
+        <footer className="py-8 pb-4 text-center text-xs text-muted-foreground">
+          <Link to="/terms" className="text-muted-foreground transition-colors hover:text-primary">
+            利用規約
+          </Link>
+          <span className="mx-2 text-border">|</span>
+          <Link
+            to="/privacy"
+            className="text-muted-foreground transition-colors hover:text-primary"
+          >
+            プライバシーポリシー
+          </Link>
+          <span className="mx-2 text-border">|</span>
+          <a
+            href="https://x.com/bismuth_72"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-muted-foreground transition-colors hover:text-primary"
+          >
+            作者
+          </a>
+        </footer>
+      )}
       <Toaster />
     </div>
   );

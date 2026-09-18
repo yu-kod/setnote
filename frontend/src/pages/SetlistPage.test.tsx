@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { within } from "@testing-library/react";
+import { act, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders, screen, waitFor } from "../test-utils";
 import SetlistPage from "./SetlistPage";
@@ -570,29 +570,46 @@ describe("SetlistPage 一覧表示", () => {
     expect(dialog).toHaveTextContent("ブラウザの戻る");
   });
 
-  // ページが縦にはみ出している状況を作る（縮小率そのものはフック側でテストする）。
-  function stubOverflowingPage() {
-    vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(1000);
-    vi.spyOn(Element.prototype, "clientHeight", "get").mockReturnValue(600);
-    vi.spyOn(Element.prototype, "scrollHeight", "get").mockReturnValue(1000);
-  }
+  // 一覧表示はスクショして共有するための表示なので、スクロールが出たら意味がない。
+  it("画面の高さと曲数から行の高さを決める", async () => {
+    const rect = vi
+      .spyOn(Element.prototype, "getBoundingClientRect")
+      .mockReturnValue({ top: 120 } as DOMRect);
+    const originalHeight = window.innerHeight;
+    window.innerHeight = 400;
+    try {
+      mockFetch.mockResolvedValue(
+        buildPublicSetlist({
+          tracks: Array.from({ length: 10 }, (_, i) => ({
+            id: `t${i}`,
+            title: `Song ${i}`,
+            artist: "",
+            songLink: "",
+            source: "",
+            customFields: [],
+            groupId: null,
+          })),
+        })
+      );
+      window.history.replaceState({}, "", "/?view=list");
+      renderWithProviders(<SetlistPage />);
+      await userEvent.click(await screen.findByRole("button", { name: "閉じる" }));
 
-  // スクロールせず1画面で見渡せるよう、画面の高さに合わせて詰める。
-  it("一覧が画面に収まらないときは縮小する", async () => {
-    stubOverflowingPage();
+      // 使える高さ = 400 - 上端120 - 余白8 = 272。10曲なので1行27px。
+      const rows = screen.getAllByRole("listitem");
+      expect(rows[0]).toHaveStyle({ height: "27px" });
 
-    await renderAndToggle();
+      // 画面が変われば測り直す（回転やアドレスバーの出入り）。
+      window.innerHeight = 800;
+      await act(async () => {
+        window.dispatchEvent(new Event("resize"));
+      });
 
-    expect(Number(screen.getByRole("list").style.zoom)).toBeLessThan(1);
-  });
-
-  it("通常表示では縮小しない", async () => {
-    stubOverflowingPage();
-
-    mockFetch.mockResolvedValue(buildSetlistForList());
-    renderWithProviders(<SetlistPage />);
-
-    expect((await screen.findByRole("list")).style.zoom).toBe("");
+      expect(screen.getAllByRole("listitem")[0]).toHaveStyle({ height: "36px" });
+    } finally {
+      window.innerHeight = originalHeight;
+      rect.mockRestore();
+    }
   });
 
   it("案内を閉じるとモーダルが消える", async () => {

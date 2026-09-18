@@ -55,6 +55,13 @@ vi.mock("./features/admin/api", () => ({
 vi.mock("./features/setlist/api", () => ({
   fetchMySetlists: vi.fn().mockResolvedValue([]),
   createSetlist: vi.fn(),
+  fetchPublicSetlist: vi.fn().mockResolvedValue({
+    id: "abc123",
+    name: "Test Set",
+    tracks: [],
+    likeCounts: {},
+  }),
+  recordSetlistView: vi.fn(),
 }));
 
 function renderApp(path: string) {
@@ -80,12 +87,28 @@ describe("App", () => {
     expect(icon).toHaveAttribute("src", "/icon-192.png");
   });
 
+  // 一覧表示はスクリーンショットして共有するための表示なので、
+  // セットリスト以外のものは画面に残さない。
+  it("公開ページの一覧表示ではサイトのヘッダーとフッターを出さない", () => {
+    renderApp("/s/abc123?view=list");
+
+    expect(screen.queryByRole("banner")).not.toBeInTheDocument();
+    expect(screen.queryByRole("contentinfo")).not.toBeInTheDocument();
+  });
+
+  it("公開ページの通常表示ではサイトのヘッダーとフッターを出す", () => {
+    renderApp("/s/abc123");
+
+    expect(screen.getByRole("banner")).toBeInTheDocument();
+    expect(screen.getByRole("contentinfo")).toBeInTheDocument();
+  });
+
   it("renders the footer with terms, privacy, and author links", () => {
     renderWithProviders(<App />);
     expect(screen.getByText("利用規約")).toBeInTheDocument();
     expect(screen.getByText("プライバシーポリシー")).toBeInTheDocument();
     const authorLink = screen.getByRole("link", { name: "作者" });
-    expect(authorLink).toHaveAttribute("href", "https://x.com/tkgmirusen");
+    expect(authorLink).toHaveAttribute("href", "https://x.com/bismuth_72");
     expect(authorLink).toHaveAttribute("target", "_blank");
   });
 

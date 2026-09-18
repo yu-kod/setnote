@@ -95,10 +95,13 @@ test.describe("公開ページの一覧表示", () => {
     expect(await verticalOverflow(page)).toBeLessThanOrEqual(0);
   });
 
-  test("通常表示では縮小しない", async ({ page }) => {
-    await page.goto("/s/demo");
-    await expect(page.getByRole("list")).toBeVisible();
+  // 一覧表示はそのままスクリーンショットを撮るための表示なので、サイトの装飾は出さない。
+  test("サイトのヘッダーとフッターを出さない", async ({ page }) => {
+    await page.goto("/s/demo?view=list");
+    await page.getByRole("button", { name: "閉じる" }).click();
+    await expect(page.getByRole("dialog")).toBeHidden();
 
-    expect(await page.getByRole("list").evaluate((el) => el.style.zoom)).toBe("");
+    await expect(page.locator("header")).toHaveCount(0);
+    await expect(page.locator("footer")).toHaveCount(0);
   });
 });

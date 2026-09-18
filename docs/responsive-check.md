@@ -81,15 +81,16 @@ npx playwright install chromium
 PLAYWRIGHT_CHROMIUM_EXECUTABLE=/path/to/chromium npm run e2e
 ```
 
-## 一覧表示の縮小について
+## 一覧表示が1画面に収まる仕組み
 
-公開ページの一覧表示（`?view=list`）は、画面の高さに合わせて CSS の `zoom` で
-自動的に縮小する（`frontend/src/features/setlist/hooks/useFitToViewportHeight.ts`）。
+公開ページの一覧表示（`?view=list`）は、スクリーンショットを撮って共有するための表示。
+実装は `frontend/src/features/setlist/listLayout.ts` と
+`frontend/src/features/setlist/listView.ts`。
 
-- 等倍での高さとページのはみ出し量を測り、収まる倍率を求めて適用する
-- 縮小すると枠線などの端数が積み上がって数 px はみ出すことがあるため、
-  実測値を見て最大 4 回まで詰め直す
-- 読めなくなるため 0.4 倍を下限とする。曲数が多すぎて 0.4 倍でも収まらない場合は
-  スクロールが残る
-- 行は必ず 1 行に収め、はみ出す分は末尾を省略する。折り返しがあると
-  縮小後の高さが計算とずれるため
+- 目次の上端から画面下までの実測値を曲数で割って、1行の高さと文字サイズを決める
+- 行の高さは 16px〜36px、文字サイズは 9px〜14px に収める。曲数が多すぎて 16px でも
+  入りきらない場合はスクロールが残る
+- サイトのヘッダーとフッターはこの表示では描画しない（`isListViewRoute`）
+
+`npm run e2e` の「20曲のセットが1画面に収まる」「サイトのヘッダーとフッターを出さない」が
+この挙動を守っている。曲数や上に置く情報を増やすときは、このテストが通るか確かめること。
