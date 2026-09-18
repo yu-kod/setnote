@@ -4,6 +4,11 @@ name: CI Gate
 #   - CI 成功 → 対象 PR をマージコミットでマージし、deploy を workflow_dispatch で起動
 #   - CI 失敗 → Claude に自動修復を依頼（1 PR あたり最大 1 回。ループ暴走防止）
 #
+# ただし依存更新 PR については例外がある（deps-label.yml と対で動く）:
+#   - deps-major ラベル → CI が通っても自動マージしない（人手で確認する）
+#   - Dependabot PR で deps-auto ラベルが未付与 → 分類が終わるまでマージしない
+#     （ラベル付けが失敗したときにマージへ倒れないための fail-closed 判定）
+#
 # workflow_run は他ワークフローの完了イベントであり、GITHUB_TOKEN 起因の
 # マージ/push でも抑制されずに起動する。deploy の起動には workflow_dispatch を
 # 使う（GITHUB_TOKEN でも例外的に起動できる唯一のイベント）。
@@ -26,18 +31,58 @@ jobs:
       github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
-      - name: Resolve open PR for head branch
+      - name: Resolve open PR and dependency-update guard
         id: pr
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
           REPO: ${{ github.repository }}
           HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
         run: |
-          num=$(gh pr list --repo "$REPO" --head "$HEAD_BRANCH" --state open --json number --jq '.[0].number // empty')
+          pr=$(gh pr list --repo "$REPO" --head "$HEAD_BRANCH" --state open \
+            --json number,author,labels --jq '.[0] // empty')
+          if [ -z "$pr" ]; then
+            echo "No open PR for $HEAD_BRANCH; nothing to merge."
+            echo "merge=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          num=$(echo "$pr" | jq -r '.number')
+          author=$(echo "$pr" | jq -r '.author.login')
+          labels=",$(echo "$pr" | jq -r '[.labels[].name] | join(",")'),"
           echo "number=$num" >> "$GITHUB_OUTPUT"
+          echo "PR #$num by $author labels=$labels"
+
+          # メジャー更新は CI が通っても自動マージしない。
+          # 型もテストも通るのに挙動だけ変わる更新があり、CI では受け止めきれないため。
+          if echo "$labels" | grep -q ",deps-major,"; then
+            if echo "$labels" | grep -q ",deps-hold-notified,"; then
+              echo "Major update on hold (already notified)."
+            else
+              gh label create "deps-hold-notified" --repo "$REPO" --color FBCA04 \
+                --description "自動マージ保留を通知済み" --force
+              gh pr edit "$num" --repo "$REPO" --add-label "deps-hold-notified"
+              gh pr comment "$num" --repo "$REPO" --body "🛑 メジャー更新のため自動マージを止めています。CI は通っていますが、挙動の変更が CI をすり抜ける可能性があるため、動作を確認したうえで手動でマージしてください。"
+            fi
+            echo "merge=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Dependabot の PR は deps-label.yml が分類ラベルを付けるまでマージしない。
+          # ラベル付けが未完了・失敗した場合にマージへ倒れないようにするための fail-closed 判定。
+          case "$author" in
+            dependabot | "dependabot[bot]" | app/dependabot)
+              if ! echo "$labels" | grep -q ",deps-auto,"; then
+                echo "Dependabot PR is not classified yet; skipping merge."
+                echo "merge=false" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+              ;;
+          esac
+
+          echo "merge=true" >> "$GITHUB_OUTPUT"
 
       - name: Merge PR (merge commit)
-        if: steps.pr.outputs.number != ''
+        if: steps.pr.outputs.merge == 'true'
         env:
           # PAT で実行することで実ユーザー扱いのマージになり、
           # main への push が抑制されず deploy.yml（on: push main）が起動する。

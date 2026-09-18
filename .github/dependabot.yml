@@ -1,0 +1,86 @@
+# 依存ライブラリの更新を自動で検知し、毎週 PR を作成する。
+#
+# 方針:
+#   - patch / minor は系統ごとに 1 本の PR にまとめる（PR 数を抑える）
+#     → CI（vitest カバレッジ100% / eslint / tsc / build）が通れば ci-gate が自動マージ
+#   - major は 1 ライブラリ 1 PR で出す
+#     → deps-label.yml が `deps-major` ラベルを付け、ci-gate が自動マージを止める
+#       （型もテストも通るのに挙動だけ変わる更新があるため、人手で確認する）
+#
+# versioning-strategy: increase は package.json のレンジも一緒に引き上げる。
+# CI / deploy は npm ci で lockfile を厳密に適用するため、
+# package.json と package-lock.json が乖離しないことを優先している。
+
+version: 2
+
+updates:
+  - package-ecosystem: npm
+    directory: /frontend
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Tokyo
+    open-pull-requests-limit: 5
+    versioning-strategy: increase
+    labels: ["dependencies", "frontend"]
+    commit-message:
+      prefix: chore(deps)
+      include: scope
+    groups:
+      frontend:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: npm
+    directory: /backend
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Tokyo
+    open-pull-requests-limit: 5
+    versioning-strategy: increase
+    labels: ["dependencies", "backend"]
+    commit-message:
+      prefix: chore(deps)
+      include: scope
+    groups:
+      backend:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Tokyo
+    open-pull-requests-limit: 5
+    versioning-strategy: increase
+    labels: ["dependencies", "root"]
+    commit-message:
+      prefix: chore(deps)
+      include: scope
+    groups:
+      root:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Asia/Tokyo
+    open-pull-requests-limit: 5
+    labels: ["dependencies", "github-actions"]
+    commit-message:
+      prefix: chore(deps)
+      include: scope
+    groups:
+      github-actions:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]

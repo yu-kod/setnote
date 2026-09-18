@@ -1,0 +1,57 @@
+name: Deps Label
+
+# Dependabot の PR を「自動マージしてよいもの」と「人手で確認すべきもの」に分類する。
+#
+#   major 更新        → deps-major  … ci-gate が自動マージを止める
+#   patch/minor 更新  → deps-auto   … ci-gate が CI グリーンで自動マージする
+#
+# ci-gate は「deps-auto が付いていない Dependabot PR はマージしない」という
+# fail-closed の判定をするため、このワークフローが失敗した場合も
+# 勝手にマージされることはない（レビュー待ちで止まる）。
+#
+# pull_request_target を使うのは、Dependabot の pull_request では
+# GITHUB_TOKEN が読み取り専用になりラベルを付けられないため。
+# PR のコードは一切チェックアウトせず、メタデータのラベル付けだけを行う。
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  label:
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch Dependabot metadata
+        id: meta
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Ensure labels exist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh label create "deps-major" --repo "$REPO" --color D93F0B \
+            --description "メジャー更新。自動マージせず人手で確認する" --force
+          gh label create "deps-auto" --repo "$REPO" --color 0E8A16 \
+            --description "patch/minor 更新。CI グリーンで自動マージする" --force
+
+      - name: Classify
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+          UPDATE_TYPE: ${{ steps.meta.outputs.update-type }}
+        run: |
+          echo "update-type: $UPDATE_TYPE"
+          if [ "$UPDATE_TYPE" = "version-update:semver-major" ]; then
+            gh pr edit "$PR" --repo "$REPO" --add-label "deps-major" --remove-label "deps-auto"
+          else
+            gh pr edit "$PR" --repo "$REPO" --add-label "deps-auto" --remove-label "deps-major"
+          fi

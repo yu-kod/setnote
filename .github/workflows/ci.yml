@@ -20,11 +20,21 @@ jobs:
       - uses: dorny/paths-filter@v3
         id: filter
         with:
+          # ルートの package.json / package-lock.json と .github/workflows/** は
+          # 全系統に影響しうる。これらを各フィルタに含めておかないと、
+          # 依存更新やワークフロー変更だけの PR でテストジョブが 1 つも走らないまま
+          # CI が success になり、ci-gate がノーチェックでマージしてしまう。
           filters: |
             frontend:
               - 'frontend/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - '.github/workflows/**'
             backend:
               - 'backend/**'
+              - 'package.json'
+              - 'package-lock.json'
+              - '.github/workflows/**'
             infra:
               - 'infra/**'
 
@@ -40,7 +50,7 @@ jobs:
           node-version: "20"
 
       - name: Install dependencies
-        run: cd frontend && npm install
+        run: cd frontend && npm ci
 
       - name: Lint
         run: cd frontend && npm run lint
@@ -69,7 +79,7 @@ jobs:
           node-version: "20"
 
       - name: Install dependencies
-        run: cd backend && npm install
+        run: cd backend && npm ci
 
       - name: Lint
         run: cd backend && npm run lint
