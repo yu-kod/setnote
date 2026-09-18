@@ -138,9 +138,7 @@ function songsUrl(title: string, artistId: number | null, limit: number): string
   return `${API_BASE}/songs?${params.toString()}`;
 }
 
-export async function searchVocadbSongs(
-  params: VocadbSearchParams
-): Promise<VocadbSearchResult> {
+export async function searchVocadbSongs(params: VocadbSearchParams): Promise<VocadbSearchResult> {
   const candidates = params.artist ? await findArtists(params.artist) : [];
   const chosen = candidates.find((a) => a.id === params.artistId) ?? candidates[0] ?? null;
   const artistId = params.artistId ?? chosen?.id ?? null;
@@ -151,7 +149,9 @@ export async function searchVocadbSongs(
     return { songs: [], artist: null, artistCandidates: [] };
   }
 
-  const body = await getJson<{ items?: SongEntry[] }>(songsUrl(params.title, artistId, params.limit));
+  const body = await getJson<{ items?: SongEntry[] }>(
+    songsUrl(params.title, artistId, params.limit)
+  );
   return {
     songs: (body.items ?? []).map(toVocadbSong),
     artist: chosen,

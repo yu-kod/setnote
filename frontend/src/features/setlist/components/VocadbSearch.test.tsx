@@ -224,9 +224,7 @@ describe("VocadbSearch", () => {
   });
 
   it("Original 以外の種別はバッジで示す", async () => {
-    mockSearch.mockResolvedValue(
-      result({ songs: [{ ...TELL_YOUR_WORLD, songType: "Remix" }] })
-    );
+    mockSearch.mockResolvedValue(result({ songs: [{ ...TELL_YOUR_WORLD, songType: "Remix" }] }));
 
     await searchByTitle();
 

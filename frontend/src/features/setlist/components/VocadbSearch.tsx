@@ -237,15 +237,7 @@ function ArtistPicker({
   );
 }
 
-function SongRow({
-  song,
-  added,
-  onAdd,
-}: {
-  song: VocadbSong;
-  added: boolean;
-  onAdd: () => void;
-}) {
+function SongRow({ song, added, onAdd }: { song: VocadbSong; added: boolean; onAdd: () => void }) {
   // サムネイルは YouTube Data API 経由のプロキシから取得し、
   // 動画ページへのリンクを添える（YouTube の利用条件に沿わせるため）。
   // ニコニコ動画しか PV が無い曲は対象外なのでプレースホルダを置く。
@@ -274,7 +266,7 @@ function SongRow({
       <div className="min-w-0 flex-1">
         <p className="flex items-center gap-1.5 truncate text-sm font-medium">
           <span className="truncate">{song.title}</span>
-          {/* Original は大多数なので、見分けが要る Remix / Cover 等だけ出す。 */}
+          {/* Original が大多数なので、見分けが要る Remix / Cover 等だけ出す。 */}
           {song.songType && song.songType !== "Original" && (
             <Badge variant="secondary" className="shrink-0 text-[10px]">
               {song.songType}

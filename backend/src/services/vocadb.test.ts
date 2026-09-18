@@ -182,7 +182,9 @@ describe("作者を指定し直したとき", () => {
 
 describe("楽曲リンクの選択", () => {
   async function linkFor(pvs: unknown[]) {
-    mockFetch.mockResolvedValueOnce(jsonResponse([{ id: 1, name: "song", artistString: "a", pvs }]));
+    mockFetch.mockResolvedValueOnce(
+      jsonResponse([{ id: 1, name: "song", artistString: "a", pvs }])
+    );
     const { songs } = await search({ title: "song" });
     return songs[0]!.songLink;
   }
@@ -246,9 +248,9 @@ describe("楽曲リンクの選択", () => {
   });
 
   it("対応サービスの PV が無ければ楽曲リンクは空になる", async () => {
-    expect(await linkFor([{ service: "Bilibili", pvType: "Original", url: "https://b23.tv/x" }])).toBe(
-      ""
-    );
+    expect(
+      await linkFor([{ service: "Bilibili", pvType: "Original", url: "https://b23.tv/x" }])
+    ).toBe("");
   });
 });
 
