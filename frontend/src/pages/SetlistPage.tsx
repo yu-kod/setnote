@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import {
   fetchPublicSetlist,
@@ -24,9 +24,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ExternalLink, Heart } from "lucide-react";
 import { MediaEmbed } from "../features/setlist/components/MediaEmbed";
 import { getThumbnailProxyUrl } from "../features/setlist/thumbnail";
+import { computeRowLayout } from "../features/setlist/listLayout";
 import NotFoundPage from "./NotFoundPage";
 
 const isUrl = (s: string) => /^https?:\/\//.test(s);
+
+// 一番下の行が画面の縁に貼り付かないようにするための余白（px）。
+const LIST_BOTTOM_MARGIN = 8;
 
 function formatEventDate(date: string): string {
   const [year, month, day] = date.split("-");
@@ -47,6 +51,18 @@ export default function SetlistPage() {
   const listView = searchParams.get("view") === "list";
   const [guideDismissed, setGuideDismissed] = useState(false);
   const guideOpen = listView && !guideDismissed;
+  // 一覧表示では全曲が1画面に収まる必要があるため、
+  // 実際に使える高さを測ってから1行の高さを決める。
+  const listElement = useRef<HTMLOListElement | null>(null);
+  const [availableHeight, setAvailableHeight] = useState(0);
+  const measureList = useCallback((node: HTMLOListElement | null) => {
+    listElement.current = node;
+    if (node) {
+      setAvailableHeight(
+        window.innerHeight - node.getBoundingClientRect().top - LIST_BOTTOM_MARGIN
+      );
+    }
+  }, []);
   const [likeCounts, setLikeCounts] = useState<Record<string, number>>({});
   const [liked, setLiked] = useState<Set<string>>(() => getLikedTrackIds(id!));
   const playerRef = useRef<HTMLDivElement>(null);
@@ -62,6 +78,14 @@ export default function SetlistPage() {
     // 公開ページ表示のPVを計測（fire-and-forget）。
     recordSetlistView(id!);
   }, [id]);
+
+  // 表示モードの切り替えや画面の回転で使える高さが変わるので測り直す。
+  useEffect(() => {
+    const remeasure = () => measureList(listElement.current);
+    remeasure();
+    window.addEventListener("resize", remeasure);
+    return () => window.removeEventListener("resize", remeasure);
+  }, [listView, measureList]);
 
   // いいねのトグル（曲ごと1回まで）。未いいねなら付け、いいね済みなら取り消す。
   // 成功したら数を更新し、端末ローカルの記録も切り替える。
@@ -98,6 +122,7 @@ export default function SetlistPage() {
   }
 
   const tracks = setlist.tracks;
+  const rowLayout = computeRowLayout(availableHeight, tracks.length);
   const groups = groupTracks(tracks);
   const trackNumber = new Map<string, number>();
   groups.forEach((group, gi) => {
@@ -117,29 +142,32 @@ export default function SetlistPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
+    <div className={listView ? "space-y-3" : "space-y-6"}>
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="min-w-0 space-y-1">
-          <h1 className="text-2xl font-bold tracking-tight">{setlist.name}</h1>
+          <h1 className="break-words text-xl font-bold tracking-tight sm:text-2xl">
+            {setlist.name}
+          </h1>
           {setlist.artistName && (
             <p className="text-sm font-medium text-foreground">by {setlist.artistName}</p>
           )}
         </div>
-        {/* イベント情報は右寄せ。リンクがあればイベント名自体をリンク化し末尾にアイコンを付ける。 */}
-        <div className="space-y-1 text-right">
+        {/* イベント情報は広い画面でのみ右寄せ。狭い画面では縦に積んで、
+            タイトルと重ならないようにする。リンクがあればイベント名自体をリンク化する。 */}
+        <div className="min-w-0 space-y-1 sm:shrink-0 sm:text-right">
           {setlist.eventName &&
             (setlist.eventLink ? (
               <a
                 href={setlist.eventLink}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1 text-sm font-medium text-primary underline underline-offset-4"
+                className="inline-flex items-center gap-1 break-words text-sm font-medium text-primary underline underline-offset-4"
               >
                 {setlist.eventName}
                 <ExternalLink aria-hidden="true" className="size-3.5" />
               </a>
             ) : (
-              <p className="font-medium">{setlist.eventName}</p>
+              <p className="break-words text-sm font-medium sm:text-base">{setlist.eventName}</p>
             ))}
           {setlist.eventDate && (
             <p className="text-sm text-muted-foreground">{formatEventDate(setlist.eventDate)}</p>
@@ -148,7 +176,7 @@ export default function SetlistPage() {
       </div>
 
       {selected ? (
-        <div className="space-y-4">
+        <div className={listView ? "" : "space-y-4"}>
           {!listView && (
             <div className="flex justify-end">
               <Button
@@ -185,7 +213,7 @@ export default function SetlistPage() {
           </Dialog>
 
           {/* 目次：全曲を一覧表示。行をタップすると下のプレイヤーが切り替わる。 */}
-          <ol className="overflow-hidden rounded-md border">
+          <ol ref={measureList} className="overflow-hidden rounded-md border">
             {tracks.map((track, i) => {
               // 一覧表示では選択の概念がないため、ハイライトも出さない。
               const active = !listView && track.id === selected.id;
@@ -212,6 +240,12 @@ export default function SetlistPage() {
               return (
                 <li
                   key={track.id}
+                  // 一覧表示は全曲を1画面に収めるため、行の高さを実測値から決める。
+                  style={
+                    listView
+                      ? { height: rowLayout.rowHeight, fontSize: rowLayout.fontSize }
+                      : undefined
+                  }
                   className={`flex items-stretch ${i > 0 && !isGroupedWithPrev ? "border-t" : ""}`}
                 >
                   {track.groupId != null && (
@@ -230,12 +264,17 @@ export default function SetlistPage() {
                         src={thumbnailUrl}
                         alt={`${track.title} のサムネイル`}
                         loading="lazy"
-                        className={`object-cover ${listView ? "h-7 w-12" : "h-9 w-16"}`}
+                        style={
+                          listView
+                            ? { height: rowLayout.rowHeight, width: rowLayout.rowHeight * 2 }
+                            : undefined
+                        }
+                        className={`object-cover ${listView ? "" : "h-9 w-16"}`}
                       />
                     </a>
                   )}
                   {listView ? (
-                    <div className="flex flex-1 items-baseline gap-2 px-3 py-1 text-sm">
+                    <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden px-2">
                       {rowContent}
                     </div>
                   ) : (
