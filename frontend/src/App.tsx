@@ -12,15 +12,17 @@ import AnalyticsPage from "./pages/AnalyticsPage";
 import AnalyticsTracksPage from "./pages/AnalyticsTracksPage";
 import AnalyticsLikesPage from "./pages/AnalyticsLikesPage";
 import AnalyticsViewsPage from "./pages/AnalyticsViewsPage";
+import AdminPage from "./pages/AdminPage";
 import TermsPage from "./pages/TermsPage";
 import PrivacyPage from "./pages/PrivacyPage";
 import { ProtectedRoute } from "./features/auth/components/ProtectedRoute";
+import { AdminRoute } from "./features/auth/components/AdminRoute";
 import { useAuth } from "./features/auth/AuthContext";
 import { Button } from "./components/ui/button";
 import { Toaster } from "./components/ui/sonner";
 
 export default function App() {
-  const { isAuthenticated, logout } = useAuth();
+  const { isAuthenticated, isAdmin, logout } = useAuth();
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-2 md:px-6">
@@ -41,6 +43,11 @@ export default function App() {
               <Button variant="ghost" size="sm" asChild>
                 <Link to="/analytics">分析</Link>
               </Button>
+              {isAdmin && (
+                <Button variant="ghost" size="sm" asChild>
+                  <Link to="/admin">管理</Link>
+                </Button>
+              )}
               <Button variant="outline" size="sm" onClick={() => logout()}>
                 ログアウト
               </Button>
@@ -69,6 +76,9 @@ export default function App() {
             <Route path="/analytics/views" element={<AnalyticsViewsPage />} />
             <Route path="/setlists/:id/edit" element={<SetlistEditPage />} />
             <Route path="/setlists/:id/design" element={<SetlistDesignPage />} />
+            <Route element={<AdminRoute />}>
+              <Route path="/admin" element={<AdminPage />} />
+            </Route>
           </Route>
           <Route path="*" element={<NotFoundPage />} />
         </Routes>

@@ -18,6 +18,40 @@ vi.mock("./features/analytics/api", () => ({
   fetchLikes: vi.fn().mockResolvedValue([]),
 }));
 
+vi.mock("./features/admin/api", () => ({
+  fetchAdminUsers: vi.fn().mockResolvedValue({
+    total: 1,
+    confirmed: 1,
+    unconfirmed: 0,
+    disabled: 0,
+    newLast7Days: 0,
+    newLast30Days: 0,
+    growth: [],
+  }),
+  fetchAdminContent: vi.fn().mockResolvedValue({
+    setlists: 0,
+    published: 0,
+    draft: 0,
+    totalViews: 0,
+    totalLikes: 0,
+    totalTracks: 0,
+    activeUsers: 0,
+  }),
+  fetchAdminHealth: vi.fn().mockResolvedValue({
+    invocations: 0,
+    errors: 0,
+    errorRate: 0,
+    throttles: 0,
+    avgDurationMs: 0,
+    maxDurationMs: 0,
+    apiRequests: 0,
+    apiErrors5xx: 0,
+    status: "ok",
+    invocationSeries: [],
+    errorSeries: [],
+  }),
+}));
+
 vi.mock("./features/setlist/api", () => ({
   fetchMySetlists: vi.fn().mockResolvedValue([]),
   createSetlist: vi.fn(),
@@ -153,5 +187,39 @@ describe("App", () => {
     expect(
       within(screen.getByRole("banner")).getByRole("link", { name: "ログイン" })
     ).toBeInTheDocument();
+  });
+});
+
+describe("App admin access", () => {
+  it("hides the admin link from a signed in non-admin", () => {
+    mockUseAuth.mockReturnValue({ isAuthenticated: true, isAdmin: false, logout: mockLogout });
+
+    renderWithProviders(<App />);
+
+    expect(screen.queryByRole("link", { name: "管理" })).not.toBeInTheDocument();
+  });
+
+  it("shows the admin link to an admin", () => {
+    mockUseAuth.mockReturnValue({ isAuthenticated: true, isAdmin: true, logout: mockLogout });
+
+    renderWithProviders(<App />);
+
+    expect(screen.getByRole("link", { name: "管理" })).toHaveAttribute("href", "/admin");
+  });
+
+  it("renders the admin page at /admin for an admin", async () => {
+    mockUseAuth.mockReturnValue({ isAuthenticated: true, isAdmin: true, logout: mockLogout });
+
+    renderApp("/admin");
+
+    expect(await screen.findByRole("heading", { name: "管理" })).toBeInTheDocument();
+  });
+
+  it("sends a non-admin away from /admin", () => {
+    mockUseAuth.mockReturnValue({ isAuthenticated: true, isAdmin: false, logout: mockLogout });
+
+    renderApp("/admin");
+
+    expect(screen.getByRole("heading", { name: "ダッシュボード" })).toBeInTheDocument();
   });
 });

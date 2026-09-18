@@ -17,6 +17,14 @@ import {
   resendCode as mockResendCode,
 } from "./api";
 
+function adminToken(groups: string[]): string {
+  const body = btoa(JSON.stringify({ sub: "u1", "cognito:groups": groups }))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
+  return `header.${body}.signature`;
+}
+
 function wrapper({ children }: { children: ReactNode }) {
   return <AuthProvider>{children}</AuthProvider>;
 }
@@ -132,6 +140,27 @@ describe("useAuth", () => {
     });
 
     expect(mockResendCode).toHaveBeenCalledWith("dj@example.com");
+  });
+
+  it("is not admin when there is no session", () => {
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    expect(result.current.isAdmin).toBe(false);
+  });
+
+  it("is not admin when the stored token carries no admin group", () => {
+    localStorage.setItem("setnote_access_token", adminToken(["beta"]));
+    localStorage.setItem("setnote_user", JSON.stringify({ email: "dj@example.com" }));
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    expect(result.current.isAdmin).toBe(false);
+  });
+
+  it("is admin when the stored token carries the admin group", () => {
+    localStorage.setItem("setnote_access_token", adminToken(["admin"]));
+    localStorage.setItem("setnote_user", JSON.stringify({ email: "dj@example.com" }));
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    expect(result.current.isAdmin).toBe(true);
   });
 
   it("throws error when used outside AuthProvider", () => {

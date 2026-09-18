@@ -6,6 +6,7 @@ import { imageParseRoute } from "./routes/image-parse";
 import { proxyRoute } from "./routes/proxy";
 import { vocadbRoute } from "./routes/vocadb";
 import { healthRoute } from "./routes/health";
+import { adminRoute } from "./routes/admin";
 import { requestLogger } from "./middleware/logger";
 import { errorHandler } from "./middleware/error";
 
@@ -21,3 +22,4 @@ app.route("/api/analytics", analyticsRoute);
 app.route("/api/image-parse", imageParseRoute);
 app.route("/api/proxy", proxyRoute);
 app.route("/api/vocadb", vocadbRoute);
+app.route("/api/admin", adminRoute);
