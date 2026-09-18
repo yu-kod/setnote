@@ -49,7 +49,12 @@ const SONG = {
   artist: "kz feat. 初音ミク",
   songLink: "https://youtu.be/original000",
   vocadbUrl: "https://vocadb.net/S/3939",
+  songType: "Original",
 };
+
+const ARTIST = { id: 77, name: "kz", artistType: "Producer" };
+
+const EMPTY_RESULT = { songs: [], artist: null, artistCandidates: [] };
 
 describe("GET /api/vocadb/songs", () => {
   beforeEach(() => {
@@ -61,36 +66,90 @@ describe("GET /api/vocadb/songs", () => {
 
   it("認証が無ければ 401 を返し、VocaDB を呼ばない", async () => {
     const { app } = await import("../app");
-    const res = await app.request("/api/vocadb/songs?q=テオ");
+    const res = await app.request("/api/vocadb/songs?title=%E3%83%86%E3%82%AA");
 
     expect(res.status).toBe(401);
     expect(mockSearchVocadbSongs).not.toHaveBeenCalled();
   });
 
-  it("検索語で曲名検索した結果を返す", async () => {
-    mockSearchVocadbSongs.mockResolvedValue([SONG]);
+  it("曲名で検索した結果をそのまま返す", async () => {
+    mockSearchVocadbSongs.mockResolvedValue({ ...EMPTY_RESULT, songs: [SONG] });
 
     const { app } = await import("../app");
-    const res = await app.request("/api/vocadb/songs?q=Tell%20Your%20World", {
+    const res = await app.request("/api/vocadb/songs?title=Tell%20Your%20World", {
       headers: authHeaders,
     });
 
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ songs: [SONG] });
-    expect(mockSearchVocadbSongs).toHaveBeenCalledWith("Tell Your World", "title", 20);
+    expect(await res.json()).toEqual({ ...EMPTY_RESULT, songs: [SONG] });
+    expect(mockSearchVocadbSongs).toHaveBeenCalledWith({
+      title: "Tell Your World",
+      artist: "",
+      artistId: null,
+      limit: 20,
+    });
   });
 
-  it("by=artist を指定すると作者名検索になる", async () => {
-    mockSearchVocadbSongs.mockResolvedValue([]);
+  it("作者名だけでも検索できる", async () => {
+    mockSearchVocadbSongs.mockResolvedValue({ ...EMPTY_RESULT, artist: ARTIST });
 
     const { app } = await import("../app");
-    const res = await app.request("/api/vocadb/songs?q=kz&by=artist", { headers: authHeaders });
+    const res = await app.request("/api/vocadb/songs?artist=kz", { headers: authHeaders });
 
     expect(res.status).toBe(200);
-    expect(mockSearchVocadbSongs).toHaveBeenCalledWith("kz", "artist", 20);
+    expect(mockSearchVocadbSongs).toHaveBeenCalledWith({
+      title: "",
+      artist: "kz",
+      artistId: null,
+      limit: 20,
+    });
   });
 
-  it("検索語が無ければ 400 を返す", async () => {
+  it("曲名と作者名を同時に指定できる", async () => {
+    mockSearchVocadbSongs.mockResolvedValue(EMPTY_RESULT);
+
+    const { app } = await import("../app");
+    await app.request("/api/vocadb/songs?title=Tell&artist=kz", { headers: authHeaders });
+
+    expect(mockSearchVocadbSongs).toHaveBeenCalledWith({
+      title: "Tell",
+      artist: "kz",
+      artistId: null,
+      limit: 20,
+    });
+  });
+
+  it("artistId で作者を指定し直せる", async () => {
+    mockSearchVocadbSongs.mockResolvedValue(EMPTY_RESULT);
+
+    const { app } = await import("../app");
+    await app.request("/api/vocadb/songs?artist=kz&artistId=78", { headers: authHeaders });
+
+    expect(mockSearchVocadbSongs).toHaveBeenCalledWith({
+      title: "",
+      artist: "kz",
+      artistId: 78,
+      limit: 20,
+    });
+  });
+
+  it("前後の空白を落として渡す", async () => {
+    mockSearchVocadbSongs.mockResolvedValue(EMPTY_RESULT);
+
+    const { app } = await import("../app");
+    await app.request("/api/vocadb/songs?title=%20Tell%20&artist=%20kz%20", {
+      headers: authHeaders,
+    });
+
+    expect(mockSearchVocadbSongs).toHaveBeenCalledWith({
+      title: "Tell",
+      artist: "kz",
+      artistId: null,
+      limit: 20,
+    });
+  });
+
+  it("曲名も作者名も無ければ 400 を返す", async () => {
     const { app } = await import("../app");
     const res = await app.request("/api/vocadb/songs", { headers: authHeaders });
 
@@ -98,17 +157,21 @@ describe("GET /api/vocadb/songs", () => {
     expect(mockSearchVocadbSongs).not.toHaveBeenCalled();
   });
 
-  it("検索語が空白だけなら 400 を返す", async () => {
+  it("空白だけの指定なら 400 を返す", async () => {
     const { app } = await import("../app");
-    const res = await app.request("/api/vocadb/songs?q=%20%20", { headers: authHeaders });
+    const res = await app.request("/api/vocadb/songs?title=%20%20&artist=%20", {
+      headers: authHeaders,
+    });
 
     expect(res.status).toBe(400);
     expect(mockSearchVocadbSongs).not.toHaveBeenCalled();
   });
 
-  it("未知の by を指定したら 400 を返す", async () => {
+  it("artistId が数値でなければ 400 を返す", async () => {
     const { app } = await import("../app");
-    const res = await app.request("/api/vocadb/songs?q=kz&by=album", { headers: authHeaders });
+    const res = await app.request("/api/vocadb/songs?artist=kz&artistId=abc", {
+      headers: authHeaders,
+    });
 
     expect(res.status).toBe(400);
     expect(mockSearchVocadbSongs).not.toHaveBeenCalled();
@@ -118,7 +181,7 @@ describe("GET /api/vocadb/songs", () => {
     mockSearchVocadbSongs.mockRejectedValue(new Error("Failed to reach VocaDB"));
 
     const { app } = await import("../app");
-    const res = await app.request("/api/vocadb/songs?q=kz", { headers: authHeaders });
+    const res = await app.request("/api/vocadb/songs?artist=kz", { headers: authHeaders });
 
     expect(res.status).toBe(502);
     expect(await res.json()).toEqual({

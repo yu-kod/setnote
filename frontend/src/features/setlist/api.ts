@@ -166,13 +166,35 @@ export type VocadbSong = {
   artist: string;
   songLink: string;
   vocadbUrl: string;
+  songType: string;
 };
 
-export type VocadbSearchBy = "title" | "artist";
+export type VocadbArtist = {
+  id: number;
+  name: string;
+  artistType: string;
+};
+
+export type VocadbSearchResult = {
+  songs: VocadbSong[];
+  // 実際に採用された作者。曲名だけで検索したときは null。
+  artist: VocadbArtist | null;
+  artistCandidates: VocadbArtist[];
+};
 
 // VocaDB 検索。ブラウザから直接ではなくバックエンド経由で叩く。
-export async function searchVocadbSongs(query: string, by: VocadbSearchBy): Promise<VocadbSong[]> {
-  const res = await fetch(`/api/vocadb/songs?q=${encodeURIComponent(query)}&by=${by}`, {
+// artistId を渡すと、候補のうちその作者に固定して検索する。
+export async function searchVocadbSongs(params: {
+  title: string;
+  artist: string;
+  artistId?: number;
+}): Promise<VocadbSearchResult> {
+  const query = new URLSearchParams();
+  if (params.title) query.set("title", params.title);
+  if (params.artist) query.set("artist", params.artist);
+  if (params.artistId !== undefined) query.set("artistId", String(params.artistId));
+
+  const res = await fetch(`/api/vocadb/songs?${query.toString()}`, {
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${getToken()}`,
@@ -187,6 +209,5 @@ export async function searchVocadbSongs(query: string, by: VocadbSearchBy): Prom
     throw new Error("VocaDBの検索に失敗しました");
   }
 
-  const data = (await res.json()) as { songs: VocadbSong[] };
-  return data.songs;
+  return (await res.json()) as VocadbSearchResult;
 }

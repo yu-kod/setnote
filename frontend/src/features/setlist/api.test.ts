@@ -499,52 +499,72 @@ describe("searchVocadbSongs", () => {
     artist: "kz feat. 初音ミク",
     songLink: "https://youtu.be/original000",
     vocadbUrl: "https://vocadb.net/S/3939",
+    songType: "Original",
   };
 
-  it("calls GET /api/vocadb/songs with the escaped query and returns songs", async () => {
+  const RESULT = { songs: [SONG], artist: null, artistCandidates: [] };
+
+  function okResponse(body: unknown) {
+    return { ok: true, status: 200, json: () => Promise.resolve(body) };
+  }
+
+  it("calls GET /api/vocadb/songs with the escaped title and returns the result", async () => {
     localStorage.setItem("setnote_access_token", "test-token");
-    mockFetch.mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: () => Promise.resolve({ songs: [SONG] }),
-    });
+    mockFetch.mockResolvedValue(okResponse(RESULT));
 
-    const result = await searchVocadbSongs("Tell Your World", "title");
+    const result = await searchVocadbSongs({ title: "Tell Your World", artist: "" });
 
-    expect(mockFetch).toHaveBeenCalledWith("/api/vocadb/songs?q=Tell%20Your%20World&by=title", {
+    expect(mockFetch).toHaveBeenCalledWith("/api/vocadb/songs?title=Tell+Your+World", {
       headers: {
         "Content-Type": "application/json",
         Authorization: "Bearer test-token",
       },
     });
-    expect(result).toEqual([SONG]);
+    expect(result).toEqual(RESULT);
   });
 
-  it("passes by=artist for an artist search", async () => {
-    mockFetch.mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: () => Promise.resolve({ songs: [] }),
-    });
+  it("sends both title and artist when both are given", async () => {
+    mockFetch.mockResolvedValue(okResponse(RESULT));
 
-    await searchVocadbSongs("kz", "artist");
+    await searchVocadbSongs({ title: "Tell", artist: "kz" });
 
     expect(mockFetch).toHaveBeenCalledWith(
-      "/api/vocadb/songs?q=kz&by=artist",
-      expect.objectContaining({ headers: expect.anything() })
+      "/api/vocadb/songs?title=Tell&artist=kz",
+      expect.anything()
+    );
+  });
+
+  it("omits empty fields from the query string", async () => {
+    mockFetch.mockResolvedValue(okResponse(RESULT));
+
+    await searchVocadbSongs({ title: "", artist: "kz" });
+
+    expect(mockFetch).toHaveBeenCalledWith("/api/vocadb/songs?artist=kz", expect.anything());
+  });
+
+  it("pins the artist when an artistId is given", async () => {
+    mockFetch.mockResolvedValue(okResponse(RESULT));
+
+    await searchVocadbSongs({ title: "", artist: "kz", artistId: 78 });
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      "/api/vocadb/songs?artist=kz&artistId=78",
+      expect.anything()
     );
   });
 
   it("throws when the request fails", async () => {
     mockFetch.mockResolvedValue({ ok: false, status: 502, json: () => Promise.resolve({}) });
 
-    await expect(searchVocadbSongs("kz", "title")).rejects.toThrow("VocaDBの検索に失敗しました");
+    await expect(searchVocadbSongs({ title: "kz", artist: "" })).rejects.toThrow(
+      "VocaDBの検索に失敗しました"
+    );
   });
 
   it("clears the session and redirects on 401", async () => {
     mockFetch.mockResolvedValue({ ok: false, status: 401, json: () => Promise.resolve({}) });
 
-    await expect(searchVocadbSongs("kz", "title")).rejects.toThrow();
+    await expect(searchVocadbSongs({ title: "kz", artist: "" })).rejects.toThrow();
 
     expect(clearSession).toHaveBeenCalled();
     expect(redirectToLogin).toHaveBeenCalled();
