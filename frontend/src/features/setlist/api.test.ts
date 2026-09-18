@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   fetchMySetlists,
   createSetlist,
+  duplicateSetlist,
   fetchSetlist,
   updateSetlist,
   publishSetlist,
@@ -270,6 +271,28 @@ describe("createSetlist", () => {
       body: JSON.stringify({ name: "New Set" }),
     });
     expect(result).toEqual({ id: "new1", name: "New Set" });
+  });
+});
+
+describe("duplicateSetlist", () => {
+  it("calls POST /api/setlists/:id/duplicate and returns the created copy", async () => {
+    localStorage.setItem("setnote_access_token", "test-token");
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 201,
+      json: () => Promise.resolve({ id: "copy1", name: "New Set のコピー" }),
+    });
+
+    const result = await duplicateSetlist("src1");
+
+    expect(mockFetch).toHaveBeenCalledWith("/api/setlists/src1/duplicate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer test-token",
+      },
+    });
+    expect(result).toEqual({ id: "copy1", name: "New Set のコピー" });
   });
 });
 

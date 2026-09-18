@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { fetchMySetlists, createSetlist } from "../api";
+import { fetchMySetlists, createSetlist, duplicateSetlist } from "../api";
+import { sortSetlists, filterSetlists, type SortOrder } from "../browse";
 import type { Setlist } from "../types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Copy } from "lucide-react";
 import { Field, FieldGroup } from "@/components/ui/field";
 import {
   Dialog,
@@ -48,6 +50,9 @@ export function SetlistList() {
   const [createError, setCreateError] = useState("");
   const [newName, setNewName] = useState("");
   const [creating, setCreating] = useState(false);
+  const [sortOrder, setSortOrder] = useState<SortOrder>("updated");
+  const [query, setQuery] = useState("");
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchMySetlists()
@@ -79,6 +84,19 @@ export function SetlistList() {
     }
   }
 
+  // 複製は下書きとして作られるので、そのまま編集画面へ送って次回分の調整に入ってもらう。
+  async function handleDuplicate(setlistId: string) {
+    setDuplicatingId(setlistId);
+    setError("");
+    try {
+      const copy = await duplicateSetlist(setlistId);
+      navigate(`/setlists/${copy.id}/edit`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "複製に失敗しました");
+      setDuplicatingId(null);
+    }
+  }
+
   if (loading) {
     return (
       <div role="status" aria-label="読み込み中" className="space-y-2">
@@ -88,6 +106,8 @@ export function SetlistList() {
       </div>
     );
   }
+
+  const visible = sortSetlists(filterSetlists(setlists, query), sortOrder);
 
   return (
     <div>
@@ -136,16 +156,48 @@ export function SetlistList() {
           </form>
         </DialogContent>
       </Dialog>
+      {setlists.length > 0 && (
+        <div className="mt-4 flex items-center gap-2">
+          <label htmlFor="setlist-search" className="sr-only">
+            セットリストを検索
+          </label>
+          <Input
+            id="setlist-search"
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="セットリスト名・イベント名で検索"
+            className="flex-1"
+          />
+          <label htmlFor="setlist-sort" className="sr-only">
+            並び順
+          </label>
+          <select
+            id="setlist-sort"
+            value={sortOrder}
+            onChange={(e) => setSortOrder(e.target.value as SortOrder)}
+            className="h-9 shrink-0 rounded-md border border-border bg-transparent px-2 text-sm text-foreground"
+          >
+            <option value="updated">更新の新しい順</option>
+            <option value="eventDate">開催日の新しい順</option>
+          </select>
+        </div>
+      )}
       {setlists.length === 0 ? (
         <p className="mt-4 text-muted-foreground">
           セットリストがありません。最初のセットリストを作成しましょう
         </p>
+      ) : visible.length === 0 ? (
+        <p className="mt-4 text-muted-foreground">条件に一致するセットリストがありません</p>
       ) : (
         <ul className="mt-4 space-y-2">
-          {setlists.map((s) => (
-            <li key={s.id}>
+          {visible.map((s) => (
+            <li
+              key={s.id}
+              className="flex items-stretch rounded-lg border border-border bg-card text-card-foreground transition-colors hover:border-primary"
+            >
               <button
-                className="flex w-full items-center gap-3 rounded-lg border border-border bg-card p-4 text-left text-card-foreground transition-colors hover:border-primary"
+                className="flex min-w-0 flex-1 items-center gap-3 p-4 text-left"
                 onClick={() => navigate(`/setlists/${s.id}/edit`)}
               >
                 <div className="min-w-0 flex-1">
@@ -160,6 +212,17 @@ export function SetlistList() {
                 </div>
                 <Badge variant={statusVariant[s.status]}>{statusLabel[s.status]}</Badge>
               </button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label={`${s.name} を複製`}
+                disabled={duplicatingId === s.id}
+                onClick={() => handleDuplicate(s.id)}
+                className="mr-2 self-center text-muted-foreground"
+              >
+                <Copy aria-hidden="true" />
+              </Button>
             </li>
           ))}
         </ul>

@@ -647,3 +647,118 @@ describe("DELETE /api/setlists/:id/publish (authenticated)", () => {
     expect(res.status).toBe(500);
   });
 });
+
+describe("POST /api/setlists/:id/duplicate (authenticated)", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    mockSend.mockReset();
+    mockVerify.mockReset();
+  });
+
+  const source = {
+    id: "source1",
+    userId: "user1",
+    name: "Friday Night Set",
+    artistName: "DJ Yu",
+    eventName: "Techno Bunker",
+    eventLink: "https://example.com/event",
+    eventDate: "2026-08-14",
+    tracks: [{ id: "t1", title: "Song A", artist: "", songLink: "", source: "", customFields: [] }],
+    status: "published",
+    likeCounts: { t1: 12 },
+    viewCount: 340,
+    createdAt: "2026-07-01T00:00:00Z",
+    updatedAt: "2026-07-02T00:00:00Z",
+  };
+
+  it("copies the setlist contents into a new draft and returns 201", async () => {
+    mockVerify.mockResolvedValue({ sub: "user1", email: "dj@example.com" });
+    mockSend.mockResolvedValueOnce({ Item: source }).mockResolvedValueOnce({});
+
+    const { app } = await import("../app");
+    const res = await app.request("/api/setlists/source1/duplicate", {
+      method: "POST",
+      headers: authHeaders(),
+    });
+
+    expect(res.status).toBe(201);
+    const body = (await res.json()) as Record<string, unknown>;
+    expect(body.id).toBe("test12345");
+    expect(body.userId).toBe("user1");
+    expect(body.name).toBe("Friday Night Set のコピー");
+    expect(body.artistName).toBe("DJ Yu");
+    expect(body.eventName).toBe("Techno Bunker");
+    expect(body.eventLink).toBe("https://example.com/event");
+    expect(body.eventDate).toBe("2026-08-14");
+    expect(body.tracks).toEqual(source.tracks);
+  });
+
+  it("starts the copy as an unpublished draft with no likes or views", async () => {
+    mockVerify.mockResolvedValue({ sub: "user1", email: "dj@example.com" });
+    mockSend.mockResolvedValueOnce({ Item: source }).mockResolvedValueOnce({});
+
+    const { app } = await import("../app");
+    const res = await app.request("/api/setlists/source1/duplicate", {
+      method: "POST",
+      headers: authHeaders(),
+    });
+
+    const body = (await res.json()) as Record<string, unknown>;
+    expect(body.status).toBe("draft");
+    expect(body.likeCounts).toEqual({});
+    expect(body.viewCount).toBeUndefined();
+  });
+
+  it("keeps optional fields null when the source does not have them", async () => {
+    mockVerify.mockResolvedValue({ sub: "user1", email: "dj@example.com" });
+    mockSend
+      .mockResolvedValueOnce({ Item: { id: "source2", userId: "user1", name: "Bare Set" } })
+      .mockResolvedValueOnce({});
+
+    const { app } = await import("../app");
+    const res = await app.request("/api/setlists/source2/duplicate", {
+      method: "POST",
+      headers: authHeaders(),
+    });
+
+    const body = (await res.json()) as Record<string, unknown>;
+    expect(body.artistName).toBeNull();
+    expect(body.eventName).toBeNull();
+    expect(body.eventLink).toBeNull();
+    expect(body.eventDate).toBeNull();
+    expect(body.tracks).toEqual([]);
+  });
+
+  it("returns 404 when the setlist does not exist", async () => {
+    mockVerify.mockResolvedValue({ sub: "user1", email: "dj@example.com" });
+    mockSend.mockResolvedValueOnce({ Item: undefined });
+
+    const { app } = await import("../app");
+    const res = await app.request("/api/setlists/not-exist/duplicate", {
+      method: "POST",
+      headers: authHeaders(),
+    });
+
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 404 when the setlist belongs to someone else", async () => {
+    mockVerify.mockResolvedValue({ sub: "user1", email: "dj@example.com" });
+    mockSend.mockResolvedValueOnce({ Item: { ...source, userId: "someone-else" } });
+
+    const { app } = await import("../app");
+    const res = await app.request("/api/setlists/source1/duplicate", {
+      method: "POST",
+      headers: authHeaders(),
+    });
+
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 401 without Authorization header", async () => {
+    const { app } = await import("../app");
+    const res = await app.request("/api/setlists/source1/duplicate", { method: "POST" });
+
+    expect(res.status).toBe(401);
+  });
+});
