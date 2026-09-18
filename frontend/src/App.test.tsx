@@ -108,7 +108,7 @@ describe("App", () => {
     expect(screen.getByText("利用規約")).toBeInTheDocument();
     expect(screen.getByText("プライバシーポリシー")).toBeInTheDocument();
     const authorLink = screen.getByRole("link", { name: "作者" });
-    expect(authorLink).toHaveAttribute("href", "https://x.com/tkgmirusen");
+    expect(authorLink).toHaveAttribute("href", "https://x.com/bismuth_72");
     expect(authorLink).toHaveAttribute("target", "_blank");
   });
 
