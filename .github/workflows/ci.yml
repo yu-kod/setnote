@@ -8,6 +8,11 @@ permissions:
   pull-requests: read
   contents: read
 
+env:
+  # Lambda の runtime（infra/lambda.tf）と backend の esbuild target に合わせる。
+  # ここがずれると、テストした環境と本番で実行する環境が違うことになる。
+  NODE_VERSION: "24"
+
 jobs:
   changes:
     runs-on: ubuntu-latest
@@ -22,8 +27,7 @@ jobs:
         with:
           # ルートの package.json / package-lock.json と .github/workflows/** は
           # 全系統に影響しうる。これらを各フィルタに含めておかないと、
-          # 依存更新やワークフロー変更だけの PR でテストジョブが 1 つも走らないまま
-          # CI が success になり、ci-gate がノーチェックでマージしてしまう。
+          # 依存更新やワークフロー変更だけの PR でテストジョブが 1 つも走らない。
           filters: |
             frontend:
               - 'frontend/**'
@@ -42,56 +46,67 @@ jobs:
     needs: changes
     if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: ${{ env.NODE_VERSION }}
 
       - name: Install dependencies
-        run: cd frontend && npm ci
+        run: npm ci
 
       - name: Lint
-        run: cd frontend && npm run lint
+        run: npm run lint
 
       - name: Format check
-        run: cd frontend && npm run format:check
+        run: npm run format:check
 
       - name: Typecheck
-        run: cd frontend && npx tsc --noEmit
+        run: npm run typecheck
 
       - name: Test
-        run: cd frontend && npm test
+        run: npm test
 
       - name: Build
-        run: cd frontend && npm run build
+        run: npm run build
 
   backend:
     needs: changes
     if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: ${{ env.NODE_VERSION }}
 
       - name: Install dependencies
-        run: cd backend && npm ci
+        run: npm ci
 
       - name: Lint
-        run: cd backend && npm run lint
+        run: npm run lint
 
       - name: Format check
-        run: cd backend && npm run format:check
+        run: npm run format:check
+
+      # build:lambda は esbuild なので型を一切見ない。
+      # このステップが無いと backend の型エラーは CI をすり抜ける。
+      - name: Typecheck
+        run: npm run typecheck
 
       - name: Test
-        run: cd backend && npm test
+        run: npm test
 
       - name: Build Lambda
-        run: cd backend && npm run build:lambda
+        run: npm run build:lambda
 
   infra:
     needs: changes
@@ -109,3 +124,29 @@ jobs:
         run: |
           terraform -chdir=infra init -backend=false
           terraform -chdir=infra validate
+
+  # CI の結果を 1 本に集約するジョブ。
+  #
+  # frontend / backend / infra は変更検出で skip されることがあり、skipped は
+  # success ではない。全ジョブが skip された PR（docs だけの変更など）では
+  # ワークフロー全体の conclusion も success にならず、ci-gate.yml の
+  # workflow_run 判定にも必須ステータスチェックにも引っかからなくなる。
+  # ここで always() で必ず 1 ジョブ結果を出し、
+  # 「失敗・キャンセルが 1 つもないこと」を CI の成功条件として確定させる。
+  ci:
+    needs: [changes, frontend, backend, infra]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check job results
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "job results: $RESULTS"
+          for r in $RESULTS; do
+            case "$r" in
+              success|skipped) ;;
+              *) echo "::error::CI failed (job result: $r)"; exit 1 ;;
+            esac
+          done
+          echo "all jobs passed or were skipped"
