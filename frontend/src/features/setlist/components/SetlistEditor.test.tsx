@@ -9,6 +9,7 @@ import {
   deleteSetlist,
   fetchTrackSuggestions,
   parseImageTracks,
+  searchVocadbSongs,
 } from "../api";
 import { toast } from "sonner";
 import type { Setlist, Track } from "../types";
@@ -27,6 +28,7 @@ vi.mock("../api", () => ({
   deleteSetlist: vi.fn(),
   fetchTrackSuggestions: vi.fn(),
   parseImageTracks: vi.fn(),
+  searchVocadbSongs: vi.fn(),
 }));
 
 vi.mock("sonner", () => ({
@@ -40,6 +42,7 @@ const mockUnpublishSetlist = vi.mocked(unpublishSetlist);
 const mockDeleteSetlist = vi.mocked(deleteSetlist);
 const mockFetchTrackSuggestions = vi.mocked(fetchTrackSuggestions);
 const mockParseImageTracks = vi.mocked(parseImageTracks);
+const mockSearchVocadbSongs = vi.mocked(searchVocadbSongs);
 
 function buildSetlist(overrides: Partial<Setlist> = {}): Setlist {
   return {
@@ -67,6 +70,7 @@ beforeEach(() => {
   mockFetchTrackSuggestions.mockReset();
   mockFetchTrackSuggestions.mockResolvedValue([]);
   mockParseImageTracks.mockReset();
+  mockSearchVocadbSongs.mockReset();
   mockNavigate.mockReset();
   vi.mocked(toast.success).mockReset();
   vi.mocked(toast.error).mockReset();
@@ -700,5 +704,33 @@ describe("SetlistEditor", () => {
 
     await screen.findByLabelText("セットリスト名");
     expect(screen.queryByRole("link", { name: "シェア画像" })).not.toBeInTheDocument();
+  });
+});
+
+describe("SetlistEditor — VocaDB検索", () => {
+  it("adds a track with title, artist and song link from a VocaDB result", async () => {
+    mockFetchSetlist.mockResolvedValue(buildSetlist({ tracks: [] }));
+    mockSearchVocadbSongs.mockResolvedValue([
+      {
+        id: 3939,
+        title: "Tell Your World",
+        artist: "kz feat. 初音ミク",
+        songLink: "https://youtu.be/original000",
+        vocadbUrl: "https://vocadb.net/S/3939",
+      },
+    ]);
+    const user = userEvent.setup();
+    renderWithProviders(<SetlistEditor id="s1" />);
+    await screen.findByLabelText("セットリスト名");
+
+    await user.click(screen.getByRole("button", { name: "VocaDBから検索" }));
+    await user.type(screen.getByRole("searchbox", { name: "検索語" }), "Tell Your World");
+    await user.click(screen.getByRole("button", { name: "検索" }));
+    await user.click(await screen.findByRole("button", { name: "追加" }));
+    await user.click(screen.getByRole("button", { name: "閉じる" }));
+
+    expect(screen.getByDisplayValue("Tell Your World")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("kz feat. 初音ミク")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("https://youtu.be/original000")).toBeInTheDocument();
   });
 });
