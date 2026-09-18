@@ -1,13 +1,12 @@
-const YOUTUBE =
-  /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/)([a-zA-Z0-9_-]{11})/;
+import { getMediaEmbed } from "./media";
 
-export function getYouTubeVideoId(url: string): string | null {
-  const match = url.match(YOUTUBE);
-  return match ? match[1] : null;
-}
+// サムネイルを出せるのは、公式にサムネイルの取得経路が用意されている
+// サービスだけ（YouTube は Data API、Spotify と SoundCloud は oEmbed）。
+// ニコニコ動画は埋め込みには対応しているが、そうした経路がないため対象外。
+const THUMBNAIL_SUPPORTED = ["youtube", "spotify", "soundcloud"];
 
 export function getThumbnailProxyUrl(songLink: string): string | null {
-  const videoId = getYouTubeVideoId(songLink);
-  if (!videoId) return null;
-  return `/api/proxy/thumbnail?videoId=${videoId}`;
+  const embed = getMediaEmbed(songLink);
+  if (!embed || !THUMBNAIL_SUPPORTED.includes(embed.type)) return null;
+  return `/api/proxy/thumbnail?url=${encodeURIComponent(songLink)}`;
 }

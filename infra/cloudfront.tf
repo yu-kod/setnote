@@ -17,10 +17,10 @@ data "aws_cloudfront_cache_policy" "caching_optimized" {
   name = "Managed-CachingOptimized"
 }
 
-# サムネイルは公開情報で、同じ videoId なら誰に対しても同じ結果を返す。
+# サムネイルは公開情報で、同じ楽曲リンクなら誰に対しても同じ結果を返す。
 # CloudFront でキャッシュすることで、閲覧のたびに Lambda へ届いて
-# YouTube Data API のクォータ（1日 10,000 ユニット）を消費するのを防ぐ。
-# キャッシュキーは videoId だけにし、Cookie やヘッダーは含めない。
+# 各サービスの API（YouTube Data API のクォータは1日 10,000 ユニット）を
+# 消費するのを防ぐ。キャッシュキーは url だけにし、Cookie やヘッダーは含めない。
 resource "aws_cloudfront_cache_policy" "thumbnail_proxy" {
   name        = "${var.project_name}-thumbnail-proxy"
   min_ttl     = 0
@@ -43,7 +43,7 @@ resource "aws_cloudfront_cache_policy" "thumbnail_proxy" {
       query_string_behavior = "whitelist"
 
       query_strings {
-        items = ["videoId"]
+        items = ["url"]
       }
     }
   }
@@ -107,7 +107,7 @@ resource "aws_cloudfront_distribution" "main" {
   }
 
   # /api/proxy/* behavior: サムネイルは公開情報なのでキャッシュする。
-  # origin request policy を付けないことで、キャッシュキーに含めた videoId だけが
+  # origin request policy を付けないことで、キャッシュキーに含めた url だけが
   # オリジンへ渡り、Cookie や Authorization は転送されない。
   # CloudFront は ordered_cache_behavior を宣言順に評価するので、
   # より限定的なこのブロックを /api/* より前に置く必要がある。

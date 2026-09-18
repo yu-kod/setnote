@@ -201,7 +201,10 @@ describe("VocadbSearch", () => {
     await searchByTitle();
 
     const thumbnail = screen.getByRole("img", { name: "Tell Your World のサムネイル" });
-    expect(thumbnail).toHaveAttribute("src", "/api/proxy/thumbnail?videoId=original000");
+    expect(thumbnail).toHaveAttribute(
+      "src",
+      `/api/proxy/thumbnail?url=${encodeURIComponent("https://youtu.be/original000")}`
+    );
     expect(thumbnail.closest("a")).toHaveAttribute("href", "https://youtu.be/original000");
   });
 

@@ -1,40 +1,32 @@
 import { describe, it, expect } from "vitest";
-import { getYouTubeVideoId, getThumbnailProxyUrl } from "./thumbnail";
-
-describe("getYouTubeVideoId", () => {
-  it("extracts the video ID from a watch?v= link", () => {
-    expect(getYouTubeVideoId("https://www.youtube.com/watch?v=dQw4w9WgXcQ")).toBe("dQw4w9WgXcQ");
-  });
-
-  it("extracts the video ID from a youtu.be link", () => {
-    expect(getYouTubeVideoId("https://youtu.be/dQw4w9WgXcQ")).toBe("dQw4w9WgXcQ");
-  });
-
-  it("extracts the video ID from an embed link", () => {
-    expect(getYouTubeVideoId("https://www.youtube.com/embed/dQw4w9WgXcQ")).toBe("dQw4w9WgXcQ");
-  });
-
-  it("returns null for a Spotify link", () => {
-    expect(getYouTubeVideoId("https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT")).toBeNull();
-  });
-
-  it("returns null for an empty string", () => {
-    expect(getYouTubeVideoId("")).toBeNull();
-  });
-});
+import { getThumbnailProxyUrl } from "./thumbnail";
 
 describe("getThumbnailProxyUrl", () => {
-  it("returns the proxy URL for a YouTube link", () => {
+  it("YouTube のリンクはプロキシ経由で取る", () => {
     expect(getThumbnailProxyUrl("https://youtu.be/dQw4w9WgXcQ")).toBe(
-      "/api/proxy/thumbnail?videoId=dQw4w9WgXcQ"
+      `/api/proxy/thumbnail?url=${encodeURIComponent("https://youtu.be/dQw4w9WgXcQ")}`
     );
   });
 
-  it("returns null for a non-YouTube link", () => {
-    expect(getThumbnailProxyUrl("https://soundcloud.com/artist/track")).toBeNull();
+  it("Spotify のリンクもプロキシ経由で取る", () => {
+    const link = "https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT";
+
+    expect(getThumbnailProxyUrl(link)).toBe(`/api/proxy/thumbnail?url=${encodeURIComponent(link)}`);
   });
 
-  it("returns null for an empty string", () => {
+  it("SoundCloud のリンクもプロキシ経由で取る", () => {
+    const link = "https://soundcloud.com/artist/track";
+
+    expect(getThumbnailProxyUrl(link)).toBe(`/api/proxy/thumbnail?url=${encodeURIComponent(link)}`);
+  });
+
+  // ニコニコ動画は公式のサムネイル取得経路がないため対象外。
+  it("ニコニコ動画のリンクは null", () => {
+    expect(getThumbnailProxyUrl("https://www.nicovideo.jp/watch/sm9")).toBeNull();
+  });
+
+  it("対応していないリンクは null", () => {
+    expect(getThumbnailProxyUrl("https://example.com/song")).toBeNull();
     expect(getThumbnailProxyUrl("")).toBeNull();
   });
 });
