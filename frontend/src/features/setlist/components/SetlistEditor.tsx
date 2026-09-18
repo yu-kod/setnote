@@ -37,6 +37,7 @@ import {
 import NotFoundPage from "@/pages/NotFoundPage";
 import { AddTrackForm } from "./AddTrackForm";
 import { ImageTrackImport } from "./ImageTrackImport";
+import { VocadbSearch } from "./VocadbSearch";
 import { TrackCard } from "./TrackCard";
 import { toggleGroup } from "../trackGroup";
 
@@ -377,6 +378,7 @@ export function SetlistEditor({ id }: { id: string }) {
         </Sortable>
         <AddTrackForm onAdd={addTrack} />
         <ImageTrackImport onImport={importTracks} />
+        <VocadbSearch onAdd={addTrack} />
       </div>
 
       <div className="flex justify-end gap-2">

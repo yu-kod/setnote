@@ -159,3 +159,34 @@ export async function fetchPublicSetlist(id: string): Promise<Setlist> {
   }
   return res.json() as Promise<Setlist>;
 }
+
+export type VocadbSong = {
+  id: number;
+  title: string;
+  artist: string;
+  songLink: string;
+  vocadbUrl: string;
+};
+
+export type VocadbSearchBy = "title" | "artist";
+
+// VocaDB 検索。ブラウザから直接ではなくバックエンド経由で叩く。
+export async function searchVocadbSongs(query: string, by: VocadbSearchBy): Promise<VocadbSong[]> {
+  const res = await fetch(`/api/vocadb/songs?q=${encodeURIComponent(query)}&by=${by}`, {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${getToken()}`,
+    },
+  });
+
+  if (!res.ok) {
+    if (res.status === 401) {
+      clearSession();
+      redirectToLogin();
+    }
+    throw new Error("VocaDBの検索に失敗しました");
+  }
+
+  const data = (await res.json()) as { songs: VocadbSong[] };
+  return data.songs;
+}
