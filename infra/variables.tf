@@ -28,3 +28,10 @@ variable "anthropic_api_key" {
   sensitive   = true
   default     = ""
 }
+
+variable "youtube_api_key" {
+  description = "YouTube Data API key for resolving video thumbnails"
+  type        = string
+  sensitive   = true
+  default     = ""
+}

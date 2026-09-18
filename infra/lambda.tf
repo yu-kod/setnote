@@ -83,6 +83,7 @@ resource "aws_lambda_function" "api" {
       COGNITO_USER_POOL_ID = aws_cognito_user_pool.main.id
       COGNITO_CLIENT_ID    = aws_cognito_user_pool_client.web.id
       ANTHROPIC_API_KEY    = var.anthropic_api_key
+      YOUTUBE_API_KEY      = var.youtube_api_key
     }
   }
 }
