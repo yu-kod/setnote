@@ -702,3 +702,80 @@ describe("SetlistEditor", () => {
     expect(screen.queryByRole("link", { name: "シェア画像" })).not.toBeInTheDocument();
   });
 });
+
+describe("SetlistEditor 曲順のテキストコピー", () => {
+  const tracks = [
+    {
+      id: "t1",
+      title: "Track One",
+      artist: "Artist A",
+      songLink: "",
+      source: "",
+      customFields: [],
+      groupId: null,
+    },
+    {
+      id: "t2",
+      title: "Track Two",
+      artist: "",
+      songLink: "",
+      source: "",
+      customFields: [],
+      groupId: null,
+    },
+  ];
+
+  it("copies the numbered tracklist, without needing the setlist to be published", async () => {
+    mockFetchSetlist.mockResolvedValue(
+      buildSetlist({ name: "Friday Night Set", status: "draft", tracks })
+    );
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    renderWithProviders(<SetlistEditor id="s1" />);
+    await screen.findByLabelText("セットリスト名");
+
+    await user.click(screen.getByRole("button", { name: "曲順をテキストでコピー" }));
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith(
+        "Friday Night Set\n\n1. Track One — Artist A\n2. Track Two"
+      );
+    });
+    expect(toast.success).toHaveBeenCalledWith("曲順をコピーしました");
+  });
+
+  it("includes the public url once the setlist is published", async () => {
+    mockFetchSetlist.mockResolvedValue(
+      buildSetlist({ name: "Friday Night Set", status: "published", tracks })
+    );
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    renderWithProviders(<SetlistEditor id="s1" />);
+    await screen.findByLabelText("セットリスト名");
+
+    await user.click(screen.getByRole("button", { name: "曲順をテキストでコピー" }));
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith(expect.stringContaining("/s/s1"));
+    });
+  });
+
+  it("copies the edits made since the last save", async () => {
+    mockFetchSetlist.mockResolvedValue(buildSetlist({ name: "Friday Night Set", tracks }));
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    renderWithProviders(<SetlistEditor id="s1" />);
+    await screen.findByLabelText("セットリスト名");
+
+    await user.clear(screen.getByLabelText("セットリスト名"));
+    await user.type(screen.getByLabelText("セットリスト名"), "Renamed Set");
+    await user.click(screen.getByRole("button", { name: "曲順をテキストでコピー" }));
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith(expect.stringContaining("Renamed Set"));
+    });
+  });
+});
