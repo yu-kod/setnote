@@ -8,6 +8,7 @@ import {
 } from "../features/setlist/api";
 import { getLikedTrackIds, markLiked, unmarkLiked } from "../features/setlist/likes";
 import { groupTracks } from "../features/setlist/trackGroup";
+import { useFitToViewportHeight } from "../features/setlist/hooks/useFitToViewportHeight";
 import type { Setlist, Track } from "../features/setlist/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -50,6 +51,10 @@ export default function SetlistPage() {
   const [likeCounts, setLikeCounts] = useState<Record<string, number>>({});
   const [liked, setLiked] = useState<Set<string>>(() => getLikedTrackIds(id!));
   const playerRef = useRef<HTMLDivElement>(null);
+  // 一覧表示は1画面に収めたいので、画面の高さに合わせて目次を詰める。
+  // 案内モーダルが開いている間はページのスクロールが止められていて正しく測れないため、
+  // 閉じてから測る。
+  const listRef = useFitToViewportHeight<HTMLOListElement>(listView && !guideOpen, setlist);
 
   useEffect(() => {
     fetchPublicSetlist(id!)
@@ -185,7 +190,7 @@ export default function SetlistPage() {
           </Dialog>
 
           {/* 目次：全曲を一覧表示。行をタップすると下のプレイヤーが切り替わる。 */}
-          <ol className="overflow-hidden rounded-md border">
+          <ol ref={listRef} className="overflow-hidden rounded-md border">
             {tracks.map((track, i) => {
               // 一覧表示では選択の概念がないため、ハイライトも出さない。
               const active = !listView && track.id === selected.id;
@@ -200,8 +205,23 @@ export default function SetlistPage() {
               const rowContent = (
                 <>
                   <span className="text-muted-foreground">{trackNumber.get(track.id)}.</span>
-                  <span className="font-medium">{track.title}</span>
-                  {track.artist && <span className="text-muted-foreground">— {track.artist}</span>}
+                  {/* 一覧表示は1行に収めるため、曲名とアーティストをまとめて末尾で省略する。
+                      別々に縮めると、長い曲名だけが極端に削られてしまう。 */}
+                  {listView ? (
+                    <span className="truncate">
+                      <span className="font-medium">{track.title}</span>
+                      {track.artist && (
+                        <span className="text-muted-foreground"> — {track.artist}</span>
+                      )}
+                    </span>
+                  ) : (
+                    <>
+                      <span className="font-medium">{track.title}</span>
+                      {track.artist && (
+                        <span className="text-muted-foreground">— {track.artist}</span>
+                      )}
+                    </>
+                  )}
                   {isGroupedWithPrev && (
                     <span className="rounded bg-primary/10 px-1 py-0.5 text-[10px] font-semibold text-primary">
                       BLEND
@@ -235,7 +255,9 @@ export default function SetlistPage() {
                     </a>
                   )}
                   {listView ? (
-                    <div className="flex flex-1 items-baseline gap-2 px-3 py-1 text-sm">
+                    // 一覧表示の行は必ず1行に収める。折り返しがあると縮小率の計算が
+                    // 実際の高さとずれるため、詰めても1画面に収まらなくなる。
+                    <div className="flex flex-1 items-baseline gap-2 overflow-hidden px-3 py-1 text-sm whitespace-nowrap">
                       {rowContent}
                     </div>
                   ) : (

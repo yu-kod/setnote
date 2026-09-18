@@ -570,6 +570,31 @@ describe("SetlistPage 一覧表示", () => {
     expect(dialog).toHaveTextContent("ブラウザの戻る");
   });
 
+  // ページが縦にはみ出している状況を作る（縮小率そのものはフック側でテストする）。
+  function stubOverflowingPage() {
+    vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(1000);
+    vi.spyOn(Element.prototype, "clientHeight", "get").mockReturnValue(600);
+    vi.spyOn(Element.prototype, "scrollHeight", "get").mockReturnValue(1000);
+  }
+
+  // スクロールせず1画面で見渡せるよう、画面の高さに合わせて詰める。
+  it("一覧が画面に収まらないときは縮小する", async () => {
+    stubOverflowingPage();
+
+    await renderAndToggle();
+
+    expect(Number(screen.getByRole("list").style.zoom)).toBeLessThan(1);
+  });
+
+  it("通常表示では縮小しない", async () => {
+    stubOverflowingPage();
+
+    mockFetch.mockResolvedValue(buildSetlistForList());
+    renderWithProviders(<SetlistPage />);
+
+    expect((await screen.findByRole("list")).style.zoom).toBe("");
+  });
+
   it("案内を閉じるとモーダルが消える", async () => {
     await renderAndOpenGuide();
     await screen.findByRole("dialog", { name: "一覧表示にしました" });

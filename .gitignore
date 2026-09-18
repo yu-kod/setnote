@@ -16,3 +16,8 @@ coverage/
 .claude/*
 !.claude/skills/
 tsconfig.tsbuildinfo
+
+# Playwright
+test-results/
+playwright-report/
+frontend/e2e/screenshots/
