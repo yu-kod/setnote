@@ -474,3 +474,74 @@ describe("SetlistPage サムネイル", () => {
     ).not.toBeInTheDocument();
   });
 });
+
+describe("SetlistPage 一覧表示", () => {
+  function buildSetlistForList() {
+    return buildPublicSetlist({
+      tracks: [
+        {
+          id: "t1",
+          title: "Song A",
+          artist: "Artist A",
+          songLink: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+          source: "",
+          customFields: [],
+          groupId: null,
+        },
+        {
+          id: "t2",
+          title: "Song B",
+          artist: "",
+          songLink: "",
+          source: "",
+          customFields: [],
+          groupId: null,
+        },
+      ],
+      likeCounts: { t1: 3 },
+    });
+  }
+
+  async function renderAndToggle() {
+    mockFetch.mockResolvedValue(buildSetlistForList());
+    renderWithProviders(<SetlistPage />);
+    const toggle = await screen.findByRole("button", { name: "一覧表示" });
+    await userEvent.click(toggle);
+  }
+
+  it("一覧表示のトグルを表示する", async () => {
+    mockFetch.mockResolvedValue(buildSetlistForList());
+    renderWithProviders(<SetlistPage />);
+
+    expect(await screen.findByRole("button", { name: "一覧表示" })).toBeInTheDocument();
+  });
+
+  it("一覧表示にするとプレイヤーを隠す", async () => {
+    await renderAndToggle();
+
+    expect(screen.queryByRole("region", { name: "選択中の曲" })).not.toBeInTheDocument();
+  });
+
+  it("一覧表示にするといいねボタンを隠す", async () => {
+    await renderAndToggle();
+
+    expect(screen.queryByRole("button", { name: "Song Aにいいね" })).not.toBeInTheDocument();
+  });
+
+  it("一覧表示でも曲名とサムネイルは残る", async () => {
+    await renderAndToggle();
+
+    expect(screen.getByText("Song A")).toBeInTheDocument();
+    expect(screen.getByText("Song B")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Song A のサムネイル" })).toBeInTheDocument();
+  });
+
+  it("もう一度押すと通常表示に戻る", async () => {
+    await renderAndToggle();
+
+    await userEvent.click(screen.getByRole("button", { name: "通常表示" }));
+
+    expect(screen.getByRole("region", { name: "選択中の曲" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Song Aにいいね" })).toBeInTheDocument();
+  });
+});
