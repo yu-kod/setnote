@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { within } from "@testing-library/react";
+import { act, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders, screen, waitFor } from "../test-utils";
 import SetlistPage from "./SetlistPage";
@@ -562,7 +562,11 @@ describe("SetlistPage 一覧表示", () => {
       await renderAndToggle();
       expect(screen.getByRole("status", { name: "操作の案内" })).toBeInTheDocument();
 
-      await vi.advanceTimersByTimeAsync(3000);
+      // React 19 はタイマー内の state 更新をそのままでは反映しないため、
+      // act で囲んで再レンダーまで待つ。
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(3000);
+      });
 
       expect(screen.queryByRole("status", { name: "操作の案内" })).not.toBeInTheDocument();
     } finally {
