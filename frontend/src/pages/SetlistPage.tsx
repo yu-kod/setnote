@@ -11,6 +11,15 @@ import { groupTracks } from "../features/setlist/trackGroup";
 import type { Setlist, Track } from "../features/setlist/types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExternalLink, Heart } from "lucide-react";
 import { MediaEmbed } from "../features/setlist/components/MediaEmbed";
@@ -33,10 +42,11 @@ export default function SetlistPage() {
   // スクロールせずにセット全体を見渡すための表示モード。
   // URL に持たせることで、ブラウザの戻るがそのまま解除操作になる。
   // 一覧表示中は解除ボタンを画面から消す（スクリーンショットに写り込むため）。
+  // 代わりに、入った直後にモーダルで戻り方を案内する。
   const [searchParams, setSearchParams] = useSearchParams();
   const listView = searchParams.get("view") === "list";
-  const [hintDismissed, setHintDismissed] = useState(false);
-  const hintVisible = listView && !hintDismissed;
+  const [guideDismissed, setGuideDismissed] = useState(false);
+  const guideOpen = listView && !guideDismissed;
   const [likeCounts, setLikeCounts] = useState<Record<string, number>>({});
   const [liked, setLiked] = useState<Set<string>>(() => getLikedTrackIds(id!));
   const playerRef = useRef<HTMLDivElement>(null);
@@ -52,14 +62,6 @@ export default function SetlistPage() {
     // 公開ページ表示のPVを計測（fire-and-forget）。
     recordSetlistView(id!);
   }, [id]);
-
-  // 一覧表示に入った直後だけ、戻り方を短く案内する。
-  // 出しっぱなしにすると案内自体がスクリーンショットに写るため、すぐ消す。
-  useEffect(() => {
-    if (!hintVisible) return;
-    const timer = setTimeout(() => setHintDismissed(true), 2500);
-    return () => clearTimeout(timer);
-  }, [hintVisible]);
 
   // いいねのトグル（曲ごと1回まで）。未いいねなら付け、いいね済みなら取り消す。
   // 成功したら数を更新し、端末ローカルの記録も切り替える。
@@ -154,7 +156,7 @@ export default function SetlistPage() {
                 variant="outline"
                 size="sm"
                 onClick={() => {
-                  setHintDismissed(false);
+                  setGuideDismissed(false);
                   setSearchParams({ view: "list" });
                 }}
               >
@@ -163,15 +165,24 @@ export default function SetlistPage() {
             </div>
           )}
 
-          {hintVisible && (
-            <p
-              role="status"
-              aria-label="操作の案内"
-              className="fixed inset-x-0 bottom-4 z-10 text-center text-xs text-muted-foreground"
-            >
-              ブラウザの戻るで通常表示に戻ります
-            </p>
-          )}
+          {/* 戻り方が分からなくなると詰むため、見落とされない形で一度だけ案内する。
+              閉じたあとは画面に何も残らないので、そのままスクリーンショットを撮れる。 */}
+          <Dialog open={guideOpen} onOpenChange={() => setGuideDismissed(true)}>
+            <DialogContent showCloseButton={false}>
+              <DialogHeader>
+                <DialogTitle>一覧表示にしました</DialogTitle>
+                <DialogDescription>
+                  ブラウザの戻る（スマートフォンなら戻るジェスチャー）で通常表示に戻ります。
+                  この案内を閉じると画面にはセットリストだけが残るので、そのままスクリーンショットを撮って共有できます。
+                </DialogDescription>
+              </DialogHeader>
+              <DialogFooter>
+                <DialogClose asChild>
+                  <Button type="button">閉じる</Button>
+                </DialogClose>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           {/* 目次：全曲を一覧表示。行をタップすると下のプレイヤーが切り替わる。 */}
           <ol className="overflow-hidden rounded-md border">
