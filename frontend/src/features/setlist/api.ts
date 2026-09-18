@@ -56,6 +56,11 @@ export function createSetlist(name: string): Promise<Setlist> {
   return setlistRequest<Setlist>("", { method: "POST", body: { name } });
 }
 
+// 既存のセットリストを下書きとして複製する。複製されたセットリストを返す。
+export function duplicateSetlist(id: string): Promise<Setlist> {
+  return setlistRequest<Setlist>(`/${id}/duplicate`, { method: "POST" });
+}
+
 // 編集用の取得は所有者専用の GET が無いため、認証付きの一覧から id で絞る。
 export async function fetchSetlist(id: string): Promise<Setlist | null> {
   const setlists = await fetchMySetlists();
