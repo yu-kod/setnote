@@ -9,6 +9,7 @@ import {
   deleteSetlist,
   fetchTrackSuggestions,
   parseImageTracks,
+  searchVocadbSongs,
 } from "../api";
 import { toast } from "sonner";
 import type { Setlist, Track } from "../types";
@@ -27,6 +28,7 @@ vi.mock("../api", () => ({
   deleteSetlist: vi.fn(),
   fetchTrackSuggestions: vi.fn(),
   parseImageTracks: vi.fn(),
+  searchVocadbSongs: vi.fn(),
 }));
 
 vi.mock("sonner", () => ({
@@ -40,6 +42,7 @@ const mockUnpublishSetlist = vi.mocked(unpublishSetlist);
 const mockDeleteSetlist = vi.mocked(deleteSetlist);
 const mockFetchTrackSuggestions = vi.mocked(fetchTrackSuggestions);
 const mockParseImageTracks = vi.mocked(parseImageTracks);
+const mockSearchVocadbSongs = vi.mocked(searchVocadbSongs);
 
 function buildSetlist(overrides: Partial<Setlist> = {}): Setlist {
   return {
@@ -59,6 +62,7 @@ function buildSetlist(overrides: Partial<Setlist> = {}): Setlist {
 }
 
 beforeEach(() => {
+  localStorage.clear();
   mockFetchSetlist.mockReset();
   mockUpdateSetlist.mockReset();
   mockPublishSetlist.mockReset();
@@ -67,6 +71,7 @@ beforeEach(() => {
   mockFetchTrackSuggestions.mockReset();
   mockFetchTrackSuggestions.mockResolvedValue([]);
   mockParseImageTracks.mockReset();
+  mockSearchVocadbSongs.mockReset();
   mockNavigate.mockReset();
   vi.mocked(toast.success).mockReset();
   vi.mocked(toast.error).mockReset();
@@ -700,5 +705,292 @@ describe("SetlistEditor", () => {
 
     await screen.findByLabelText("セットリスト名");
     expect(screen.queryByRole("link", { name: "シェア画像" })).not.toBeInTheDocument();
+  });
+});
+
+describe("SetlistEditor — VocaDB検索", () => {
+  it("adds a track with title, artist and song link from a VocaDB result", async () => {
+    mockFetchSetlist.mockResolvedValue(buildSetlist({ tracks: [] }));
+    mockSearchVocadbSongs.mockResolvedValue([
+      {
+        id: 3939,
+        title: "Tell Your World",
+        artist: "kz feat. 初音ミク",
+        songLink: "https://youtu.be/original000",
+        vocadbUrl: "https://vocadb.net/S/3939",
+      },
+    ]);
+    const user = userEvent.setup();
+    renderWithProviders(<SetlistEditor id="s1" />);
+    await screen.findByLabelText("セットリスト名");
+
+    await user.click(screen.getByRole("button", { name: "VocaDBから検索" }));
+    await user.type(screen.getByRole("searchbox", { name: "検索語" }), "Tell Your World");
+    await user.click(screen.getByRole("button", { name: "検索" }));
+    await user.click(await screen.findByRole("button", { name: "追加" }));
+    await user.click(screen.getByRole("button", { name: "閉じる" }));
+
+    expect(screen.getByDisplayValue("Tell Your World")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("kz feat. 初音ミク")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("https://youtu.be/original000")).toBeInTheDocument();
+  });
+});
+
+describe("SetlistEditor 曲順のテキストコピー", () => {
+  const tracks = [
+    {
+      id: "t1",
+      title: "Track One",
+      artist: "Artist A",
+      songLink: "",
+      source: "",
+      customFields: [],
+      groupId: null,
+    },
+    {
+      id: "t2",
+      title: "Track Two",
+      artist: "",
+      songLink: "",
+      source: "",
+      customFields: [],
+      groupId: null,
+    },
+  ];
+
+  it("copies the numbered tracklist, without needing the setlist to be published", async () => {
+    mockFetchSetlist.mockResolvedValue(
+      buildSetlist({ name: "Friday Night Set", status: "draft", tracks })
+    );
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    renderWithProviders(<SetlistEditor id="s1" />);
+    await screen.findByLabelText("セットリスト名");
+
+    await user.click(screen.getByRole("button", { name: "曲順をテキストでコピー" }));
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith(
+        "Friday Night Set\n\n1. Track One — Artist A\n2. Track Two"
+      );
+    });
+    expect(toast.success).toHaveBeenCalledWith("曲順をコピーしました");
+  });
+
+  it("includes the public url once the setlist is published", async () => {
+    mockFetchSetlist.mockResolvedValue(
+      buildSetlist({ name: "Friday Night Set", status: "published", tracks })
+    );
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    renderWithProviders(<SetlistEditor id="s1" />);
+    await screen.findByLabelText("セットリスト名");
+
+    await user.click(screen.getByRole("button", { name: "曲順をテキストでコピー" }));
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith(expect.stringContaining("/s/s1"));
+    });
+  });
+
+  it("copies the edits made since the last save", async () => {
+    mockFetchSetlist.mockResolvedValue(buildSetlist({ name: "Friday Night Set", tracks }));
+    const user = userEvent.setup();
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    renderWithProviders(<SetlistEditor id="s1" />);
+    await screen.findByLabelText("セットリスト名");
+
+    await user.clear(screen.getByLabelText("セットリスト名"));
+    await user.type(screen.getByLabelText("セットリスト名"), "Renamed Set");
+    await user.click(screen.getByRole("button", { name: "曲順をテキストでコピー" }));
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith(expect.stringContaining("Renamed Set"));
+    });
+  });
+});
+
+describe("SetlistEditor 未保存インジケーター", () => {
+  it("reads as saved right after loading", async () => {
+    mockFetchSetlist.mockResolvedValue(buildSetlist({ name: "My Set" }));
+    renderWithProviders(<SetlistEditor id="s1" />);
+
+    expect(await screen.findByText("保存済み")).toBeInTheDocument();
+    expect(screen.queryByText("未保存の変更あり")).not.toBeInTheDocument();
+  });
+
+  it("switches to unsaved once the DJ edits something", async () => {
+    mockFetchSetlist.mockResolvedValue(buildSetlist({ name: "My Set" }));
+    const user = userEvent.setup();
+    renderWithProviders(<SetlistEditor id="s1" />);
+
+    await screen.findByLabelText("セットリスト名");
+    await user.type(screen.getByLabelText("イベント名"), "Club Night");
+
+    expect(screen.getByText("未保存の変更あり")).toBeInTheDocument();
+  });
+
+  it("goes back to saved after a successful save", async () => {
+    mockFetchSetlist.mockResolvedValue(buildSetlist({ name: "My Set" }));
+    mockUpdateSetlist.mockResolvedValue(buildSetlist());
+    const user = userEvent.setup();
+    renderWithProviders(<SetlistEditor id="s1" />);
+
+    await screen.findByLabelText("セットリスト名");
+    await user.type(screen.getByLabelText("イベント名"), "Club Night");
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("保存済み")).toBeInTheDocument();
+    });
+  });
+
+  it("stays unsaved when saving fails", async () => {
+    mockFetchSetlist.mockResolvedValue(buildSetlist({ name: "My Set" }));
+    mockUpdateSetlist.mockRejectedValue(new Error("save failed"));
+    const user = userEvent.setup();
+    renderWithProviders(<SetlistEditor id="s1" />);
+
+    await screen.findByLabelText("セットリスト名");
+    await user.type(screen.getByLabelText("イベント名"), "Club Night");
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("保存に失敗しました");
+    });
+    expect(screen.getByText("未保存の変更あり")).toBeInTheDocument();
+  });
+});
+
+describe("SetlistEditor 未保存の下書き", () => {
+  const draftKey = "setnote_draft_s1";
+
+  function storedDraft() {
+    const raw = localStorage.getItem(draftKey);
+    return raw ? (JSON.parse(raw) as { name: string }) : null;
+  }
+
+  it("keeps the edits in local storage while they are unsaved", async () => {
+    mockFetchSetlist.mockResolvedValue(buildSetlist({ name: "My Set" }));
+    const user = userEvent.setup();
+    renderWithProviders(<SetlistEditor id="s1" />);
+
+    await screen.findByLabelText("セットリスト名");
+    await user.type(screen.getByLabelText("イベント名"), "Club Night");
+
+    await waitFor(() => {
+      expect(storedDraft()).toMatchObject({ eventName: "Club Night" });
+    });
+  });
+
+  it("drops the stored draft once the edits are saved", async () => {
+    mockFetchSetlist.mockResolvedValue(buildSetlist({ name: "My Set" }));
+    mockUpdateSetlist.mockResolvedValue(buildSetlist());
+    const user = userEvent.setup();
+    renderWithProviders(<SetlistEditor id="s1" />);
+
+    await screen.findByLabelText("セットリスト名");
+    await user.type(screen.getByLabelText("イベント名"), "Club Night");
+    await waitFor(() => {
+      expect(storedDraft()).not.toBeNull();
+    });
+
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    await waitFor(() => {
+      expect(storedDraft()).toBeNull();
+    });
+  });
+
+  it("offers to restore a draft left over from a previous visit", async () => {
+    localStorage.setItem(
+      draftKey,
+      JSON.stringify({
+        name: "Half finished",
+        artistName: "",
+        eventName: "Club Night",
+        eventLink: "",
+        eventDate: "",
+        tracks: [],
+      })
+    );
+    mockFetchSetlist.mockResolvedValue(buildSetlist({ name: "My Set" }));
+    renderWithProviders(<SetlistEditor id="s1" />);
+
+    expect(await screen.findByText("未保存の変更があります")).toBeInTheDocument();
+    // 復元するまではサーバーの内容を表示したままにする。
+    expect(screen.getByLabelText("セットリスト名")).toHaveValue("My Set");
+  });
+
+  it("puts the draft back into the form when the DJ restores it", async () => {
+    localStorage.setItem(
+      draftKey,
+      JSON.stringify({
+        name: "Half finished",
+        artistName: "",
+        eventName: "Club Night",
+        eventLink: "",
+        eventDate: "",
+        tracks: [],
+      })
+    );
+    mockFetchSetlist.mockResolvedValue(buildSetlist({ name: "My Set" }));
+    const user = userEvent.setup();
+    renderWithProviders(<SetlistEditor id="s1" />);
+
+    await screen.findByText("未保存の変更があります");
+    await user.click(screen.getByRole("button", { name: "復元する" }));
+
+    expect(screen.getByLabelText("セットリスト名")).toHaveValue("Half finished");
+    expect(screen.getByLabelText("イベント名")).toHaveValue("Club Night");
+    expect(screen.queryByText("未保存の変更があります")).not.toBeInTheDocument();
+  });
+
+  it("throws the draft away when the DJ discards it", async () => {
+    localStorage.setItem(
+      draftKey,
+      JSON.stringify({
+        name: "Half finished",
+        artistName: "",
+        eventName: "",
+        eventLink: "",
+        eventDate: "",
+        tracks: [],
+      })
+    );
+    mockFetchSetlist.mockResolvedValue(buildSetlist({ name: "My Set" }));
+    const user = userEvent.setup();
+    renderWithProviders(<SetlistEditor id="s1" />);
+
+    await screen.findByText("未保存の変更があります");
+    await user.click(screen.getByRole("button", { name: "破棄する" }));
+
+    expect(screen.getByLabelText("セットリスト名")).toHaveValue("My Set");
+    expect(screen.queryByText("未保存の変更があります")).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(storedDraft()).toBeNull();
+    });
+  });
+
+  it("does not offer to restore when the draft matches what is saved", async () => {
+    localStorage.setItem(
+      draftKey,
+      JSON.stringify({
+        name: "My Set",
+        artistName: "",
+        eventName: "",
+        eventLink: "",
+        eventDate: "",
+        tracks: [],
+      })
+    );
+    mockFetchSetlist.mockResolvedValue(buildSetlist({ name: "My Set" }));
+    renderWithProviders(<SetlistEditor id="s1" />);
+
+    await screen.findByLabelText("セットリスト名");
+    expect(screen.queryByText("未保存の変更があります")).not.toBeInTheDocument();
   });
 });

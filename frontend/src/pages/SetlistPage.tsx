@@ -13,6 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExternalLink, Heart } from "lucide-react";
 import { MediaEmbed } from "../features/setlist/components/MediaEmbed";
+import { getThumbnailProxyUrl } from "../features/setlist/thumbnail";
 import NotFoundPage from "./NotFoundPage";
 
 const isUrl = (s: string) => /^https?:\/\//.test(s);
@@ -134,6 +135,9 @@ export default function SetlistPage() {
             {tracks.map((track, i) => {
               const active = track.id === selected.id;
               const alreadyLiked = liked.has(track.id);
+              // サムネイルは YouTube Data API 経由のプロキシから取得し、
+              // 動画ページへのリンクを添える（YouTube の利用条件に沿わせるため）。
+              const thumbnailUrl = getThumbnailProxyUrl(track.songLink);
               const prevTrack = tracks[i - 1];
               const isGroupedWithPrev =
                 prevTrack && track.groupId != null && prevTrack.groupId === track.groupId;
@@ -144,6 +148,23 @@ export default function SetlistPage() {
                 >
                   {track.groupId != null && (
                     <div className="w-1 shrink-0 bg-primary" aria-hidden="true" />
+                  )}
+                  {thumbnailUrl && (
+                    <a
+                      href={track.songLink}
+                      target="_blank"
+                      rel="noreferrer"
+                      className={`flex shrink-0 items-center transition-colors ${
+                        active ? "bg-muted" : "hover:bg-muted/50"
+                      }`}
+                    >
+                      <img
+                        src={thumbnailUrl}
+                        alt={`${track.title} のサムネイル`}
+                        loading="lazy"
+                        className="h-9 w-16 object-cover"
+                      />
+                    </a>
                   )}
                   <button
                     type="button"

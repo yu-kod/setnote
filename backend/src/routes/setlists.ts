@@ -179,6 +179,50 @@ setlistsRoute.post("/", authMiddleware, async (c) => {
   return c.json(item, 201);
 });
 
+// 既存のセットリストを下書きとして複製する。レギュラーイベントの次回分を前回から作るための導線。
+// いいね数・PV は引き継がず、常に未公開の下書きから始める。
+setlistsRoute.post("/:id/duplicate", authMiddleware, async (c) => {
+  const userId = c.get("userId");
+
+  const result = await docClient.send(
+    new GetCommand({
+      TableName: TABLES.setlists,
+      Key: { id: c.req.param("id") },
+    })
+  );
+
+  // 他人のセットリストは存在自体を伏せ、見つからない場合と同じ 404 にする。
+  const source = result.Item;
+  if (!source || source.userId !== userId) {
+    return c.json({ error: "Not found" }, 404);
+  }
+
+  const now = new Date().toISOString();
+  const item = {
+    id: nanoid(10),
+    userId,
+    name: `${source.name} のコピー`,
+    artistName: source.artistName ?? null,
+    eventName: source.eventName ?? null,
+    eventLink: source.eventLink ?? null,
+    eventDate: source.eventDate ?? null,
+    tracks: source.tracks ?? [],
+    status: "draft",
+    likeCounts: {},
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  await docClient.send(
+    new PutCommand({
+      TableName: TABLES.setlists,
+      Item: item,
+    })
+  );
+
+  return c.json(item, 201);
+});
+
 setlistsRoute.put("/:id", authMiddleware, async (c) => {
   const body = await c.req.json();
   const id = c.req.param("id");

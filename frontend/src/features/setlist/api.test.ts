@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   fetchMySetlists,
   createSetlist,
+  duplicateSetlist,
   fetchSetlist,
   updateSetlist,
   publishSetlist,
@@ -13,6 +14,7 @@ import {
   likeTrack,
   unlikeTrack,
   parseImageTracks,
+  searchVocadbSongs,
 } from "./api";
 import { clearSession, redirectToLogin } from "../auth/session";
 
@@ -273,6 +275,28 @@ describe("createSetlist", () => {
   });
 });
 
+describe("duplicateSetlist", () => {
+  it("calls POST /api/setlists/:id/duplicate and returns the created copy", async () => {
+    localStorage.setItem("setnote_access_token", "test-token");
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 201,
+      json: () => Promise.resolve({ id: "copy1", name: "New Set のコピー" }),
+    });
+
+    const result = await duplicateSetlist("src1");
+
+    expect(mockFetch).toHaveBeenCalledWith("/api/setlists/src1/duplicate", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer test-token",
+      },
+    });
+    expect(result).toEqual({ id: "copy1", name: "New Set のコピー" });
+  });
+});
+
 describe("204 response", () => {
   it("returns undefined for 204 status", async () => {
     mockFetch.mockResolvedValue({ ok: true, status: 204 });
@@ -465,5 +489,64 @@ describe("recordSetlistView", () => {
     mockFetch.mockRejectedValue(new Error("offline"));
 
     await expect(recordSetlistView("abc")).resolves.toBeUndefined();
+  });
+});
+
+describe("searchVocadbSongs", () => {
+  const SONG = {
+    id: 3939,
+    title: "Tell Your World",
+    artist: "kz feat. 初音ミク",
+    songLink: "https://youtu.be/original000",
+    vocadbUrl: "https://vocadb.net/S/3939",
+  };
+
+  it("calls GET /api/vocadb/songs with the escaped query and returns songs", async () => {
+    localStorage.setItem("setnote_access_token", "test-token");
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ songs: [SONG] }),
+    });
+
+    const result = await searchVocadbSongs("Tell Your World", "title");
+
+    expect(mockFetch).toHaveBeenCalledWith("/api/vocadb/songs?q=Tell%20Your%20World&by=title", {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer test-token",
+      },
+    });
+    expect(result).toEqual([SONG]);
+  });
+
+  it("passes by=artist for an artist search", async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve({ songs: [] }),
+    });
+
+    await searchVocadbSongs("kz", "artist");
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      "/api/vocadb/songs?q=kz&by=artist",
+      expect.objectContaining({ headers: expect.anything() })
+    );
+  });
+
+  it("throws when the request fails", async () => {
+    mockFetch.mockResolvedValue({ ok: false, status: 502, json: () => Promise.resolve({}) });
+
+    await expect(searchVocadbSongs("kz", "title")).rejects.toThrow("VocaDBの検索に失敗しました");
+  });
+
+  it("clears the session and redirects on 401", async () => {
+    mockFetch.mockResolvedValue({ ok: false, status: 401, json: () => Promise.resolve({}) });
+
+    await expect(searchVocadbSongs("kz", "title")).rejects.toThrow();
+
+    expect(clearSession).toHaveBeenCalled();
+    expect(redirectToLogin).toHaveBeenCalled();
   });
 });

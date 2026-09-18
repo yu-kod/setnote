@@ -401,3 +401,76 @@ describe("SetlistPage", () => {
     expect(likeButton("Song A")).toHaveAttribute("aria-pressed", "false");
   });
 });
+
+describe("SetlistPage サムネイル", () => {
+  function buildSetlistWithLinks() {
+    return buildPublicSetlist({
+      tracks: [
+        {
+          id: "t1",
+          title: "YouTube Song",
+          artist: "",
+          songLink: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+          source: "",
+          customFields: [],
+          groupId: null,
+        },
+        {
+          id: "t2",
+          title: "Spotify Song",
+          artist: "",
+          songLink: "https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT",
+          source: "",
+          customFields: [],
+          groupId: null,
+        },
+        {
+          id: "t3",
+          title: "No Link Song",
+          artist: "",
+          songLink: "",
+          source: "",
+          customFields: [],
+          groupId: null,
+        },
+      ],
+    });
+  }
+
+  it("YouTube リンクのトラックにサムネイルを表示する", async () => {
+    mockFetch.mockResolvedValue(buildSetlistWithLinks());
+    renderWithProviders(<SetlistPage />);
+
+    const thumbnail = await screen.findByRole("img", { name: "YouTube Song のサムネイル" });
+    expect(thumbnail).toHaveAttribute("src", "/api/proxy/thumbnail?videoId=dQw4w9WgXcQ");
+  });
+
+  it("サムネイルから YouTube の動画ページへリンクする", async () => {
+    mockFetch.mockResolvedValue(buildSetlistWithLinks());
+    renderWithProviders(<SetlistPage />);
+
+    const link = await screen.findByRole("link", { name: "YouTube Song のサムネイル" });
+    expect(link).toHaveAttribute("href", "https://www.youtube.com/watch?v=dQw4w9WgXcQ");
+    expect(link).toHaveAttribute("target", "_blank");
+  });
+
+  it("YouTube 以外のリンクではサムネイルを表示しない", async () => {
+    mockFetch.mockResolvedValue(buildSetlistWithLinks());
+    renderWithProviders(<SetlistPage />);
+
+    await screen.findByRole("img", { name: "YouTube Song のサムネイル" });
+    expect(
+      screen.queryByRole("img", { name: "Spotify Song のサムネイル" })
+    ).not.toBeInTheDocument();
+  });
+
+  it("リンクのないトラックではサムネイルを表示しない", async () => {
+    mockFetch.mockResolvedValue(buildSetlistWithLinks());
+    renderWithProviders(<SetlistPage />);
+
+    await screen.findByRole("img", { name: "YouTube Song のサムネイル" });
+    expect(
+      screen.queryByRole("img", { name: "No Link Song のサムネイル" })
+    ).not.toBeInTheDocument();
+  });
+});

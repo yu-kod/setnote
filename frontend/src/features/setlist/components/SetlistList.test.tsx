@@ -12,16 +12,27 @@ vi.mock("react-router-dom", async () => {
 const mockFetchMySetlists = vi.fn();
 const mockCreateSetlist = vi.fn();
 
+const mockDuplicateSetlist = vi.fn();
+
 vi.mock("../api", () => ({
   fetchMySetlists: (...args: unknown[]) => mockFetchMySetlists(...args),
   createSetlist: (...args: unknown[]) => mockCreateSetlist(...args),
+  duplicateSetlist: (...args: unknown[]) => mockDuplicateSetlist(...args),
 }));
 
 beforeEach(() => {
   mockFetchMySetlists.mockReset();
   mockCreateSetlist.mockReset();
+  mockDuplicateSetlist.mockReset();
   mockNavigate.mockReset();
 });
+
+// 一覧の並び順は、各行の複製ボタンのアクセシブル名（"<セットリスト名> を複製"）から読み取る。
+function setlistNames(): string[] {
+  return screen
+    .getAllByRole("button", { name: /を複製$/ })
+    .map((button) => button.getAttribute("aria-label")!.replace(" を複製", ""));
+}
 
 describe("SetlistList", () => {
   it("shows a loading skeleton while fetching", () => {
@@ -234,6 +245,180 @@ describe("SetlistList", () => {
 
     await waitFor(() => {
       expect(screen.getByRole("alert")).toHaveTextContent("作成に失敗しました");
+    });
+  });
+});
+
+describe("SetlistList 並び順", () => {
+  const setlists = [
+    {
+      id: "a",
+      name: "Spring Set",
+      status: "draft",
+      eventDate: "2026-03-20",
+      updatedAt: "2026-08-10T00:00:00Z",
+    },
+    {
+      id: "b",
+      name: "Summer Set",
+      status: "draft",
+      eventDate: "2026-08-14",
+      updatedAt: "2026-07-01T00:00:00Z",
+    },
+  ];
+
+  it("lists the most recently updated setlist first by default", async () => {
+    mockFetchMySetlists.mockResolvedValue(setlists);
+    renderWithProviders(<SetlistList />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Spring Set")).toBeInTheDocument();
+    });
+    expect(setlistNames()).toEqual(["Spring Set", "Summer Set"]);
+  });
+
+  it("re-orders by event date when the DJ switches the sort order", async () => {
+    mockFetchMySetlists.mockResolvedValue(setlists);
+    const user = userEvent.setup();
+    renderWithProviders(<SetlistList />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Spring Set")).toBeInTheDocument();
+    });
+    await user.selectOptions(screen.getByLabelText("並び順"), "eventDate");
+
+    expect(setlistNames()).toEqual(["Summer Set", "Spring Set"]);
+  });
+});
+
+describe("SetlistList 検索", () => {
+  const setlists = [
+    {
+      id: "a",
+      name: "Summer Festival Set",
+      status: "draft",
+      eventName: "Summer Fes",
+      eventDate: null,
+      updatedAt: "2026-08-10T00:00:00Z",
+    },
+    {
+      id: "b",
+      name: "Club Night Mix",
+      status: "published",
+      eventName: "Techno Bunker",
+      eventDate: null,
+      updatedAt: "2026-07-01T00:00:00Z",
+    },
+  ];
+
+  it("narrows the list to setlists matching the query", async () => {
+    mockFetchMySetlists.mockResolvedValue(setlists);
+    const user = userEvent.setup();
+    renderWithProviders(<SetlistList />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Summer Festival Set")).toBeInTheDocument();
+    });
+    await user.type(screen.getByLabelText("セットリストを検索"), "bunker");
+
+    expect(setlistNames()).toEqual(["Club Night Mix"]);
+  });
+
+  it("tells the DJ when nothing matches the query", async () => {
+    mockFetchMySetlists.mockResolvedValue(setlists);
+    const user = userEvent.setup();
+    renderWithProviders(<SetlistList />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Summer Festival Set")).toBeInTheDocument();
+    });
+    await user.type(screen.getByLabelText("セットリストを検索"), "存在しない");
+
+    expect(screen.queryAllByRole("listitem")).toHaveLength(0);
+    expect(screen.getByText("条件に一致するセットリストがありません")).toBeInTheDocument();
+  });
+
+  it("does not show the search box until there is something to search", async () => {
+    mockFetchMySetlists.mockResolvedValue([]);
+    renderWithProviders(<SetlistList />);
+
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "新規作成" })).toBeInTheDocument();
+    });
+    expect(screen.queryByLabelText("セットリストを検索")).not.toBeInTheDocument();
+  });
+});
+
+describe("SetlistList 複製", () => {
+  const setlists = [
+    {
+      id: "abc123",
+      name: "Friday Night Set",
+      status: "published",
+      eventName: null,
+      eventDate: null,
+      updatedAt: "2026-08-10T00:00:00Z",
+    },
+  ];
+
+  it("duplicates a setlist and opens the copy for editing", async () => {
+    mockFetchMySetlists.mockResolvedValue(setlists);
+    mockDuplicateSetlist.mockResolvedValue({ id: "copy1", name: "Friday Night Set のコピー" });
+    const user = userEvent.setup();
+    renderWithProviders(<SetlistList />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Friday Night Set")).toBeInTheDocument();
+    });
+    await user.click(screen.getByRole("button", { name: "Friday Night Set を複製" }));
+
+    await waitFor(() => {
+      expect(mockDuplicateSetlist).toHaveBeenCalledWith("abc123");
+    });
+    expect(mockNavigate).toHaveBeenCalledWith("/setlists/copy1/edit");
+  });
+
+  it("shows an error and stays on the list when duplication fails", async () => {
+    mockFetchMySetlists.mockResolvedValue(setlists);
+    mockDuplicateSetlist.mockRejectedValue(new Error("Duplicate failed"));
+    const user = userEvent.setup();
+    renderWithProviders(<SetlistList />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Friday Night Set")).toBeInTheDocument();
+    });
+    await user.click(screen.getByRole("button", { name: "Friday Night Set を複製" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Duplicate failed")).toBeInTheDocument();
+    });
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+});
+
+describe("SetlistList 複製の既定エラー", () => {
+  it("falls back to a generic message when the failure is not an Error", async () => {
+    mockFetchMySetlists.mockResolvedValue([
+      {
+        id: "abc123",
+        name: "Friday Night Set",
+        status: "published",
+        eventName: null,
+        eventDate: null,
+        updatedAt: "2026-08-10T00:00:00Z",
+      },
+    ]);
+    mockDuplicateSetlist.mockRejectedValue("something went wrong");
+    const user = userEvent.setup();
+    renderWithProviders(<SetlistList />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Friday Night Set")).toBeInTheDocument();
+    });
+    await user.click(screen.getByRole("button", { name: "Friday Night Set を複製" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("複製に失敗しました")).toBeInTheDocument();
     });
   });
 });

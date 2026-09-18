@@ -56,6 +56,11 @@ export function createSetlist(name: string): Promise<Setlist> {
   return setlistRequest<Setlist>("", { method: "POST", body: { name } });
 }
 
+// 既存のセットリストを下書きとして複製する。複製されたセットリストを返す。
+export function duplicateSetlist(id: string): Promise<Setlist> {
+  return setlistRequest<Setlist>(`/${id}/duplicate`, { method: "POST" });
+}
+
 // 編集用の取得は所有者専用の GET が無いため、認証付きの一覧から id で絞る。
 export async function fetchSetlist(id: string): Promise<Setlist | null> {
   const setlists = await fetchMySetlists();
@@ -153,4 +158,35 @@ export async function fetchPublicSetlist(id: string): Promise<Setlist> {
     throw new Error("Not found");
   }
   return res.json() as Promise<Setlist>;
+}
+
+export type VocadbSong = {
+  id: number;
+  title: string;
+  artist: string;
+  songLink: string;
+  vocadbUrl: string;
+};
+
+export type VocadbSearchBy = "title" | "artist";
+
+// VocaDB 検索。ブラウザから直接ではなくバックエンド経由で叩く。
+export async function searchVocadbSongs(query: string, by: VocadbSearchBy): Promise<VocadbSong[]> {
+  const res = await fetch(`/api/vocadb/songs?q=${encodeURIComponent(query)}&by=${by}`, {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${getToken()}`,
+    },
+  });
+
+  if (!res.ok) {
+    if (res.status === 401) {
+      clearSession();
+      redirectToLogin();
+    }
+    throw new Error("VocaDBの検索に失敗しました");
+  }
+
+  const data = (await res.json()) as { songs: VocadbSong[] };
+  return data.songs;
 }
