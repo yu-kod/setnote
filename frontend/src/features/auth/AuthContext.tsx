@@ -6,6 +6,7 @@ import {
   signin as apiSignin,
 } from "./api";
 import { TOKEN_KEY, REFRESH_KEY, USER_KEY, clearSession } from "./session";
+import { hasAdminGroup } from "./adminClaim";
 
 type User = {
   email: string;
@@ -14,6 +15,7 @@ type User = {
 type AuthContextValue = {
   user: User | null;
   isAuthenticated: boolean;
+  isAdmin: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   signup: (email: string, password: string, username: string) => Promise<void>;
@@ -42,6 +44,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   const isAuthenticated = user !== null;
+  // 管理画面のリンクとルートの出し分けに使う。実際の可否はサーバー側が判定する。
+  const isAdmin = isAuthenticated && hasAdminGroup(localStorage.getItem(TOKEN_KEY));
 
   const login = useCallback(async (email: string, password: string) => {
     const tokens = await apiSignin(email, password);
@@ -78,6 +82,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       value={{
         user,
         isAuthenticated,
+        isAdmin,
         login,
         logout,
         signup,
