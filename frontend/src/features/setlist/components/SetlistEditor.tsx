@@ -15,12 +15,14 @@ import type { ParsedTrack } from "../api";
 import { matchImportedTracks } from "../importMatch";
 import { hasEmptyTitleTracks } from "../trackValidation";
 import { buildTracklistText } from "../tracklistText";
+import { loadDraft, saveDraft, clearDraft, hasUnsavedChanges, type SetlistDraft } from "../draft";
 import { ClipboardList, GripVertical, ImageDown, Link2, Unlink2 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Field, FieldGroup } from "@/components/ui/field";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Sortable, SortableItem, SortableItemHandle } from "@/components/ui/sortable";
 import {
@@ -70,6 +72,10 @@ export function SetlistEditor({ id }: { id: string }) {
   const [publishing, setPublishing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [suggestions, setSuggestions] = useState<Track[]>([]);
+  // 直近の保存内容。今の編集内容と突き合わせて未保存かどうかを判定する。
+  const [savedSnapshot, setSavedSnapshot] = useState<SetlistDraft | null>(null);
+  // 前回の訪問で保存せずに離れた編集内容。復元するか破棄するかを選んでもらうまで保持する。
+  const [pendingDraft, setPendingDraft] = useState<SetlistDraft | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -86,19 +92,58 @@ export function SetlistEditor({ id }: { id: string }) {
           setNotFound(true);
           return;
         }
-        setTracks(data.tracks);
-        setStatus(data.status);
-        setForm({
+        const loaded: SetlistDraft = {
           name: data.name,
           artistName: nullToEmpty(data.artistName),
           eventName: nullToEmpty(data.eventName),
           eventLink: nullToEmpty(data.eventLink),
           eventDate: nullToEmpty(data.eventDate),
-        });
+          tracks: data.tracks,
+        };
+        setTracks(loaded.tracks);
+        setStatus(data.status);
+        setForm(loaded);
+        setSavedSnapshot(loaded);
+
+        // サーバーの内容と食い違う下書きが残っていれば、まず扱いを尋ねる。
+        const draft = loadDraft(id);
+        if (draft && hasUnsavedChanges(draft, loaded)) {
+          setPendingDraft(draft);
+        }
       })
       .catch(() => setNotFound(true))
       .finally(() => setLoading(false));
   }, [id]);
+
+  // 未保存の間だけローカルに退避し、保存済みになったら捨てる。
+  // 復元するか破棄するかを尋ねている間は、その下書きを上書きしないよう触らない。
+  useEffect(() => {
+    if (savedSnapshot === null || pendingDraft !== null) return;
+    const draft = { ...form, tracks };
+    if (hasUnsavedChanges(draft, savedSnapshot)) {
+      saveDraft(id, draft);
+    } else {
+      clearDraft(id);
+    }
+  }, [id, form, tracks, savedSnapshot, pendingDraft]);
+
+  function restoreDraft() {
+    const draft = pendingDraft!;
+    setForm({
+      name: draft.name,
+      artistName: draft.artistName,
+      eventName: draft.eventName,
+      eventLink: draft.eventLink,
+      eventDate: draft.eventDate,
+    });
+    setTracks(draft.tracks);
+    setPendingDraft(null);
+  }
+
+  function discardDraft() {
+    clearDraft(id);
+    setPendingDraft(null);
+  }
 
   function update<K extends keyof FormState>(key: K, value: string) {
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -121,6 +166,10 @@ export function SetlistEditor({ id }: { id: string }) {
     setTracks((prev) => [...prev, ...newTracks]);
   }
 
+  function currentDraft(): SetlistDraft {
+    return { ...form, tracks };
+  }
+
   function currentInput(): UpdateSetlistInput {
     return {
       name: form.name.trim(),
@@ -140,6 +189,7 @@ export function SetlistEditor({ id }: { id: string }) {
     setSaving(true);
     try {
       await updateSetlist(id, currentInput());
+      setSavedSnapshot(currentDraft());
       toast.success("保存しました");
     } catch {
       toast.error("保存に失敗しました");
@@ -156,6 +206,7 @@ export function SetlistEditor({ id }: { id: string }) {
     setPublishing(true);
     try {
       await updateSetlist(id, currentInput());
+      setSavedSnapshot(currentDraft());
       const updated = await publishSetlist(id);
       setStatus(updated.status);
       toast.success("公開しました");
@@ -192,6 +243,7 @@ export function SetlistEditor({ id }: { id: string }) {
   }
 
   const publicUrl = `${window.location.origin}/s/${id}`;
+  const dirty = savedSnapshot !== null && hasUnsavedChanges(currentDraft(), savedSnapshot);
 
   async function handleCopy() {
     await navigator.clipboard.writeText(publicUrl);
@@ -255,6 +307,22 @@ export function SetlistEditor({ id }: { id: string }) {
             </Link>
           </Button>
         </div>
+      )}
+
+      {pendingDraft && (
+        <Alert>
+          <AlertDescription className="flex flex-wrap items-center justify-between gap-2">
+            <span>未保存の変更があります</span>
+            <span className="flex gap-2">
+              <Button type="button" size="sm" onClick={restoreDraft}>
+                復元する
+              </Button>
+              <Button type="button" size="sm" variant="outline" onClick={discardDraft}>
+                破棄する
+              </Button>
+            </span>
+          </AlertDescription>
+        </Alert>
       )}
 
       <Card>
@@ -381,7 +449,10 @@ export function SetlistEditor({ id }: { id: string }) {
         <VocadbSearch onAdd={addTrack} />
       </div>
 
-      <div className="flex justify-end gap-2">
+      <div className="flex items-center justify-end gap-2">
+        <span className="mr-auto text-xs text-muted-foreground">
+          {dirty ? "未保存の変更あり" : "保存済み"}
+        </span>
         <Button type="button" variant="outline" onClick={handleCopyTracklist}>
           <ClipboardList className="size-4" aria-hidden="true" />
           曲順をテキストでコピー
