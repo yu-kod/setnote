@@ -135,7 +135,7 @@ jobs:
 
       - name: Checkout PR branch
         if: steps.pr.outputs.proceed == 'true'
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.workflow_run.head_branch }}
           fetch-depth: 0
