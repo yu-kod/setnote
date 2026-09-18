@@ -10,6 +10,7 @@ import { getLikedTrackIds, markLiked, unmarkLiked } from "../features/setlist/li
 import { groupTracks } from "../features/setlist/trackGroup";
 import type { Setlist, Track } from "../features/setlist/types";
 import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ExternalLink, Heart } from "lucide-react";
 import { MediaEmbed } from "../features/setlist/components/MediaEmbed";
@@ -28,6 +29,9 @@ export default function SetlistPage() {
   const [setlist, setSetlist] = useState<Setlist | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // 一覧表示：プレイヤーといいねを畳み、全曲を詰めて並べる。
+  // スクロールせずにセット全体を見渡すための表示モード。
+  const [listView, setListView] = useState(false);
   const [likeCounts, setLikeCounts] = useState<Record<string, number>>({});
   const [liked, setLiked] = useState<Set<string>>(() => getLikedTrackIds(id!));
   const playerRef = useRef<HTMLDivElement>(null);
@@ -130,10 +134,22 @@ export default function SetlistPage() {
 
       {selected ? (
         <div className="space-y-4">
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setListView((v) => !v)}
+            >
+              {listView ? "通常表示" : "一覧表示"}
+            </Button>
+          </div>
+
           {/* 目次：全曲を一覧表示。行をタップすると下のプレイヤーが切り替わる。 */}
           <ol className="overflow-hidden rounded-md border">
             {tracks.map((track, i) => {
-              const active = track.id === selected.id;
+              // 一覧表示では選択の概念がないため、ハイライトも出さない。
+              const active = !listView && track.id === selected.id;
               const alreadyLiked = liked.has(track.id);
               // サムネイルは YouTube Data API 経由のプロキシから取得し、
               // 動画ページへのリンクを添える（YouTube の利用条件に沿わせるため）。
@@ -141,6 +157,19 @@ export default function SetlistPage() {
               const prevTrack = tracks[i - 1];
               const isGroupedWithPrev =
                 prevTrack && track.groupId != null && prevTrack.groupId === track.groupId;
+              // 行の中身は通常表示と一覧表示で共通。包む要素だけが変わる。
+              const rowContent = (
+                <>
+                  <span className="text-muted-foreground">{trackNumber.get(track.id)}.</span>
+                  <span className="font-medium">{track.title}</span>
+                  {track.artist && <span className="text-muted-foreground">— {track.artist}</span>}
+                  {isGroupedWithPrev && (
+                    <span className="rounded bg-primary/10 px-1 py-0.5 text-[10px] font-semibold text-primary">
+                      BLEND
+                    </span>
+                  )}
+                </>
+              );
               return (
                 <li
                   key={track.id}
@@ -162,91 +191,92 @@ export default function SetlistPage() {
                         src={thumbnailUrl}
                         alt={`${track.title} のサムネイル`}
                         loading="lazy"
-                        className="h-9 w-16 object-cover"
+                        className={`object-cover ${listView ? "h-7 w-12" : "h-9 w-16"}`}
                       />
                     </a>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => handleSelect(track.id)}
-                    aria-current={active ? "true" : undefined}
-                    className={`flex flex-1 items-baseline gap-2 px-3 py-1.5 text-left text-sm transition-colors ${
-                      active ? "bg-muted" : "hover:bg-muted/50"
-                    }`}
-                  >
-                    <span className="text-muted-foreground">{trackNumber.get(track.id)}.</span>
-                    <span className="font-medium">{track.title}</span>
-                    {track.artist && (
-                      <span className="text-muted-foreground">— {track.artist}</span>
-                    )}
-                    {isGroupedWithPrev && (
-                      <span className="rounded bg-primary/10 px-1 py-0.5 text-[10px] font-semibold text-primary">
-                        BLEND
-                      </span>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleToggleLike(track.id)}
-                    aria-label={`${track.title}にいいね`}
-                    aria-pressed={alreadyLiked}
-                    className={`flex shrink-0 items-center gap-1 px-3 text-xs transition-colors ${
-                      alreadyLiked ? "text-primary" : "text-muted-foreground"
-                    } ${active ? "bg-muted" : "hover:bg-muted/50"}`}
-                  >
-                    <Heart
-                      aria-hidden="true"
-                      className={`size-4 ${alreadyLiked ? "fill-primary text-primary" : ""}`}
-                    />
-                    <span className="tabular-nums">{likeCounts[track.id] ?? 0}</span>
-                  </button>
+                  {listView ? (
+                    <div className="flex flex-1 items-baseline gap-2 px-3 py-1 text-sm">
+                      {rowContent}
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => handleSelect(track.id)}
+                      aria-current={active ? "true" : undefined}
+                      className={`flex flex-1 items-baseline gap-2 px-3 py-1.5 text-left text-sm transition-colors ${
+                        active ? "bg-muted" : "hover:bg-muted/50"
+                      }`}
+                    >
+                      {rowContent}
+                    </button>
+                  )}
+                  {!listView && (
+                    <button
+                      type="button"
+                      onClick={() => handleToggleLike(track.id)}
+                      aria-label={`${track.title}にいいね`}
+                      aria-pressed={alreadyLiked}
+                      className={`flex shrink-0 items-center gap-1 px-3 text-xs transition-colors ${
+                        alreadyLiked ? "text-primary" : "text-muted-foreground"
+                      } ${active ? "bg-muted" : "hover:bg-muted/50"}`}
+                    >
+                      <Heart
+                        aria-hidden="true"
+                        className={`size-4 ${alreadyLiked ? "fill-primary text-primary" : ""}`}
+                      />
+                      <span className="tabular-nums">{likeCounts[track.id] ?? 0}</span>
+                    </button>
+                  )}
                 </li>
               );
             })}
           </ol>
 
-          {/* 選択中のグループをプレイヤーとして開く。 */}
-          <div ref={playerRef} role="region" aria-label="選択中の曲">
-            <Card>
-              <CardContent className="space-y-3">
-                {selectedGroup.map((t) => (
-                  <div key={t.id} className="space-y-3">
-                    {t.songLink ? (
-                      <MediaEmbed url={t.songLink} />
-                    ) : (
-                      <p className="text-sm text-muted-foreground">再生リンクはありません</p>
-                    )}
-                    <div>
-                      <p className="font-semibold">{t.title}</p>
-                      {t.artist && <p className="text-sm text-muted-foreground">{t.artist}</p>}
-                    </div>
-                    {t.source &&
-                      (isUrl(t.source) ? (
-                        <a
-                          href={t.source}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="block text-sm text-primary underline underline-offset-4"
-                        >
-                          入手元
-                        </a>
+          {/* 選択中のグループをプレイヤーとして開く。一覧表示では畳む。 */}
+          {!listView && (
+            <div ref={playerRef} role="region" aria-label="選択中の曲">
+              <Card>
+                <CardContent className="space-y-3">
+                  {selectedGroup.map((t) => (
+                    <div key={t.id} className="space-y-3">
+                      {t.songLink ? (
+                        <MediaEmbed url={t.songLink} />
                       ) : (
-                        <p className="text-sm text-muted-foreground">入手元: {t.source}</p>
-                      ))}
-                    {t.customFields.length > 0 && (
-                      <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                        {t.customFields.map((f) => (
-                          <span key={f.id}>
-                            {f.label}: {f.value}
-                          </span>
-                        ))}
+                        <p className="text-sm text-muted-foreground">再生リンクはありません</p>
+                      )}
+                      <div>
+                        <p className="font-semibold">{t.title}</p>
+                        {t.artist && <p className="text-sm text-muted-foreground">{t.artist}</p>}
                       </div>
-                    )}
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
-          </div>
+                      {t.source &&
+                        (isUrl(t.source) ? (
+                          <a
+                            href={t.source}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="block text-sm text-primary underline underline-offset-4"
+                          >
+                            入手元
+                          </a>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">入手元: {t.source}</p>
+                        ))}
+                      {t.customFields.length > 0 && (
+                        <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                          {t.customFields.map((f) => (
+                            <span key={f.id}>
+                              {f.label}: {f.value}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </div>
       ) : (
         <p className="text-muted-foreground">曲がまだありません</p>
