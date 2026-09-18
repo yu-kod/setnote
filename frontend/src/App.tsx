@@ -104,7 +104,7 @@ export default function App() {
           </Link>
           <span className="mx-2 text-border">|</span>
           <a
-            href="https://x.com/tkgmirusen"
+            href="https://x.com/bismuth_72"
             target="_blank"
             rel="noopener noreferrer"
             className="text-muted-foreground transition-colors hover:text-primary"
