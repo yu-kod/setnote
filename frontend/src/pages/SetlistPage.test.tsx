@@ -506,7 +506,13 @@ describe("SetlistPage 一覧表示", () => {
     });
   }
 
+  // 一覧表示に入ると戻り方の案内モーダルが出るため、閉じてから中身を検証する。
   async function renderAndToggle() {
+    await renderAndOpenGuide();
+    await userEvent.click(screen.getByRole("button", { name: "閉じる" }));
+  }
+
+  async function renderAndOpenGuide() {
     mockFetch.mockResolvedValue(buildSetlistForList());
     renderWithProviders(<SetlistPage />);
     await userEvent.click(await screen.findByRole("button", { name: "一覧表示" }));
@@ -556,17 +562,21 @@ describe("SetlistPage 一覧表示", () => {
     expect(screen.queryByRole("region", { name: "選択中の曲" })).not.toBeInTheDocument();
   });
 
-  it("戻り方の案内を出し、しばらくすると消す", async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true });
-    try {
-      await renderAndToggle();
-      expect(screen.getByRole("status", { name: "操作の案内" })).toBeInTheDocument();
+  // 戻り方が分からなくなると詰むため、見落とされない形（モーダル）で案内する。
+  it("一覧表示にすると戻り方の案内をモーダルで出す", async () => {
+    await renderAndOpenGuide();
 
-      await vi.advanceTimersByTimeAsync(3000);
-
-      expect(screen.queryByRole("status", { name: "操作の案内" })).not.toBeInTheDocument();
-    } finally {
-      vi.useRealTimers();
-    }
+    const dialog = await screen.findByRole("dialog", { name: "一覧表示にしました" });
+    expect(dialog).toHaveTextContent("ブラウザの戻る");
   });
+
+  it("案内を閉じるとモーダルが消える", async () => {
+    await renderAndOpenGuide();
+    await screen.findByRole("dialog", { name: "一覧表示にしました" });
+
+    await userEvent.click(screen.getByRole("button", { name: "閉じる" }));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
 });
