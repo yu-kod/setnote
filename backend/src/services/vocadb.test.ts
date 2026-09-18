@@ -80,7 +80,8 @@ describe("作者名だけで検索したとき", () => {
     expect(mockFetch).toHaveBeenCalledTimes(2);
     expect(mockFetch.mock.calls[0]![0]).toContain("https://vocadb.net/api/artists?query=kz");
     const songsUrl = mockFetch.mock.calls[1]![0] as string;
-    expect(songsUrl).toContain("artistId=77");
+    // 角カッコ付きの配列形式でないと VocaDB に無視される（後述の回帰テスト参照）。
+    expect(songsUrl).toContain("artistId%5B%5D=77");
     expect(songsUrl).toContain("sort=RatingScore");
     expect(songsUrl).not.toContain("query=");
     expect(result.songs).toHaveLength(1);
@@ -144,7 +145,7 @@ describe("曲名と作者名を同時に指定したとき", () => {
     await search({ title: "Tell Your World", artist: "kz" });
 
     const songsUrl = mockFetch.mock.calls[1]![0] as string;
-    expect(songsUrl).toContain("artistId=77");
+    expect(songsUrl).toContain("artistId%5B%5D=77");
     expect(songsUrl).toContain("query=Tell");
     expect(songsUrl).not.toContain("sort=RatingScore");
   });
@@ -163,7 +164,7 @@ describe("作者を指定し直したとき", () => {
 
     const result = await search({ artist: "kz", artistId: 78 });
 
-    expect(mockFetch.mock.calls[1]![0]).toContain("artistId=78");
+    expect(mockFetch.mock.calls[1]![0]).toContain("artistId%5B%5D=78");
     expect(result.artist).toEqual({ id: 78, name: "kzlabo", artistType: "Circle" });
     // 選び直せるよう候補は返し続ける。
     expect(result.artistCandidates).toHaveLength(2);
@@ -175,7 +176,7 @@ describe("作者を指定し直したとき", () => {
     const result = await search({ artistId: 999 });
 
     expect(mockFetch).toHaveBeenCalledTimes(1);
-    expect(mockFetch.mock.calls[0]![0]).toContain("artistId=999");
+    expect(mockFetch.mock.calls[0]![0]).toContain("artistId%5B%5D=999");
     expect(result.artist).toBeNull();
   });
 });
@@ -357,6 +358,23 @@ describe("作者候補の並べ替え", () => {
     const result = await search({ artist: "kz" });
 
     expect(result.artist).toEqual({ id: 2, name: "kz", artistType: "Producer" });
-    expect(mockFetch.mock.calls[1]![0]).toContain("artistId=2");
+    expect(mockFetch.mock.calls[1]![0]).toContain("artistId%5B%5D=2");
+  });
+});
+
+describe("作者の絞り込みパラメータ（回帰）", () => {
+  // VocaDB は認識できないクエリパラメータを黙って無視する。`artistId=89` と書くと
+  // 絞り込みが効かず「全体の人気曲トップN」が返ってきて、しかもエラーにならない。
+  // 実際に 2026-09-18 にこれで別人の曲が並ぶ不具合を出したので、形式を固定する。
+  it("角カッコ付きの配列形式で作者を指定する", async () => {
+    mockFetch
+      .mockResolvedValueOnce(jsonResponse([{ id: 89, name: "kz", artistType: "Producer" }]))
+      .mockResolvedValueOnce(jsonResponse([]));
+
+    await search({ artist: "kz" });
+
+    const songsUrl = mockFetch.mock.calls[1]![0] as string;
+    expect(songsUrl).toContain("artistId%5B%5D=89");
+    expect(songsUrl).not.toMatch(/[?&]artistId=/);
   });
 });

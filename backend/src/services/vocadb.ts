@@ -133,7 +133,10 @@ function songsUrl(title: string, artistId: number | null, limit: number): string
   }
 
   if (artistId !== null) {
-    params.set("artistId", String(artistId));
+    // VocaDB はこの項目を配列で受けるので、角カッコ付きの名前でないと束縛されない。
+    // しかも認識できないパラメータは黙って無視される（エラーにならない）ため、
+    // `artistId=89` と書くと絞り込み無しの「全体の人気曲」がそのまま返ってくる。
+    params.set("artistId[]", String(artistId));
   }
   return `${API_BASE}/songs?${params.toString()}`;
 }
