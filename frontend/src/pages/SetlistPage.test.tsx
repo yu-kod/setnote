@@ -578,5 +578,4 @@ describe("SetlistPage 一覧表示", () => {
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
-
 });
