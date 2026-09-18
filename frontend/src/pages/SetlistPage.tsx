@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useSearchParams } from "react-router-dom";
 import {
   fetchPublicSetlist,
   recordSetlistView,
@@ -31,7 +31,12 @@ export default function SetlistPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   // 一覧表示：プレイヤーといいねを畳み、全曲を詰めて並べる。
   // スクロールせずにセット全体を見渡すための表示モード。
-  const [listView, setListView] = useState(false);
+  // URL に持たせることで、ブラウザの戻るがそのまま解除操作になる。
+  // 一覧表示中は解除ボタンを画面から消す（スクリーンショットに写り込むため）。
+  const [searchParams, setSearchParams] = useSearchParams();
+  const listView = searchParams.get("view") === "list";
+  const [hintDismissed, setHintDismissed] = useState(false);
+  const hintVisible = listView && !hintDismissed;
   const [likeCounts, setLikeCounts] = useState<Record<string, number>>({});
   const [liked, setLiked] = useState<Set<string>>(() => getLikedTrackIds(id!));
   const playerRef = useRef<HTMLDivElement>(null);
@@ -47,6 +52,14 @@ export default function SetlistPage() {
     // 公開ページ表示のPVを計測（fire-and-forget）。
     recordSetlistView(id!);
   }, [id]);
+
+  // 一覧表示に入った直後だけ、戻り方を短く案内する。
+  // 出しっぱなしにすると案内自体がスクリーンショットに写るため、すぐ消す。
+  useEffect(() => {
+    if (!hintVisible) return;
+    const timer = setTimeout(() => setHintDismissed(true), 2500);
+    return () => clearTimeout(timer);
+  }, [hintVisible]);
 
   // いいねのトグル（曲ごと1回まで）。未いいねなら付け、いいね済みなら取り消す。
   // 成功したら数を更新し、端末ローカルの記録も切り替える。
@@ -134,16 +147,31 @@ export default function SetlistPage() {
 
       {selected ? (
         <div className="space-y-4">
-          <div className="flex justify-end">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              onClick={() => setListView((v) => !v)}
+          {!listView && (
+            <div className="flex justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setHintDismissed(false);
+                  setSearchParams({ view: "list" });
+                }}
+              >
+                一覧表示
+              </Button>
+            </div>
+          )}
+
+          {hintVisible && (
+            <p
+              role="status"
+              aria-label="操作の案内"
+              className="fixed inset-x-0 bottom-4 z-10 text-center text-xs text-muted-foreground"
             >
-              {listView ? "通常表示" : "一覧表示"}
-            </Button>
-          </div>
+              ブラウザの戻るで通常表示に戻ります
+            </p>
+          )}
 
           {/* 目次：全曲を一覧表示。行をタップすると下のプレイヤーが切り替わる。 */}
           <ol className="overflow-hidden rounded-md border">
