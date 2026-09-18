@@ -3,6 +3,10 @@
 // そのため fields に ThumbUrl を含めず、返すのも文字列メタデータと PV リンクだけ。
 
 const API_BASE = "https://vocadb.net/api";
+
+// VocaDB はボランティア運営のコミュニティDB。素性の分かる名前と連絡先を名乗っておく
+// （匿名の大量アクセスとして弾かれるのを避けるための、この手のAPIでの作法）。
+const USER_AGENT = "setnote (+https://setnote.yu-web.site)";
 const SONG_FIELDS = "PVs";
 
 // 作者名は部分一致で引かれるため、1件に決め打ちせず候補を出して選び直せるようにする。
@@ -77,7 +81,9 @@ function toVocadbSong(entry: SongEntry): VocadbSong {
 async function getJson<T>(url: string): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(url, { headers: { Accept: "application/json" } });
+    res = await fetch(url, {
+      headers: { Accept: "application/json", "User-Agent": USER_AGENT },
+    });
   } catch {
     throw new Error("Failed to reach VocaDB");
   }

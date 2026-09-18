@@ -378,3 +378,21 @@ describe("作者の絞り込みパラメータ（回帰）", () => {
     expect(songsUrl).not.toMatch(/[?&]artistId=/);
   });
 });
+
+describe("VocaDB へのリクエストヘッダ", () => {
+  // VocaDB はボランティア運営のコミュニティDBなので、素性の分かる
+  // User-Agent を名乗っておく（匿名の大量アクセスとして弾かれにくくする）。
+  it("setnote と連絡先を名乗る User-Agent を付ける", async () => {
+    mockFetch
+      .mockResolvedValueOnce(jsonResponse([{ id: 89, name: "kz" }]))
+      .mockResolvedValueOnce(jsonResponse([]));
+
+    await search({ artist: "kz" });
+
+    for (const [, init] of mockFetch.mock.calls) {
+      const headers = (init as { headers: Record<string, string> }).headers;
+      expect(headers["User-Agent"]).toBe("setnote (+https://setnote.yu-web.site)");
+      expect(headers.Accept).toBe("application/json");
+    }
+  });
+});
