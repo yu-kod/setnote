@@ -16,7 +16,8 @@ import { matchImportedTracks } from "../importMatch";
 import { hasEmptyTitleTracks } from "../trackValidation";
 import { buildTracklistText } from "../tracklistText";
 import { loadDraft, saveDraft, clearDraft, hasUnsavedChanges, type SetlistDraft } from "../draft";
-import { ClipboardList, GripVertical, ImageDown, Link2, Unlink2 } from "lucide-react";
+// ImageDown はシェア画像の導線を戻すときに使う（封印中）。
+import { ClipboardList, GripVertical, Link2, Unlink2 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -300,12 +301,17 @@ export function SetlistEditor({ id }: { id: string }) {
           <Button type="button" variant="outline" size="sm" onClick={handleCopy}>
             コピー
           </Button>
+          {/* シェア画像の生成は封印中。共有はセットリストの一覧表示を
+              スクリーンショットして行う方針にしたため、導線だけを閉じている。
+              生成の実装（SetlistDesigner / shareImage）とルートは残してあるので、
+              再開するときはこのブロックのコメントを外すだけでよい。
           <Button type="button" variant="outline" size="sm" asChild>
             <Link to={`/setlists/${id}/design`}>
               <ImageDown className="size-4" aria-hidden="true" />
               シェア画像
             </Link>
           </Button>
+          */}
         </div>
       )}
 

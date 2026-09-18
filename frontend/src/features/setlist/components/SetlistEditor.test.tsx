@@ -569,13 +569,14 @@ describe("SetlistEditor", () => {
     expect(mockPublishSetlist).not.toHaveBeenCalled();
   });
 
-  it("shows the share image link only when published", async () => {
+  // シェア画像の生成機能は封印中（スクリーンショットで代替する方針）。
+  // 導線だけを閉じ、生成の実装は残してある。
+  it("does not show the share image link", async () => {
     mockFetchSetlist.mockResolvedValue(buildSetlist({ status: "published" }));
     renderWithProviders(<SetlistEditor id="s1" />);
 
     await screen.findByLabelText("セットリスト名");
-    const link = screen.getByRole("link", { name: "シェア画像" });
-    expect(link).toHaveAttribute("href", "/setlists/s1/design");
+    expect(screen.queryByRole("link", { name: "シェア画像" })).not.toBeInTheDocument();
   });
 
   it("shows a link button between two ungrouped tracks", async () => {
