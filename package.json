@@ -11,6 +11,6 @@
     "install:all": "npm ci && cd backend && npm ci && cd ../frontend && npm ci"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^10.0.5"
   }
 }
