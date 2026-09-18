@@ -160,7 +160,7 @@ export default function SetlistPage() {
                     )}
                     {isGroupedWithPrev && (
                       <span className="rounded bg-primary/10 px-1 py-0.5 text-[10px] font-semibold text-primary">
-                        B2B
+                        BLEND
                       </span>
                     )}
                   </button>
