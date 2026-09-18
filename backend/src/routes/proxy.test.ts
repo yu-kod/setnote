@@ -38,6 +38,19 @@ const mockFetch = vi.fn();
 vi.stubGlobal("fetch", mockFetch);
 
 const VIDEO_ID = "dQw4w9WgXcQ";
+const YOUTUBE_URL = `https://www.youtube.com/watch?v=${VIDEO_ID}`;
+const SPOTIFY_URL = "https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT";
+
+function thumbnailPath(songLink: string) {
+  return `/api/proxy/thumbnail?url=${encodeURIComponent(songLink)}`;
+}
+
+function oembedResponse(body: unknown) {
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
+}
 const IMAGE_BYTES = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
 
 function apiResponse(thumbnails: Record<string, { url: string }>) {
@@ -60,23 +73,26 @@ beforeEach(() => {
 });
 
 describe("GET /api/proxy/thumbnail", () => {
-  it("returns 400 when videoId is missing", async () => {
+  it("returns 400 when url is missing", async () => {
     const { app } = await import("../app");
     const res = await app.request("/api/proxy/thumbnail");
     expect(res.status).toBe(400);
   });
 
-  it("returns 400 when videoId has invalid format", async () => {
+  // 任意の URL を中継すると踏み台にされるため、対応サービス以外は必ず断る。
+  it("returns 400 for a url of an unsupported service", async () => {
     const { app } = await import("../app");
-    const res = await app.request("/api/proxy/thumbnail?videoId=<script>alert(1)</script>");
+    const res = await app.request(thumbnailPath("https://example.com/image.png"));
+
     expect(res.status).toBe(400);
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 
   it("returns 500 when YOUTUBE_API_KEY is not configured", async () => {
     delete process.env.YOUTUBE_API_KEY;
 
     const { app } = await import("../app");
-    const res = await app.request(`/api/proxy/thumbnail?videoId=${VIDEO_ID}`);
+    const res = await app.request(thumbnailPath(YOUTUBE_URL));
 
     expect(res.status).toBe(500);
     expect(mockFetch).not.toHaveBeenCalled();
@@ -88,7 +104,7 @@ describe("GET /api/proxy/thumbnail", () => {
       .mockResolvedValueOnce(imageResponse("image/jpeg"));
 
     const { app } = await import("../app");
-    const res = await app.request(`/api/proxy/thumbnail?videoId=${VIDEO_ID}`);
+    const res = await app.request(thumbnailPath(YOUTUBE_URL));
 
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toBe("image/jpeg");
@@ -112,7 +128,7 @@ describe("GET /api/proxy/thumbnail", () => {
       .mockResolvedValueOnce(imageResponse("image/jpeg"));
 
     const { app } = await import("../app");
-    await app.request(`/api/proxy/thumbnail?videoId=${VIDEO_ID}`);
+    await app.request(thumbnailPath(YOUTUBE_URL));
 
     expect(mockFetch).toHaveBeenNthCalledWith(2, "https://i.ytimg.com/vi/x/maxres.jpg");
   });
@@ -123,7 +139,7 @@ describe("GET /api/proxy/thumbnail", () => {
       .mockResolvedValueOnce(imageResponse("image/jpeg"));
 
     const { app } = await import("../app");
-    await app.request(`/api/proxy/thumbnail?videoId=${VIDEO_ID}`);
+    await app.request(thumbnailPath(YOUTUBE_URL));
 
     expect(mockFetch).toHaveBeenNthCalledWith(2, "https://i.ytimg.com/vi/x/d.jpg");
   });
@@ -134,7 +150,7 @@ describe("GET /api/proxy/thumbnail", () => {
       .mockResolvedValueOnce(imageResponse());
 
     const { app } = await import("../app");
-    const res = await app.request(`/api/proxy/thumbnail?videoId=${VIDEO_ID}`);
+    const res = await app.request(thumbnailPath(YOUTUBE_URL));
 
     expect(res.status).toBe(200);
     expect(res.headers.get("Content-Type")).toBe("image/jpeg");
@@ -144,7 +160,7 @@ describe("GET /api/proxy/thumbnail", () => {
     mockFetch.mockResolvedValueOnce(new Response(JSON.stringify({ items: [] }), { status: 200 }));
 
     const { app } = await import("../app");
-    const res = await app.request(`/api/proxy/thumbnail?videoId=${VIDEO_ID}`);
+    const res = await app.request(thumbnailPath(YOUTUBE_URL));
 
     expect(res.status).toBe(404);
   });
@@ -153,7 +169,7 @@ describe("GET /api/proxy/thumbnail", () => {
     mockFetch.mockResolvedValueOnce(apiResponse({}));
 
     const { app } = await import("../app");
-    const res = await app.request(`/api/proxy/thumbnail?videoId=${VIDEO_ID}`);
+    const res = await app.request(thumbnailPath(YOUTUBE_URL));
 
     expect(res.status).toBe(404);
   });
@@ -162,7 +178,7 @@ describe("GET /api/proxy/thumbnail", () => {
     mockFetch.mockRejectedValueOnce(new Error("network error"));
 
     const { app } = await import("../app");
-    const res = await app.request(`/api/proxy/thumbnail?videoId=${VIDEO_ID}`);
+    const res = await app.request(thumbnailPath(YOUTUBE_URL));
 
     expect(res.status).toBe(502);
   });
@@ -171,7 +187,7 @@ describe("GET /api/proxy/thumbnail", () => {
     mockFetch.mockResolvedValueOnce(new Response(null, { status: 403 }));
 
     const { app } = await import("../app");
-    const res = await app.request(`/api/proxy/thumbnail?videoId=${VIDEO_ID}`);
+    const res = await app.request(thumbnailPath(YOUTUBE_URL));
 
     expect(res.status).toBe(502);
   });
@@ -182,7 +198,7 @@ describe("GET /api/proxy/thumbnail", () => {
       .mockRejectedValueOnce(new Error("network error"));
 
     const { app } = await import("../app");
-    const res = await app.request(`/api/proxy/thumbnail?videoId=${VIDEO_ID}`);
+    const res = await app.request(thumbnailPath(YOUTUBE_URL));
 
     expect(res.status).toBe(502);
   });
@@ -193,7 +209,64 @@ describe("GET /api/proxy/thumbnail", () => {
       .mockResolvedValueOnce(new Response(null, { status: 404 }));
 
     const { app } = await import("../app");
-    const res = await app.request(`/api/proxy/thumbnail?videoId=${VIDEO_ID}`);
+    const res = await app.request(thumbnailPath(YOUTUBE_URL));
+
+    expect(res.status).toBe(502);
+  });
+  // Spotify と SoundCloud は公式の oEmbed が返す thumbnail_url を使う。
+  it("resolves a Spotify thumbnail through the oEmbed endpoint", async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        oembedResponse({ thumbnail_url: "https://image-cdn.spotifycdn.com/image/abc" })
+      )
+      .mockResolvedValueOnce(imageResponse("image/jpeg"));
+
+    const { app } = await import("../app");
+    const res = await app.request(thumbnailPath(SPOTIFY_URL));
+
+    expect(res.status).toBe(200);
+    expect(mockFetch).toHaveBeenNthCalledWith(
+      1,
+      `https://open.spotify.com/oembed?url=${encodeURIComponent(SPOTIFY_URL)}`
+    );
+    expect(mockFetch).toHaveBeenNthCalledWith(2, "https://image-cdn.spotifycdn.com/image/abc");
+  });
+
+  it("does not require an API key for oEmbed sources", async () => {
+    delete process.env.YOUTUBE_API_KEY;
+    mockFetch
+      .mockResolvedValueOnce(oembedResponse({ thumbnail_url: "https://cdn.example.com/a.jpg" }))
+      .mockResolvedValueOnce(imageResponse("image/jpeg"));
+
+    const { app } = await import("../app");
+    const res = await app.request(thumbnailPath(SPOTIFY_URL));
+
+    expect(res.status).toBe(200);
+  });
+
+  it("returns 404 when the oEmbed response carries no thumbnail", async () => {
+    mockFetch.mockResolvedValueOnce(oembedResponse({ title: "No artwork" }));
+
+    const { app } = await import("../app");
+    const res = await app.request(thumbnailPath(SPOTIFY_URL));
+
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 502 when the oEmbed request throws", async () => {
+    mockFetch.mockRejectedValueOnce(new Error("network"));
+
+    const { app } = await import("../app");
+    const res = await app.request(thumbnailPath(SPOTIFY_URL));
+
+    expect(res.status).toBe(502);
+  });
+
+  it("returns 502 when the oEmbed request fails", async () => {
+    mockFetch.mockResolvedValueOnce(new Response("nope", { status: 404 }));
+
+    const { app } = await import("../app");
+    const res = await app.request(thumbnailPath(SPOTIFY_URL));
 
     expect(res.status).toBe(502);
   });

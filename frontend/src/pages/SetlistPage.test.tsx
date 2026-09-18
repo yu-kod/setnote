@@ -442,7 +442,10 @@ describe("SetlistPage サムネイル", () => {
     renderWithProviders(<SetlistPage />);
 
     const thumbnail = await screen.findByRole("img", { name: "YouTube Song のサムネイル" });
-    expect(thumbnail).toHaveAttribute("src", "/api/proxy/thumbnail?videoId=dQw4w9WgXcQ");
+    expect(thumbnail).toHaveAttribute(
+      "src",
+      `/api/proxy/thumbnail?url=${encodeURIComponent("https://www.youtube.com/watch?v=dQw4w9WgXcQ")}`
+    );
   });
 
   it("サムネイルから YouTube の動画ページへリンクする", async () => {
@@ -454,14 +457,14 @@ describe("SetlistPage サムネイル", () => {
     expect(link).toHaveAttribute("target", "_blank");
   });
 
-  it("YouTube 以外のリンクではサムネイルを表示しない", async () => {
+  // Spotify も公式の oEmbed からサムネイルを取れるので表示する。
+  it("Spotify リンクのトラックにもサムネイルを表示する", async () => {
     mockFetch.mockResolvedValue(buildSetlistWithLinks());
     renderWithProviders(<SetlistPage />);
 
-    await screen.findByRole("img", { name: "YouTube Song のサムネイル" });
     expect(
-      screen.queryByRole("img", { name: "Spotify Song のサムネイル" })
-    ).not.toBeInTheDocument();
+      await screen.findByRole("img", { name: "Spotify Song のサムネイル" })
+    ).toBeInTheDocument();
   });
 
   it("リンクのないトラックではサムネイルを表示しない", async () => {
