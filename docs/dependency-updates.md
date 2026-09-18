@@ -8,7 +8,8 @@
 毎週月曜 09:00 (JST)
   └─ Dependabot が更新を検知して PR を作成
        ├─ patch / minor → 系統ごとに 1 本にまとめた PR
-       └─ major        → 1 ライブラリ 1 PR
+       ├─ major        → 1 ライブラリ 1 PR
+       └─ major のうち peer dependency で結ばれた組 → その組で 1 本
 
   └─ deps-label.yml が PR を分類してラベルを付ける
        ├─ patch / minor → deps-auto
@@ -34,6 +35,34 @@
 | GitHub Actions | `/` (`.github/workflows/`) |
 
 Terraform のプロバイダは対象外。`.terraform.lock.hcl` が gitignore されていてバージョンが固定されていないため、まず固定するところからになる。
+
+## peer dependency で結ばれたライブラリはまとめて上げる
+
+major を 1 ライブラリ 1 PR で出すと、互いに peer dependency を張っている組が別々の PR に割れる。片方だけ上げた状態は `npm ci` が ERESOLVE で解決できず、その PR は単独では絶対に緑にならない。
+
+```
+npm error Found: vitest@5.0.0
+npm error Could not resolve dependency:
+npm error peer vitest@"4.1.10" from @vitest/coverage-v8@4.1.10
+```
+
+`.github/dependabot.yml` の `groups` で、次の組は major でも 1 本の PR にまとめている。
+
+| 組             | 対象                                                     | 理由                                              |
+| -------------- | -------------------------------------------------------- | ------------------------------------------------- |
+| frontend-react | `react`, `react-dom`, `@types/react`, `@types/react-dom` | react と react-dom は互いに peer dependency       |
+| frontend-vite  | `vite`, `@vitejs/*`, `vitest`, `@vitest/*`               | vite 8 は `@vitejs/plugin-react` 5 以上を要求する |
+| backend-vitest | `vitest`, `@vitest/*`                                    | `@vitest/coverage-v8` は vitest と完全一致が必要  |
+
+新しく peer dependency で縛られた組が出てきたら、ここに足す。目印は「CI の失敗が `npm ci` の ERESOLVE で、相手のバージョンが PR に含まれていない」こと。
+
+`open-pull-requests-limit` は frontend / backend とも 10 にしている。5 のままだと打ち切りに当たった更新が PR にすらならず、存在に気づけない（実際に `@vitejs/plugin-react` の major がこれで出てこなかった）。
+
+## 保留している更新
+
+| ライブラリ   | 保留理由                                                                                                                                                                                                                                   |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `typescript` | major を `ignore` 指定。typescript-eslint が TS 7 に未対応で、上げると `eslint` が起動時にエラーで落ちる（[typescript-eslint#10940](https://github.com/typescript-eslint/typescript-eslint/issues/10940)）。対応が入ったら `ignore` を消す |
 
 ## なぜ major だけ自動マージしないのか
 

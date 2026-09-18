@@ -6,6 +6,10 @@
 #   - major は 1 ライブラリ 1 PR で出す
 #     → deps-label.yml が `deps-major` ラベルを付け、ci-gate が自動マージを止める
 #       （型もテストも通るのに挙動だけ変わる更新があるため、人手で確認する）
+#   - ただし peer dependency で結ばれたライブラリ群（react と react-dom、
+#     vite と vitest など）は major もまとめて 1 本にする
+#     → 片方だけ上げた PR は npm ci が ERESOLVE で落ちるため、
+#       単独では絶対にマージできず、CI が赤いまま溜まっていく
 #
 # versioning-strategy: increase は package.json のレンジも一緒に引き上げる。
 # CI / deploy は npm ci で lockfile を厳密に適用するため、
@@ -21,16 +25,40 @@ updates:
       day: monday
       time: "09:00"
       timezone: Asia/Tokyo
-    open-pull-requests-limit: 5
+    # major を系統ごとに分けて出すと本数が増える。5 だと打ち切られ、
+    # 打ち切られた更新は PR にすらならず存在に気づけない。
+    open-pull-requests-limit: 10
     versioning-strategy: increase
     labels: ["dependencies", "frontend"]
     commit-message:
       prefix: chore(deps)
       include: scope
+    ignore:
+      # typescript-eslint が TS 7 に未対応で、上げると eslint が起動時に落ちる。
+      # 対応は typescript-eslint#10940 で追跡中。対応が入ったらこの ignore を消す。
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
     groups:
       frontend:
         patterns: ["*"]
         update-types: ["minor", "patch"]
+      # react と react-dom は互いに peer dependency。片方だけでは npm ci が通らない。
+      frontend-react:
+        patterns:
+          - react
+          - react-dom
+          - "@types/react"
+          - "@types/react-dom"
+        update-types: ["major"]
+      # vite / vitest / プラグインは peer dependency で世代が縛られている。
+      # 例えば vite 8 は @vitejs/plugin-react 5 以上を要求する。
+      frontend-vite:
+        patterns:
+          - vite
+          - "@vitejs/*"
+          - vitest
+          - "@vitest/*"
+        update-types: ["major"]
 
   - package-ecosystem: npm
     directory: /backend
@@ -39,16 +67,26 @@ updates:
       day: monday
       time: "09:00"
       timezone: Asia/Tokyo
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 10
     versioning-strategy: increase
     labels: ["dependencies", "backend"]
     commit-message:
       prefix: chore(deps)
       include: scope
+    ignore:
+      # frontend と同じ理由。typescript-eslint#10940 の対応待ち。
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
     groups:
       backend:
         patterns: ["*"]
         update-types: ["minor", "patch"]
+      # vitest 本体と @vitest/coverage-v8 はバージョンが完全一致でないと解決できない。
+      backend-vitest:
+        patterns:
+          - vitest
+          - "@vitest/*"
+        update-types: ["major"]
 
   - package-ecosystem: npm
     directory: /
