@@ -11,6 +11,8 @@ on:
 
 env:
   AWS_REGION: ap-northeast-1
+  # Lambda の runtime（infra/lambda.tf）と backend の esbuild target に合わせる。
+  NODE_VERSION: "24"
 
 permissions:
   id-token: write
@@ -27,9 +29,19 @@ jobs:
         with:
           ref: main
 
+      # 未設定のとき、OIDC の分かりにくいエラーではなく何をすればよいかを出す
+      - name: Check setup
+        env:
+          AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+        run: |
+          if [ -z "$AWS_ROLE_ARN" ]; then
+            echo "::error::Secrets に AWS_ROLE_ARN が未設定です。infra を apply して得られる GitHub Actions 用ロールの ARN を登録してください。"
+            exit 1
+          fi
+
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: ${{ env.NODE_VERSION }}
 
       - uses: hashicorp/setup-terraform@v3
 
@@ -60,11 +72,39 @@ jobs:
         id: tf
         working-directory: infra
         run: |
-          echo "s3_bucket=$(terraform output -raw frontend_bucket_name)" >> "$GITHUB_OUTPUT"
-          echo "cf_dist_id=$(terraform output -raw cloudfront_distribution_id)" >> "$GITHUB_OUTPUT"
+          {
+            echo "s3_bucket=$(terraform output -raw frontend_bucket_name)"
+            echo "cf_dist_id=$(terraform output -raw cloudfront_distribution_id)"
+            echo "app_url=$(terraform output -raw app_url)"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Deploy Frontend to S3
-        run: aws s3 sync frontend/dist/ s3://${{ steps.tf.outputs.s3_bucket }} --delete
+        run: aws s3 sync frontend/dist/ "s3://${{ steps.tf.outputs.s3_bucket }}" --delete
 
       - name: Invalidate CloudFront cache
-        run: aws cloudfront create-invalidation --distribution-id ${{ steps.tf.outputs.cf_dist_id }} --paths "/*"
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id "${{ steps.tf.outputs.cf_dist_id }}" \
+            --paths "/*"
+
+      # CI グリーン → 自動マージ → ここまで無人で流れるため、
+      # 本番が実際に応答することをデプロイの成否として確認する。
+      - name: Smoke test
+        run: |
+          url="${{ steps.tf.outputs.app_url }}"
+          echo "deployed: $url"
+          # CloudFront への反映を待ちつつヘルスチェックを叩く
+          for i in $(seq 1 10); do
+            if curl -fsS "$url/api/health" | grep -q '"ok"'; then
+              echo "health check passed"
+              exit 0
+            fi
+            echo "attempt $i failed; retrying in 15s"
+            sleep 15
+          done
+          echo "::error::health check failed at $url/api/health"
+          exit 1
+
+      # 失敗時に空の URL で「Deployed to」と書かないよう、成功時のみ出す
+      - name: Summary
+        run: echo "### Deployed to ${{ steps.tf.outputs.app_url }}" >> "$GITHUB_STEP_SUMMARY"

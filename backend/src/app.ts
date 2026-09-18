@@ -4,6 +4,7 @@ import { authRoute } from "./routes/auth";
 import { analyticsRoute } from "./routes/analytics";
 import { imageParseRoute } from "./routes/image-parse";
 import { proxyRoute } from "./routes/proxy";
+import { healthRoute } from "./routes/health";
 import { requestLogger } from "./middleware/logger";
 import { errorHandler } from "./middleware/error";
 
@@ -12,6 +13,7 @@ export const app = new Hono();
 app.use("*", requestLogger);
 app.onError(errorHandler);
 
+app.route("/api/health", healthRoute);
 app.route("/api/auth", authRoute);
 app.route("/api/setlists", setlistsRoute);
 app.route("/api/analytics", analyticsRoute);
