@@ -711,21 +711,26 @@ describe("SetlistEditor", () => {
 describe("SetlistEditor — VocaDB検索", () => {
   it("adds a track with title, artist and song link from a VocaDB result", async () => {
     mockFetchSetlist.mockResolvedValue(buildSetlist({ tracks: [] }));
-    mockSearchVocadbSongs.mockResolvedValue([
-      {
-        id: 3939,
-        title: "Tell Your World",
-        artist: "kz feat. 初音ミク",
-        songLink: "https://youtu.be/original000",
-        vocadbUrl: "https://vocadb.net/S/3939",
-      },
-    ]);
+    mockSearchVocadbSongs.mockResolvedValue({
+      songs: [
+        {
+          id: 3939,
+          title: "Tell Your World",
+          artist: "kz feat. 初音ミク",
+          songLink: "https://youtu.be/original000",
+          vocadbUrl: "https://vocadb.net/S/3939",
+          songType: "Original",
+        },
+      ],
+      artist: null,
+      artistCandidates: [],
+    });
     const user = userEvent.setup();
     renderWithProviders(<SetlistEditor id="s1" />);
     await screen.findByLabelText("セットリスト名");
 
     await user.click(screen.getByRole("button", { name: "VocaDBから検索" }));
-    await user.type(screen.getByRole("searchbox", { name: "検索語" }), "Tell Your World");
+    await user.type(screen.getByRole("searchbox", { name: "曲名" }), "Tell Your World");
     await user.click(screen.getByRole("button", { name: "検索" }));
     await user.click(await screen.findByRole("button", { name: "追加" }));
     await user.click(screen.getByRole("button", { name: "閉じる" }));

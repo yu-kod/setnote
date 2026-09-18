@@ -6,13 +6,21 @@
 ## 使い方
 
 1. セットリスト編集画面で「VocaDBから検索」を押す
-2. 「曲名」か「作者名」を選んで検索語を入れる
+2. 「曲名」「作者名」のどちらか、または両方を入れて検索する
 3. 結果の「追加」を押すと、曲名・作者名・楽曲リンクが入ったトラックが末尾に追加される
 4. 続けて追加できる。追加済みの曲はボタンが「追加済み」になり二重追加されない
 
+作者名を入れて検索したときは、**採用した作者を結果の上に表示する**。候補が複数あれば
+「別の作者で探す」に並ぶので、違う人が当たっていたら押して引き直せる。
+
 ## 取得するもの / 取得しないもの
 
-**取得する**: 曲名、作者名(VocaDB の `artistString`)、PV の URL、VocaDB のエントリ URL。
+**取得する**: 曲名、作者名(VocaDB の `artistString`)、曲の種別(`songType`)、PV の URL、
+VocaDB のエントリ URL。
+
+サムネイルは VocaDB からではなく、取り込んだ YouTube リンクの videoId を
+`/api/proxy/thumbnail` に渡して表示する(YouTube Data API 経由)。ニコニコ動画しか PV が
+無い曲にはサムネイルが出ないので、プレースホルダを置く。
 
 **取得しない**: ジャケット/サムネイル画像。VocaDB の画像はフェアユース依拠でライセンス
 対象外のため、API リクエストの `fields` に `ThumbUrl` を含めない。サムネイルが必要な
@@ -33,11 +41,12 @@ PV が無ければ楽曲リンクは空のままで、一覧に「楽曲リン�
 ## エンドポイント
 
 ```
-GET /api/vocadb/songs?q=<検索語>&by=title|artist
+GET /api/vocadb/songs?title=<曲名>&artist=<作者名>&artistId=<作者ID>
 Authorization: Bearer <access token>
 ```
 
-`by` を省略すると `title`。最大 20 件を返す。
+`title` と `artist` は少なくとも一方が必要。両方あればその作者の中を曲名で絞り込む。
+`artistId` は作者候補から選び直したときに作者を固定するためのもの。最大 20 件を返す。
 
 ```json
 {
@@ -47,11 +56,17 @@ Authorization: Bearer <access token>
       "title": "Tell Your World",
       "artist": "kz feat. 初音ミク",
       "songLink": "https://www.youtube.com/watch?v=PqJNc9KVIZE",
-      "vocadbUrl": "https://vocadb.net/S/3939"
+      "vocadbUrl": "https://vocadb.net/S/3939",
+      "songType": "Original"
     }
-  ]
+  ],
+  "artist": { "id": 77, "name": "kz", "artistType": "Producer" },
+  "artistCandidates": [{ "id": 77, "name": "kz", "artistType": "Producer" }]
 }
 ```
+
+`songType` は Original / Remix / Cover / Instrumental 等。同名エントリが並んだときの
+見分けに使うので、画面では Original 以外だけバッジで出す。
 
 VocaDB は無認証で叩ける公開 API だが、Lambda が無認証の踏み台にならないよう
 編集画面と同じ Cognito 認証を要求する。VocaDB 側の通信に失敗した場合は 502 を返す。
@@ -59,9 +74,23 @@ VocaDB は無認証で叩ける公開 API だが、Lambda が無認証の踏み�
 ## 作者名検索が 2 リクエストになる理由
 
 VocaDB の `/api/songs?query=` は曲名しか見ないため、作者名検索は
-`/api/artists?query=` で作者を 1 件に絞ってから `/api/songs?artistId=` を人気順
-(`sort=RatingScore`)で引く 2 段構えにしている。該当する作者がいなければ楽曲検索は
-行わず、空の結果を返す。
+`/api/artists?query=` で作者を引いてから `/api/songs?artistId=` を引く 2 段構えにしている。
+曲名の指定が無いときは人気順(`sort=RatingScore`)にして、その作者の代表曲から見られるようにする。
+
+### 候補を 1 件に決め打ちしないこと
+
+初版は作者検索の**先頭 1 件を無条件に採用**していて、狙いと違う作者の曲が黙って並ぶ事故が
+起きた。VocaDB の作者検索は部分一致で、並び順も関連度順とは限らないため、「kz」で名前に
+kz を含む別人や別サークルが先頭に来てしまう。しかも画面にどの作者を採用したか出していない
+ので、間違いに気づけなかった。
+
+そこで次のようにした。
+
+- 候補を 5 件取り、**完全一致 → 前方一致 → VocaDB の並び順**で並べ替えて先頭を採用する
+  (大文字小文字は区別しない)
+- 採用した作者と候補一覧を必ずレスポンスに含め、画面に出して選び直せるようにする
+- 作者名を指定したのに誰も見つからなければ、**曲名だけで検索し直さない**。
+  別人の曲が並ぶより「その作者は見つからなかった」と分かるほうがよい
 
 ## API キー
 
