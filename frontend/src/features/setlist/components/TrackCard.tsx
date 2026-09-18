@@ -4,6 +4,7 @@ import { Trash2, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createCustomField } from "../track";
 import { matchTracks } from "../trackMatch";
+import { getThumbnailProxyUrl } from "../thumbnail";
 import type { Track, CustomField } from "../types";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -79,6 +80,9 @@ export function TrackCard({
   const removeField = (id: string) =>
     onChange({ ...track, customFields: track.customFields.filter((f) => f.id !== id) });
 
+  // サムネイルを取れるサービスのリンクなら、小さくプレビューを出す。
+  const thumbnailUrl = getThumbnailProxyUrl(track.songLink);
+
   return (
     <Card role="group" aria-label={`トラック ${index + 1}`} className="py-3 gap-2">
       <CardContent className="space-y-0.5 px-3">
@@ -149,13 +153,24 @@ export function TrackCard({
           placeholder="アーティストを追加"
           className="text-sm text-muted-foreground"
         />
-        <InlineInput
-          aria-label="楽曲リンク"
-          value={track.songLink}
-          onChange={(e) => set({ songLink: e.target.value })}
-          placeholder="楽曲リンクを追加（YouTube / Spotify / SoundCloud）"
-          className="text-sm text-muted-foreground"
-        />
+        {/* 貼ったリンクが意図した曲かどうかを、その場で確かめられるようにする。 */}
+        <div className="flex items-center gap-2">
+          {thumbnailUrl && (
+            <img
+              src={thumbnailUrl}
+              alt={`${track.title} のサムネイル`}
+              loading="lazy"
+              className="h-6 w-10 shrink-0 rounded-xs object-cover"
+            />
+          )}
+          <InlineInput
+            aria-label="楽曲リンク"
+            value={track.songLink}
+            onChange={(e) => set({ songLink: e.target.value })}
+            placeholder="楽曲リンクを追加（YouTube / Spotify / SoundCloud）"
+            className="text-sm text-muted-foreground"
+          />
+        </div>
         <InlineInput
           aria-label="入手元"
           value={track.source}

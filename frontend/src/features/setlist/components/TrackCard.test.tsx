@@ -231,3 +231,39 @@ describe("TrackCard", () => {
     expect(onDelete).toHaveBeenCalledTimes(1);
   });
 });
+
+describe("TrackCard サムネイルのプレビュー", () => {
+  const YOUTUBE_LINK = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
+
+  it("楽曲リンクがあればサムネイルを出す", () => {
+    renderWithProviders(<Harness initial={buildTrack({ songLink: YOUTUBE_LINK })} />);
+
+    expect(screen.getByRole("img", { name: "Song のサムネイル" })).toHaveAttribute(
+      "src",
+      `/api/proxy/thumbnail?url=${encodeURIComponent(YOUTUBE_LINK)}`
+    );
+  });
+
+  it("楽曲リンクがなければサムネイルを出さない", () => {
+    renderWithProviders(<Harness initial={buildTrack()} />);
+
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+  });
+
+  // 入力した瞬間に確かめられることが、プレビューを出す理由そのもの。
+  it("楽曲リンクを入力するとサムネイルが出る", async () => {
+    renderWithProviders(<Harness initial={buildTrack()} />);
+
+    await userEvent.type(screen.getByLabelText("楽曲リンク"), YOUTUBE_LINK);
+
+    expect(screen.getByRole("img", { name: "Song のサムネイル" })).toBeInTheDocument();
+  });
+
+  it("サムネイルを取れないサービスのリンクでは出さない", () => {
+    renderWithProviders(
+      <Harness initial={buildTrack({ songLink: "https://www.nicovideo.jp/watch/sm9" })} />
+    );
+
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+  });
+});
