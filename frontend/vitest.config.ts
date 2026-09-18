@@ -10,6 +10,8 @@ export default defineConfig({
     },
   },
   test: {
+    // e2e/ は Playwright が実行するため、vitest の対象から外す。
+    include: ["src/**/*.test.{ts,tsx}"],
     environment: "jsdom",
     setupFiles: ["./vitest.setup.ts"],
     restoreMocks: true,

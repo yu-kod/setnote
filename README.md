@@ -59,6 +59,17 @@ cd backend
 npm test
 ```
 
+### スマホ表示 / PC 表示の確認
+
+```bash
+cd frontend
+npx playwright install chromium  # 初回のみ
+npm run e2e        # 3つの端末サイズでレイアウト崩れを検証
+npm run e2e:shots  # 端末ごとのスクリーンショットを書き出す
+```
+
+詳細は [docs/responsive-check.md](docs/responsive-check.md)。
+
 ### ブランチ戦略
 
 トランクベース開発を採用しています。
