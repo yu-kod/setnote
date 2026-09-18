@@ -3,6 +3,7 @@ import { fetchTrackUsage, fetchViews, fetchLikes } from "./api";
 import { clearSession, redirectToLogin } from "../auth/session";
 
 vi.mock("../auth/session", () => ({
+  TOKEN_KEY: "setnote_access_token",
   clearSession: vi.fn(),
   redirectToLogin: vi.fn(),
 }));

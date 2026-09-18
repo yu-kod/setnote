@@ -56,8 +56,26 @@ resource "aws_iam_role_policy" "lambda_cognito" {
         "cognito-idp:SignUp",
         "cognito-idp:ConfirmSignUp",
         "cognito-idp:InitiateAuth",
+        "cognito-idp:ResendConfirmationCode",
+        # 管理画面の利用者数集計で使う。
+        "cognito-idp:ListUsers",
       ]
       Resource = aws_cognito_user_pool.main.arn
+    }]
+  })
+}
+
+# 管理画面の死活メトリクス用。GetMetricData はリソース単位の権限指定に対応していない。
+resource "aws_iam_role_policy" "lambda_cloudwatch_read" {
+  name = "${var.project_name}-lambda-cloudwatch-read"
+  role = aws_iam_role.lambda.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = ["cloudwatch:GetMetricData"]
+      Resource = "*"
     }]
   })
 }
@@ -84,6 +102,7 @@ resource "aws_lambda_function" "api" {
       COGNITO_CLIENT_ID    = aws_cognito_user_pool_client.web.id
       ANTHROPIC_API_KEY    = var.anthropic_api_key
       YOUTUBE_API_KEY      = var.youtube_api_key
+      API_GATEWAY_ID       = aws_apigatewayv2_api.api.id
     }
   }
 }

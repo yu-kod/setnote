@@ -73,3 +73,11 @@ resource "aws_cognito_user_pool_client" "web" {
 
   prevent_user_existence_errors = "ENABLED"
 }
+
+# 管理者グループ。setnote 自体の管理画面（/admin）に入れるのはこのグループのメンバーだけ。
+# メンバーの追加は AWS 側で行う運用にして、管理者の identity をコードや tfstate に残さない。
+resource "aws_cognito_user_group" "admin" {
+  name         = "admin"
+  user_pool_id = aws_cognito_user_pool.main.id
+  description  = "setnote の管理画面にアクセスできる管理者"
+}
