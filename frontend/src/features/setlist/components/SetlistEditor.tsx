@@ -14,7 +14,8 @@ import type { Setlist, Track } from "../types";
 import type { ParsedTrack } from "../api";
 import { matchImportedTracks } from "../importMatch";
 import { hasEmptyTitleTracks } from "../trackValidation";
-import { GripVertical, ImageDown, Link2, Unlink2 } from "lucide-react";
+import { buildTracklistText } from "../tracklistText";
+import { ClipboardList, GripVertical, ImageDown, Link2, Unlink2 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -197,6 +198,20 @@ export function SetlistEditor({ id }: { id: string }) {
     toast.success("コピーしました");
   }
 
+  // X などに貼るためのプレーンテキスト。保存前の編集内容もそのまま反映する。
+  async function handleCopyTracklist() {
+    await navigator.clipboard.writeText(
+      buildTracklistText({
+        name: form.name.trim(),
+        eventName: toNullable(form.eventName),
+        eventDate: toNullable(form.eventDate),
+        publicUrl: status === "published" ? publicUrl : null,
+        tracks,
+      })
+    );
+    toast.success("曲順をコピーしました");
+  }
+
   if (loading) {
     return (
       <div role="status" aria-label="読み込み中" className="space-y-4">
@@ -366,7 +381,11 @@ export function SetlistEditor({ id }: { id: string }) {
         <VocadbSearch onAdd={addTrack} />
       </div>
 
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="outline" onClick={handleCopyTracklist}>
+          <ClipboardList className="size-4" aria-hidden="true" />
+          曲順をテキストでコピー
+        </Button>
         <Button type="button" onClick={handleSave} disabled={saving || !form.name.trim()}>
           {saving ? "保存中..." : "保存"}
         </Button>
