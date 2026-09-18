@@ -476,6 +476,10 @@ describe("SetlistPage サムネイル", () => {
 });
 
 describe("SetlistPage 一覧表示", () => {
+  beforeEach(() => {
+    window.history.replaceState({}, "", "/");
+  });
+
   function buildSetlistForList() {
     return buildPublicSetlist({
       tracks: [
@@ -505,8 +509,7 @@ describe("SetlistPage 一覧表示", () => {
   async function renderAndToggle() {
     mockFetch.mockResolvedValue(buildSetlistForList());
     renderWithProviders(<SetlistPage />);
-    const toggle = await screen.findByRole("button", { name: "一覧表示" });
-    await userEvent.click(toggle);
+    await userEvent.click(await screen.findByRole("button", { name: "一覧表示" }));
   }
 
   it("一覧表示のトグルを表示する", async () => {
@@ -536,12 +539,34 @@ describe("SetlistPage 一覧表示", () => {
     expect(screen.getByRole("img", { name: "Song A のサムネイル" })).toBeInTheDocument();
   });
 
-  it("もう一度押すと通常表示に戻る", async () => {
+  // スクリーンショットに写り込まないよう、一覧表示中はトグル自体を消す。
+  it("一覧表示ではトグルボタンを表示しない", async () => {
     await renderAndToggle();
 
-    await userEvent.click(screen.getByRole("button", { name: "通常表示" }));
+    expect(screen.queryByRole("button", { name: "一覧表示" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "通常表示" })).not.toBeInTheDocument();
+  });
 
-    expect(screen.getByRole("region", { name: "選択中の曲" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Song Aにいいね" })).toBeInTheDocument();
+  it("一覧表示は URL に残るため、リロードしても一覧表示で開く", async () => {
+    window.history.replaceState({}, "", "/?view=list");
+    mockFetch.mockResolvedValue(buildSetlistForList());
+    renderWithProviders(<SetlistPage />);
+
+    await screen.findByText("Song A");
+    expect(screen.queryByRole("region", { name: "選択中の曲" })).not.toBeInTheDocument();
+  });
+
+  it("戻り方の案内を出し、しばらくすると消す", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      await renderAndToggle();
+      expect(screen.getByRole("status", { name: "操作の案内" })).toBeInTheDocument();
+
+      await vi.advanceTimersByTimeAsync(3000);
+
+      expect(screen.queryByRole("status", { name: "操作の案内" })).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
