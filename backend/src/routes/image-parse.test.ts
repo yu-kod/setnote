@@ -79,7 +79,7 @@ describe("POST /api/image-parse", () => {
     });
 
     expect(res.status).toBe(400);
-    const data = await res.json();
+    const data = (await res.json()) as { error?: unknown };
     expect(data.error).toBeDefined();
   });
 
@@ -105,7 +105,7 @@ describe("POST /api/image-parse", () => {
     });
 
     expect(res.status).toBe(400);
-    const data = await res.json();
+    const data = (await res.json()) as { error: { message: string } };
     expect(data.error.message).toContain("5MB");
   });
 
