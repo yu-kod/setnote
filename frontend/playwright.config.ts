@@ -29,9 +29,16 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `npm run dev -- --port ${PORT} --strictPort`,
+    // baseURL と同じ 127.0.0.1 を明示して待ち受けさせる。
+    // 指定しないと Vite は localhost に bind するため、
+    // localhost の名前解決が 127.0.0.1 と一致しない環境で待ち受けを取りこぼす。
+    command: `npm run dev -- --host 127.0.0.1 --port ${PORT} --strictPort`,
     url: baseURL,
     reuseExistingServer: !process.env.CI,
-    timeout: 120_000,
+    // CI はブラウザのダウンロード直後で、起動に時間がかかることがある。
+    timeout: 180_000,
+    // 既定では stdout が捨てられ、起動できたかどうかがログに残らない。
+    stdout: "pipe",
+    stderr: "pipe",
   },
 });
