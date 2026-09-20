@@ -86,13 +86,36 @@ test.describe("ヘッダー", () => {
 
 test.describe("公開ページの一覧表示", () => {
   // スクリーンショットで全曲を見渡すための表示なので、スクロールが出たら用をなさない。
+  // 実際のセットリストに近い長さの曲名で確かめる（折り返しの限界は次のテストで見る）。
   test("20曲のセットが1画面に収まる", async ({ page }) => {
-    await mockApi(page, { trackCount: 20 });
+    await mockApi(page, { trackCount: 20, longTitles: false });
     await page.goto("/s/demo?view=list");
     await page.getByRole("button", { name: "閉じる" }).click();
     await expect(page.getByRole("dialog")).toBeHidden();
 
     expect(await verticalOverflow(page)).toBeLessThanOrEqual(0);
+  });
+
+  // 行の高さを決め打ちにすると、折り返した行だけ中身が収まらず下の行と重なる。
+  test("折り返した行の中身が行からはみ出さない", async ({ page }) => {
+    await mockApi(page, { trackCount: 24 });
+    await page.goto("/s/demo?view=list");
+    await page.getByRole("button", { name: "閉じる" }).click();
+    await expect(page.getByRole("dialog")).toBeHidden();
+
+    const overflowing = await page.evaluate(() =>
+      [...document.querySelectorAll("ol > li")]
+        .map((li, i) => {
+          const row = li.getBoundingClientRect().height;
+          const content = Math.max(
+            ...[...li.querySelectorAll("div, span")].map((el) => (el as HTMLElement).scrollHeight)
+          );
+          return { n: i + 1, row, content };
+        })
+        .filter((r) => r.content > r.row + 0.5)
+    );
+
+    expect(overflowing).toEqual([]);
   });
 
   // 一覧表示はそのままスクリーンショットを撮るための表示なので、サイトの装飾は出さない。

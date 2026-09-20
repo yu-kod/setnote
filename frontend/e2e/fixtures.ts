@@ -20,10 +20,16 @@ export type Track = {
   groupId: string | null;
 };
 
-export function buildTracks(count: number): Track[] {
+/**
+ * longTitles: 折り返しを起こす極端に長い曲名にする（既定）。
+ * 実際のセットリストに近い長さで確かめたいときだけ false にする。
+ */
+export function buildTracks(count: number, { longTitles = true } = {}): Track[] {
   return Array.from({ length: count }, (_, i) => ({
     id: `t${i + 1}`,
-    title: `テスト楽曲 ${i + 1} — とても長いタイトルでも折り返されること`,
+    title: longTitles
+      ? `テスト楽曲 ${i + 1} — とても長いタイトルでも折り返されること`
+      : `テスト楽曲 ${i + 1}`,
     artist: `アーティスト ${i + 1}`,
     songLink: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
     source: "",
@@ -32,8 +38,8 @@ export function buildTracks(count: number): Track[] {
   }));
 }
 
-export function buildSetlist(trackCount: number) {
-  const tracks = buildTracks(trackCount);
+export function buildSetlist(trackCount: number, { longTitles = true } = {}) {
+  const tracks = buildTracks(trackCount, { longTitles });
   return {
     id: "demo",
     userId: "u1",
@@ -62,8 +68,11 @@ function fakeAccessToken(groups: string[]): string {
   return `header.${payload}.signature`;
 }
 
-export async function mockApi(page: Page, { trackCount = 12 }: { trackCount?: number } = {}) {
-  const setlist = buildSetlist(trackCount);
+export async function mockApi(
+  page: Page,
+  { trackCount = 12, longTitles = true }: { trackCount?: number; longTitles?: boolean } = {}
+) {
+  const setlist = buildSetlist(trackCount, { longTitles });
 
   // glob だと dev サーバーが配信する src/api/ 配下のモジュールまで巻き込むため、
   // パス名で /api/ 配下だけを厳密に拾う。
