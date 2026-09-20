@@ -574,10 +574,22 @@ describe("SetlistPage 一覧表示", () => {
   });
 
   // 一覧表示はスクショして共有するための表示なので、スクロールが出たら意味がない。
-  it("画面の高さと曲数から行の高さを決める", async () => {
+  // 行の高さを決め打ちすると折り返した行がはみ出すため、
+  // 高さは中身に任せ、実測した合計が収まるまで文字サイズだけを下げる。
+  it("実測した高さが画面に収まるまで文字サイズを下げる", async () => {
     const rect = vi
       .spyOn(Element.prototype, "getBoundingClientRect")
       .mockReturnValue({ top: 120 } as DOMRect);
+    // jsdom はレイアウトしないので、1行あたり文字サイズの2倍の高さで描画されたものとみなす。
+    const scrollHeight = vi
+      .spyOn(Element.prototype, "scrollHeight", "get")
+      .mockImplementation(function (this: Element) {
+        let total = 0;
+        this.querySelectorAll("li").forEach((li) => {
+          total += parseFloat((li as HTMLElement).style.fontSize || "0") * 2;
+        });
+        return total;
+      });
     const originalHeight = window.innerHeight;
     window.innerHeight = 400;
     try {
@@ -598,21 +610,33 @@ describe("SetlistPage 一覧表示", () => {
       renderWithProviders(<SetlistPage />);
       await userEvent.click(await screen.findByRole("button", { name: "閉じる" }));
 
-      // 使える高さ = 400 - 上端120 - 余白8 = 272。10曲なので1行27px。
+      // 使える高さ = 400 - 上端120 - 余白8 = 272。
+      // 14px だと 10曲 × 28px = 280px ではみ出すので、収まる 13px まで下げる。
       const rows = screen.getAllByRole("listitem");
-      expect(rows[0]).toHaveStyle({ height: "27px" });
+      expect(rows[0]).toHaveStyle({ fontSize: "13px" });
+      expect(rows[0]).not.toHaveStyle({ height: "27px" });
 
-      // 画面が変われば測り直す（回転やアドレスバーの出入り）。
+      // 画面が変われば測り直す（回転やアドレスバーの出入り）。広がれば元の大きさに戻る。
       window.innerHeight = 800;
       await act(async () => {
         window.dispatchEvent(new Event("resize"));
       });
 
-      expect(screen.getAllByRole("listitem")[0]).toHaveStyle({ height: "36px" });
+      expect(screen.getAllByRole("listitem")[0]).toHaveStyle({ fontSize: "14px" });
     } finally {
       window.innerHeight = originalHeight;
+      scrollHeight.mockRestore();
       rect.mockRestore();
     }
+  });
+
+  // 曲が1つもないと目次自体を描画しないので、測る対象がない。
+  it("曲がない一覧表示でも落ちない", async () => {
+    mockFetch.mockResolvedValue(buildPublicSetlist({ tracks: [] }));
+    window.history.replaceState({}, "", "/?view=list");
+    renderWithProviders(<SetlistPage />);
+
+    expect(await screen.findByText("曲がまだありません")).toBeInTheDocument();
   });
 
   it("案内を閉じるとモーダルが消える", async () => {

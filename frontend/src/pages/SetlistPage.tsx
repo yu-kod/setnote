@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import {
   fetchPublicSetlist,
@@ -24,7 +24,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ExternalLink, Heart } from "lucide-react";
 import { MediaEmbed } from "../features/setlist/components/MediaEmbed";
 import { getThumbnailProxyUrl } from "../features/setlist/thumbnail";
-import { computeRowLayout } from "../features/setlist/listLayout";
+import {
+  shrinkToFit,
+  thumbnailSizeFor,
+  rowPaddingFor,
+  MAX_FONT_SIZE,
+} from "../features/setlist/listLayout";
 import NotFoundPage from "./NotFoundPage";
 
 const isUrl = (s: string) => /^https?:\/\//.test(s);
@@ -51,17 +56,13 @@ export default function SetlistPage() {
   const listView = searchParams.get("view") === "list";
   const [guideDismissed, setGuideDismissed] = useState(false);
   const guideOpen = listView && !guideDismissed;
-  // 一覧表示では全曲が1画面に収まる必要があるため、
-  // 実際に使える高さを測ってから1行の高さを決める。
+  // 一覧表示では全曲が1画面に収まる必要がある。
+  // 行の高さを決め打ちすると折り返した行がはみ出すので、
+  // 中身の高さは行に任せ、描画された実測値が収まるまで文字サイズを下げる。
   const listElement = useRef<HTMLOListElement | null>(null);
-  const [availableHeight, setAvailableHeight] = useState(0);
+  const [fontSize, setFontSize] = useState(MAX_FONT_SIZE);
   const measureList = useCallback((node: HTMLOListElement | null) => {
     listElement.current = node;
-    if (node) {
-      setAvailableHeight(
-        window.innerHeight - node.getBoundingClientRect().top - LIST_BOTTOM_MARGIN
-      );
-    }
   }, []);
   const [likeCounts, setLikeCounts] = useState<Record<string, number>>({});
   const [liked, setLiked] = useState<Set<string>>(() => getLikedTrackIds(id!));
@@ -79,13 +80,24 @@ export default function SetlistPage() {
     recordSetlistView(id!);
   }, [id]);
 
-  // 表示モードの切り替えや画面の回転で使える高さが変わるので測り直す。
+  // 表示モードの切り替えや画面の回転で使える高さが変わる。
+  // いったん最大まで戻してから測り直すことで、広くなった画面では文字も大きく戻る。
   useEffect(() => {
-    const remeasure = () => measureList(listElement.current);
-    remeasure();
-    window.addEventListener("resize", remeasure);
-    return () => window.removeEventListener("resize", remeasure);
-  }, [listView, measureList]);
+    const reset = () => setFontSize(MAX_FONT_SIZE);
+    reset();
+    window.addEventListener("resize", reset);
+    return () => window.removeEventListener("resize", reset);
+  }, [listView]);
+
+  // 描画のたびに実測し、はみ出していれば1段小さくして測り直す。
+  // 収まるか下限に達した時点で shrinkToFit が null を返し、繰り返しが止まる。
+  useLayoutEffect(() => {
+    const node = listElement.current;
+    if (!listView || !node) return;
+    const available = window.innerHeight - node.getBoundingClientRect().top - LIST_BOTTOM_MARGIN;
+    const next = shrinkToFit(fontSize, node.scrollHeight, available);
+    if (next !== null) setFontSize(next);
+  });
 
   // いいねのトグル（曲ごと1回まで）。未いいねなら付け、いいね済みなら取り消す。
   // 成功したら数を更新し、端末ローカルの記録も切り替える。
@@ -122,7 +134,8 @@ export default function SetlistPage() {
   }
 
   const tracks = setlist.tracks;
-  const rowLayout = computeRowLayout(availableHeight, tracks.length);
+  const thumbnail = thumbnailSizeFor(fontSize);
+  const rowPadding = rowPaddingFor(fontSize);
   const groups = groupTracks(tracks);
   const trackNumber = new Map<string, number>();
   groups.forEach((group, gi) => {
@@ -232,7 +245,7 @@ export default function SetlistPage() {
                   <span className="font-medium">{track.title}</span>
                   {track.artist && <span className="text-muted-foreground">— {track.artist}</span>}
                   {isGroupedWithPrev && (
-                    <span className="rounded bg-primary/10 px-1 py-0.5 text-[10px] font-semibold text-primary">
+                    <span className="shrink-0 rounded bg-primary/10 px-1 py-0.5 text-[0.7em] font-semibold text-primary">
                       BLEND
                     </span>
                   )}
@@ -241,12 +254,9 @@ export default function SetlistPage() {
               return (
                 <li
                   key={track.id}
-                  // 一覧表示は全曲を1画面に収めるため、行の高さを実測値から決める。
-                  style={
-                    listView
-                      ? { height: rowLayout.rowHeight, fontSize: rowLayout.fontSize }
-                      : undefined
-                  }
+                  // 一覧表示は全曲を1画面に収めるため文字サイズを絞る。
+                  // 高さは指定せず中身に合わせる（折り返した行はその分だけ高くなる）。
+                  style={listView ? { fontSize } : undefined}
                   className={`flex items-stretch ${i > 0 && !isGroupedWithPrev ? "border-t" : ""}`}
                 >
                   {track.groupId != null && (
@@ -265,17 +275,16 @@ export default function SetlistPage() {
                         src={thumbnailUrl}
                         alt={`${track.title} のサムネイル`}
                         loading="lazy"
-                        style={
-                          listView
-                            ? { height: rowLayout.rowHeight, width: rowLayout.rowHeight * 2 }
-                            : undefined
-                        }
+                        style={listView ? thumbnail : undefined}
                         className={`object-cover ${listView ? "" : "h-9 w-16"}`}
                       />
                     </a>
                   )}
                   {listView ? (
-                    <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden px-2">
+                    <div
+                      style={{ paddingBlock: rowPadding }}
+                      className="flex min-w-0 flex-1 items-center gap-2 px-2 leading-tight"
+                    >
                       {rowContent}
                     </div>
                   ) : (
