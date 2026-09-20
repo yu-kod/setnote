@@ -5,19 +5,31 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(1 0 0);
+
+  /* 面の段差（surface elevation）。
+     ダークテーマでは影がほとんど見えないため、背景より明るい面を重ねて
+     「上に載っている」ことを表す。色の値を直接使わず、必ず下の意味づけした
+     トークン（--background / --card / --muted）経由で参照する。
+       surface-0 … ページ背景
+       surface-1 … その上に載るコンテンツの面（カード、曲リスト）
+       surface-2 … さらに上（ホバー、選択中、スケルトン） */
+  --surface-0: oklch(1 0 0);
+  --surface-1: oklch(0.97 0 0);
+  --surface-2: oklch(0.94 0 0);
+
+  --background: var(--surface-0);
   --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
+  --card: var(--surface-1);
   --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
+  --popover: var(--surface-1);
   --popover-foreground: oklch(0.145 0 0);
   --primary: oklch(0.205 0 0);
   --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
+  --secondary: var(--surface-2);
   --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
+  --muted: var(--surface-2);
   --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
+  --accent: var(--surface-2);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
@@ -39,19 +51,25 @@
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
+  /* 背景 #0a0a0a → 面 #262626 → ホバー・選択 #333333。
+     背景がほぼ純黒なので、面を一段明るくしないと境目が見えない。 */
+  --surface-0: oklch(0.145 0 0);
+  --surface-1: oklch(0.269 0 0);
+  --surface-2: oklch(0.32 0 0);
+
+  --background: var(--surface-0);
   --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
+  --card: var(--surface-1);
   --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
+  --popover: var(--surface-1);
   --popover-foreground: oklch(0.985 0 0);
   --primary: oklch(0.922 0 0);
   --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
+  --secondary: var(--surface-2);
   --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
+  --muted: var(--surface-2);
   --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
+  --accent: var(--surface-2);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);

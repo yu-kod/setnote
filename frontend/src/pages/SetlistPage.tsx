@@ -212,8 +212,9 @@ export default function SetlistPage() {
             </DialogContent>
           </Dialog>
 
-          {/* 目次：全曲を一覧表示。行をタップすると下のプレイヤーが切り替わる。 */}
-          <ol ref={measureList} className="overflow-hidden rounded-md border">
+          {/* 目次：全曲を一覧表示。行をタップすると下のプレイヤーが切り替わる。
+              背景より一段明るい面（bg-card）に載せて、上のセットリスト名との境目を作る。 */}
+          <ol ref={measureList} className="overflow-hidden rounded-md border bg-card">
             {tracks.map((track, i) => {
               // 一覧表示では選択の概念がないため、ハイライトも出さない。
               const active = !listView && track.id === selected.id;
