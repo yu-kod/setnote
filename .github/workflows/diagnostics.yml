@@ -126,7 +126,7 @@ jobs:
         run: openssl enc -aes-256-cbc -pbkdf2 -in diagnostics.txt -out diagnostics.enc -pass pass:${{ inputs.passphrase }}
 
       - name: Upload encrypted results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: diagnostics
           path: diagnostics.enc
