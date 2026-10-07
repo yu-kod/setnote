@@ -2,18 +2,20 @@
 //
 // 各サービスが「ドキュメント化された手段」を用意しており、そこから外れた取得
 // （画像URLの推測やスクレイピング）は各社の規約で禁じられている。そのため
-// YouTube は Data API、Spotify と SoundCloud は公式の oEmbed を経由する。
-// ニコニコ動画は公式の oEmbed がなく、確実に使える公開経路が見当たらないため
-// 対応していない。
+// YouTube は Data API、Spotify と SoundCloud は公式の oEmbed、ニコニコ動画は
+// 外部向けの動画情報 API (getthumbinfo) を経由する。
 
 const YOUTUBE =
   /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/)([a-zA-Z0-9_-]{11})/;
 const SPOTIFY_TRACK =
   /(?:open\.spotify\.com\/(?:intl-[a-z]{2}\/)?track\/|spotify:track:)([a-zA-Z0-9]{22})/;
 const SOUNDCLOUD = /soundcloud\.com\/([\w-]+\/[\w-]+)/;
+const NICONICO = /(?:nicovideo\.jp\/watch\/|nico\.ms\/)((?:sm|nm|so)\d+)/;
 
 export type ThumbnailSource =
-  { kind: "youtube"; videoId: string } | { kind: "oembed"; endpoint: string };
+  | { kind: "youtube"; videoId: string }
+  | { kind: "oembed"; endpoint: string }
+  | { kind: "niconico"; endpoint: string };
 
 export function resolveThumbnailSource(songLink: string): ThumbnailSource | null {
   const youtube = songLink.match(YOUTUBE);
@@ -34,6 +36,14 @@ export function resolveThumbnailSource(songLink: string): ThumbnailSource | null
     return {
       kind: "oembed",
       endpoint: `https://soundcloud.com/oembed?format=json&url=${encodeURIComponent(trackUrl)}`,
+    };
+  }
+
+  const niconico = songLink.match(NICONICO);
+  if (niconico) {
+    return {
+      kind: "niconico",
+      endpoint: `https://ext.nicovideo.jp/api/getthumbinfo/${niconico[1]}`,
     };
   }
 

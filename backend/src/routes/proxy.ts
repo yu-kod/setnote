@@ -22,10 +22,17 @@ function pickThumbnailUrl(body: VideosResponse): string | null {
   return null;
 }
 
+// getthumbinfo は削除済み動画などでも 200 を返し、status="fail" で失敗を示す。
+function pickNiconicoThumbnailUrl(xml: string): string | null {
+  if (!xml.includes('status="ok"')) return null;
+  return xml.match(/<thumbnail_url>(https:\/\/[^<]+)<\/thumbnail_url>/)?.[1] ?? null;
+}
+
 export const proxyRoute = new Hono();
 
 // サムネイルは画像URLの直リンクではなく、各サービスがドキュメント化している
-// 経路（YouTube は Data API、Spotify と SoundCloud は oEmbed）で解決する。
+// 経路（YouTube は Data API、Spotify と SoundCloud は oEmbed、ニコニコ動画は
+// getthumbinfo）で解決する。
 // 画像URLの推測やスクレイピングは各社の規約で禁じられているため。
 proxyRoute.get("/thumbnail", async (c) => {
   const songLink = c.req.query("url");
@@ -79,7 +86,10 @@ proxyRoute.get("/thumbnail", async (c) => {
       );
     }
 
-    thumbnailUrl = ((await metadata.json()) as OembedResponse).thumbnail_url ?? null;
+    thumbnailUrl =
+      source.kind === "niconico"
+        ? pickNiconicoThumbnailUrl(await metadata.text())
+        : (((await metadata.json()) as OembedResponse).thumbnail_url ?? null);
   }
 
   if (!thumbnailUrl) {

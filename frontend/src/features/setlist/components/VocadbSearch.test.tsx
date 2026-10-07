@@ -34,6 +34,15 @@ const NICO_ONLY_SONG = {
   songType: "Original",
 };
 
+const UNSUPPORTED_LINK_SONG = {
+  id: 300,
+  title: "配信サイト不明の曲",
+  artist: "だれか",
+  songLink: "https://example.com/song",
+  vocadbUrl: "https://vocadb.net/S/300",
+  songType: "Original",
+};
+
 const NO_LINK_SONG = {
   id: 100,
   title: "リンクなしの曲",
@@ -208,14 +217,27 @@ describe("VocadbSearch", () => {
     expect(thumbnail.closest("a")).toHaveAttribute("href", "https://youtu.be/original000");
   });
 
-  it("YouTube 以外のリンクしかない結果にはサムネイルを出さない", async () => {
+  it("ニコニコ動画のリンクしかない結果にもサムネイルを出す", async () => {
     mockSearch.mockResolvedValue(result({ songs: [NICO_ONLY_SONG] }));
 
     await searchByTitle("ニコニコ");
 
+    const thumbnail = screen.getByRole("img", { name: "ニコニコだけの曲 のサムネイル" });
+    expect(thumbnail).toHaveAttribute(
+      "src",
+      `/api/proxy/thumbnail?url=${encodeURIComponent("https://www.nicovideo.jp/watch/sm1")}`
+    );
+    expect(thumbnail.closest("a")).toHaveAttribute("href", "https://www.nicovideo.jp/watch/sm1");
+  });
+
+  it("サムネイルを取れないリンクしかない結果にはサムネイルを出さない", async () => {
+    mockSearch.mockResolvedValue(result({ songs: [UNSUPPORTED_LINK_SONG] }));
+
+    await searchByTitle("配信サイト不明");
+
     expect(screen.queryByRole("img")).not.toBeInTheDocument();
     expect(screen.queryByText("楽曲リンクなし")).not.toBeInTheDocument();
-    expect(screen.getByText("ニコニコだけの曲")).toBeInTheDocument();
+    expect(screen.getByText("配信サイト不明の曲")).toBeInTheDocument();
   });
 
   it("楽曲リンクが見つからなかった曲はその旨を表示する", async () => {

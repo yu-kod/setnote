@@ -20,9 +20,10 @@ describe("getThumbnailProxyUrl", () => {
     expect(getThumbnailProxyUrl(link)).toBe(`/api/proxy/thumbnail?url=${encodeURIComponent(link)}`);
   });
 
-  // ニコニコ動画は公式のサムネイル取得経路がないため対象外。
-  it("ニコニコ動画のリンクは null", () => {
-    expect(getThumbnailProxyUrl("https://www.nicovideo.jp/watch/sm9")).toBeNull();
+  it("ニコニコ動画のリンクもプロキシ経由で取る", () => {
+    const link = "https://www.nicovideo.jp/watch/sm9";
+
+    expect(getThumbnailProxyUrl(link)).toBe(`/api/proxy/thumbnail?url=${encodeURIComponent(link)}`);
   });
 
   it("対応していないリンクは null", () => {
