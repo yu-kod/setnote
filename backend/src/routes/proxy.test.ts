@@ -40,6 +40,7 @@ vi.stubGlobal("fetch", mockFetch);
 const VIDEO_ID = "dQw4w9WgXcQ";
 const YOUTUBE_URL = `https://www.youtube.com/watch?v=${VIDEO_ID}`;
 const SPOTIFY_URL = "https://open.spotify.com/track/4cOdK2wGLETKBW3PvgPWqT";
+const NICONICO_URL = "https://www.nicovideo.jp/watch/sm9";
 
 function thumbnailPath(songLink: string) {
   return `/api/proxy/thumbnail?url=${encodeURIComponent(songLink)}`;
@@ -51,6 +52,10 @@ function oembedResponse(body: unknown) {
     headers: { "Content-Type": "application/json" },
   });
 }
+function thumbinfoResponse(xml: string) {
+  return new Response(xml, { status: 200, headers: { "Content-Type": "text/xml" } });
+}
+
 const IMAGE_BYTES = new Uint8Array([0x89, 0x50, 0x4e, 0x47]);
 
 function apiResponse(thumbnails: Record<string, { url: string }>) {
@@ -267,6 +272,70 @@ describe("GET /api/proxy/thumbnail", () => {
 
     const { app } = await import("../app");
     const res = await app.request(thumbnailPath(SPOTIFY_URL));
+
+    expect(res.status).toBe(502);
+  });
+
+  // ニコニコ動画は getthumbinfo が返す XML の thumbnail_url を使う。
+  it("resolves a niconico thumbnail through the getthumbinfo API", async () => {
+    mockFetch
+      .mockResolvedValueOnce(
+        thumbinfoResponse(
+          `<?xml version="1.0" encoding="UTF-8"?>
+<nicovideo_thumb_response status="ok"><thumb><video_id>sm9</video_id>
+<thumbnail_url>https://nicovideo.cdn.nimg.jp/thumbnails/9/9</thumbnail_url></thumb></nicovideo_thumb_response>`
+        )
+      )
+      .mockResolvedValueOnce(imageResponse("image/jpeg"));
+
+    const { app } = await import("../app");
+    const res = await app.request(thumbnailPath(NICONICO_URL));
+
+    expect(res.status).toBe(200);
+    expect(mockFetch).toHaveBeenNthCalledWith(1, "https://ext.nicovideo.jp/api/getthumbinfo/sm9");
+    expect(mockFetch).toHaveBeenNthCalledWith(2, "https://nicovideo.cdn.nimg.jp/thumbnails/9/9");
+  });
+
+  // 削除済み・非公開の動画でも getthumbinfo は 200 で status="fail" を返す。
+  it("returns 404 when getthumbinfo reports the video as unavailable", async () => {
+    mockFetch.mockResolvedValueOnce(
+      thumbinfoResponse(
+        `<nicovideo_thumb_response status="fail"><error><code>DELETED</code></error></nicovideo_thumb_response>`
+      )
+    );
+
+    const { app } = await import("../app");
+    const res = await app.request(thumbnailPath(NICONICO_URL));
+
+    expect(res.status).toBe(404);
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("returns 404 when getthumbinfo carries no thumbnail_url", async () => {
+    mockFetch.mockResolvedValueOnce(
+      thumbinfoResponse(`<nicovideo_thumb_response status="ok"><thumb></thumb></nicovideo_thumb_response>`)
+    );
+
+    const { app } = await import("../app");
+    const res = await app.request(thumbnailPath(NICONICO_URL));
+
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 502 when the getthumbinfo request throws", async () => {
+    mockFetch.mockRejectedValueOnce(new Error("network"));
+
+    const { app } = await import("../app");
+    const res = await app.request(thumbnailPath(NICONICO_URL));
+
+    expect(res.status).toBe(502);
+  });
+
+  it("returns 502 when the getthumbinfo request fails", async () => {
+    mockFetch.mockResolvedValueOnce(new Response("nope", { status: 503 }));
+
+    const { app } = await import("../app");
+    const res = await app.request(thumbnailPath(NICONICO_URL));
 
     expect(res.status).toBe(502);
   });

@@ -261,7 +261,7 @@ describe("TrackCard サムネイルのプレビュー", () => {
 
   it("サムネイルを取れないサービスのリンクでは出さない", () => {
     renderWithProviders(
-      <Harness initial={buildTrack({ songLink: "https://www.nicovideo.jp/watch/sm9" })} />
+      <Harness initial={buildTrack({ songLink: "https://example.com/song" })} />
     );
 
     expect(screen.queryByRole("img")).not.toBeInTheDocument();

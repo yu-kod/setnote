@@ -37,9 +37,23 @@ describe("resolveThumbnailSource", () => {
     });
   });
 
+  it("ニコニコ動画は getthumbinfo API で解決する", () => {
+    const expected = {
+      kind: "niconico",
+      endpoint: "https://ext.nicovideo.jp/api/getthumbinfo/sm9",
+    };
+
+    expect(resolveThumbnailSource("https://www.nicovideo.jp/watch/sm9?ref=x")).toEqual(expected);
+    expect(resolveThumbnailSource("https://nico.ms/sm9")).toEqual(expected);
+    expect(resolveThumbnailSource("https://sp.nicovideo.jp/watch/so123")).toEqual({
+      kind: "niconico",
+      endpoint: "https://ext.nicovideo.jp/api/getthumbinfo/so123",
+    });
+  });
+
   // 任意の URL を中継すると踏み台になるため、対応外は必ず null にする。
   it("対応していない URL は null", () => {
-    expect(resolveThumbnailSource("https://www.nicovideo.jp/watch/sm9")).toBeNull();
+    expect(resolveThumbnailSource("https://www.nicovideo.jp/watch/lv123")).toBeNull();
     expect(resolveThumbnailSource("https://example.com/image.png")).toBeNull();
     expect(resolveThumbnailSource("")).toBeNull();
   });
