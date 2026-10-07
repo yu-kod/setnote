@@ -41,7 +41,10 @@ export function resolveThumbnailSource(songLink: string): ThumbnailSource | null
 
   const niconico = songLink.match(NICONICO);
   if (niconico) {
-    return { kind: "niconico", endpoint: `https://ext.nicovideo.jp/api/getthumbinfo/${niconico[1]}` };
+    return {
+      kind: "niconico",
+      endpoint: `https://ext.nicovideo.jp/api/getthumbinfo/${niconico[1]}`,
+    };
   }
 
   return null;

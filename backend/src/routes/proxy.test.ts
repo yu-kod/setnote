@@ -313,7 +313,9 @@ describe("GET /api/proxy/thumbnail", () => {
 
   it("returns 404 when getthumbinfo carries no thumbnail_url", async () => {
     mockFetch.mockResolvedValueOnce(
-      thumbinfoResponse(`<nicovideo_thumb_response status="ok"><thumb></thumb></nicovideo_thumb_response>`)
+      thumbinfoResponse(
+        `<nicovideo_thumb_response status="ok"><thumb></thumb></nicovideo_thumb_response>`
+      )
     );
 
     const { app } = await import("../app");
