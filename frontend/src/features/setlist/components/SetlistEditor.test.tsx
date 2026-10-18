@@ -700,6 +700,37 @@ describe("SetlistEditor", () => {
     expect(tracks[1].groupId).toBeNull();
   });
 
+  it("only groups the clicked pair when there are 3+ tracks", async () => {
+    mockFetchSetlist.mockResolvedValue(
+      buildSetlist({
+        name: "Set",
+        tracks: [
+          { id: "a", title: "Track A", artist: "", songLink: "", source: "", customFields: [], groupId: null },
+          { id: "b", title: "Track B", artist: "", songLink: "", source: "", customFields: [], groupId: null },
+          { id: "c", title: "Track C", artist: "", songLink: "", source: "", customFields: [], groupId: null },
+        ],
+      })
+    );
+    mockUpdateSetlist.mockResolvedValue(buildSetlist());
+    const user = userEvent.setup();
+    renderWithProviders(<SetlistEditor id="s1" />);
+    await screen.findByLabelText("セットリスト名");
+
+    const linkButtons = screen.getAllByRole("button", { name: "結合" });
+    expect(linkButtons).toHaveLength(2);
+
+    await user.click(linkButtons[0]);
+
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    await waitFor(() => {
+      expect(mockUpdateSetlist).toHaveBeenCalled();
+    });
+    const tracks = mockUpdateSetlist.mock.calls[0][1].tracks as Track[];
+    expect(tracks[0].groupId).toBeTruthy();
+    expect(tracks[0].groupId).toBe(tracks[1].groupId);
+    expect(tracks[2].groupId).toBeNull();
+  });
+
   it("does not show the share image link when in draft", async () => {
     mockFetchSetlist.mockResolvedValue(buildSetlist({ status: "draft" }));
     renderWithProviders(<SetlistEditor id="s1" />);

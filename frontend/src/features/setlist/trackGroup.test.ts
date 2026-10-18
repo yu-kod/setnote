@@ -110,4 +110,57 @@ describe("toggleGroup", () => {
     expect(result[2].groupId).toBe("g2");
     expect(result[3].groupId).toBe("g2");
   });
+
+  it("splits a 3-track group when unlinking in the middle", () => {
+    const tracks = [
+      buildTrack({ id: "a", groupId: "g1" }),
+      buildTrack({ id: "b", groupId: "g1" }),
+      buildTrack({ id: "c", groupId: "g1" }),
+    ];
+    const result = toggleGroup(tracks, 1);
+    expect(result[0].groupId).toBeTruthy();
+    expect(result[0].groupId).toBe(result[1].groupId);
+    expect(result[2].groupId).toBeNull();
+  });
+
+  it("splits a 3-track group when unlinking at the start", () => {
+    const tracks = [
+      buildTrack({ id: "a", groupId: "g1" }),
+      buildTrack({ id: "b", groupId: "g1" }),
+      buildTrack({ id: "c", groupId: "g1" }),
+    ];
+    const result = toggleGroup(tracks, 0);
+    expect(result[0].groupId).toBeNull();
+    expect(result[1].groupId).toBeTruthy();
+    expect(result[1].groupId).toBe(result[2].groupId);
+  });
+
+  it("splits a 4-track group in the middle into two pairs", () => {
+    const tracks = [
+      buildTrack({ id: "a", groupId: "g1" }),
+      buildTrack({ id: "b", groupId: "g1" }),
+      buildTrack({ id: "c", groupId: "g1" }),
+      buildTrack({ id: "d", groupId: "g1" }),
+    ];
+    const result = toggleGroup(tracks, 1);
+    expect(result[0].groupId).toBe("g1");
+    expect(result[1].groupId).toBe("g1");
+    expect(result[2].groupId).toBeTruthy();
+    expect(result[2].groupId).toBe(result[3].groupId);
+    expect(result[2].groupId).not.toBe("g1");
+  });
+
+  it("does not link unrelated tracks when linking adjacent ungrouped tracks", () => {
+    const tracks = [
+      buildTrack({ id: "a" }),
+      buildTrack({ id: "b" }),
+      buildTrack({ id: "c" }),
+      buildTrack({ id: "d" }),
+    ];
+    const result = toggleGroup(tracks, 1);
+    expect(result[0].groupId).toBeNull();
+    expect(result[1].groupId).toBeTruthy();
+    expect(result[1].groupId).toBe(result[2].groupId);
+    expect(result[3].groupId).toBeNull();
+  });
 });
