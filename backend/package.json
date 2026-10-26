@@ -15,7 +15,7 @@
     "format:check": "prettier --check src/"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.135.0",
+    "@anthropic-ai/sdk": "^1.1.0",
     "@aws-sdk/client-cloudwatch": "^3.1156.0",
     "@aws-sdk/client-cognito-identity-provider": "^3.1156.0",
     "@aws-sdk/client-dynamodb": "^3.1156.0",
